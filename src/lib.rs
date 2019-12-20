@@ -1,3 +1,4 @@
+#![allow(unused_labels)]
 #![allow(clippy::unused_label)]
 
 #[derive(Debug, Clone, Default)]
@@ -76,12 +77,58 @@ impl<'s> XmlIterator<'s> {
     Self { words: words.trim_start() }
   }
   fn move_to(&mut self, i: usize) {
-    self.words = &self.words[i..].trim_start();
+    if i <= self.words.len() {
+      self.words = &self.words[i..].trim_start();
+    } else {
+      self.words = "";
+    }
+  }
+
+  /// `self.words` should point to immediately after the `<![CDATA[` opener.
+  fn gather_cdata(&mut self) -> Option<XmlElement<'s>> {
+    let mut it = self.words.char_indices();
+    loop {
+      match it.next()? {
+        (end_i, ']') => match it.next()? {
+          (_, ']') => match it.next()? {
+            (gt, '>') => {
+              let cdata = &self.words[..end_i];
+              self.move_to(gt+1);
+              return Some(XmlElement::CData(cdata));
+            },
+            _ => continue,
+          },
+          _ => continue,
+        },
+        _ => continue,
+      }
+    }
+  }
+
+  /// `self.words` should point to immediately after the `<!--` opener.
+  fn skip_over_comment(&mut self) -> Option<()> {
+    let mut it = self.words.char_indices();
+    loop {
+      match it.next()? {
+        (_, '-') => match it.next()? {
+          (_, '-') => match it.next()? {
+            (gt, '>') => {
+              self.move_to(gt + 1);
+              return Some(());
+            },
+            _ => continue,
+          },
+          _ => continue,
+        },
+        _ => continue,
+      }
+    }
   }
 }
 impl<'s> Iterator for XmlIterator<'s> {
   type Item = XmlElement<'s>;
 
+  #[allow(clippy::cognitive_complexity)]
   fn next(&mut self) -> Option<XmlElement<'s>> {
     let mut it = self.words.char_indices().peekable();
     match it.next()? {
@@ -90,60 +137,19 @@ impl<'s> Iterator for XmlIterator<'s> {
           it.next()?;
           match it.next()?.1 {
             '[' => {
-              // cdata, like `<![CDATA[ words ]]>`, so skip `CDATA` then record
-              // the position after `[`
+              // cdata, like `<![CDATA[ words ]]>`, so skip `CDATA`, then move
+              // to the position after `[`, and call the sub-function
               for _ in 0..5 {
                 it.next()?;
               }
-              let start_i = it.peek()?.0;
-              'gather_cdata: loop {
-                match it.next()? {
-                  (end_i, ']') => match it.next()? {
-                    (_, ']') => match it.next()? {
-                      (_, '>') => match it.peek() {
-                        Some((fin, _)) => {
-                          let cdata = &self.words[start_i..end_i];
-                          self.move_to(*fin);
-                          return Some(XmlElement::CData(cdata));
-                        }
-                        None => {
-                          let cdata = &self.words[start_i..end_i];
-                          self.words = "";
-                          return Some(XmlElement::CData(cdata));
-                        }
-                      },
-                      _ => continue 'gather_cdata,
-                    },
-                    _ => continue 'gather_cdata,
-                  },
-                  _ => continue 'gather_cdata,
-                }
-              }
+              self.move_to(it.peek()?.0);
+              self.gather_cdata()
             }
             '-' => {
               // inline comment, like `<!-- words -->`, so skip the 2nd dash
               it.next()?;
-              'skip_over_comment: loop {
-                match it.next()? {
-                  (_, '-') => match it.next()? {
-                    (_, '-') => match it.next()? {
-                      (_, '>') => match it.peek() {
-                        Some((i, _)) => {
-                          self.move_to(*i);
-                          return self.next();
-                        }
-                        None => {
-                          self.words = "";
-                          return None;
-                        }
-                      },
-                      _ => continue 'skip_over_comment,
-                    },
-                    _ => continue 'skip_over_comment,
-                  },
-                  _ => continue 'skip_over_comment,
-                }
-              }
+              self.skip_over_comment()?;
+              self.next()
             }
             _ => {
               self.words = "";
@@ -151,23 +157,39 @@ impl<'s> Iterator for XmlIterator<'s> {
             }
           }
         } else {
+          let is_end_tag = if it.peek()?.1 == '/' {
+            it.next();
+            true
+          } else {
+            false
+          };
           let name = 'gather_tag_name: loop {
             match it.next()? {
               (i, ' ') => {
+                if is_end_tag {
+                  return None;
+                }
                 break &self.words[1..i];
               }
               (i, '>') => {
-                let name = &self.words[1..i];
-                let attrs = "";
-                self.move_to(i + 1);
-                return Some(XmlElement::StartTag { name, attrs });
+                if is_end_tag {
+                  let name = &self.words[2..i];
+                  self.move_to(i + 1);
+                  return Some(XmlElement::EndTag { name });
+                } else {
+                  let name = &self.words[1..i];
+                  let attrs = "";
+                  self.move_to(i + 1);
+                  return Some(XmlElement::StartTag { name, attrs });
+                }
               }
-              (_, '/') => loop {
+              (f_slash, '/') => loop {
                 match it.next()? {
                   (i, '>') => {
-                    let name = &self.words[2..i];
+                    let name = &self.words[1..f_slash];
+                    let attrs = "";
                     self.move_to(i + 1);
-                    return Some(XmlElement::EndTag { name });
+                    return Some(XmlElement::EmptyTag { name, attrs });
                   }
                   (_, _) => {
                     continue;
@@ -181,7 +203,7 @@ impl<'s> Iterator for XmlIterator<'s> {
             match it.next()? {
               (i, '/') => match it.next()? {
                 (_j, '>') => {
-                  let attrs = &self.words[name.len() + 1..i];
+                  let attrs = &self.words[name.len() + 2..i];
                   match it.next() {
                     Some((k, _)) => {
                       self.move_to(k);
@@ -231,5 +253,53 @@ impl<'s> Iterator for XmlIterator<'s> {
         }
       },
     }
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct AttributeIterator<'s> {
+  words: &'s str,
+}
+impl<'s> AttributeIterator<'s> {
+  pub fn new(words: &'s str) -> Self {
+    Self { words: words.trim_start() }
+  }
+  fn move_to(&mut self, i: usize) {
+    self.words = &self.words[i..].trim_start();
+  }
+}
+impl<'s> Iterator for AttributeIterator<'s> {
+  type Item = (&'s str, &'s str);
+
+  fn next(&mut self) -> Option<(&'s str, &'s str)> {
+    let mut it = self.words.char_indices().peekable();
+    let key = loop {
+      match it.next()? {
+        (i, '=') => {
+          break &self.words[..i];
+        }
+        (_, _) => {
+          continue;
+        }
+      }
+    };
+    let (v_start, _) = it.next()?;
+    let val = loop {
+      match it.next()? {
+        (i, '"') => {
+          let v = &self.words[v_start + 1..i];
+          if it.peek().is_none() {
+            self.words = "";
+          } else {
+            self.move_to(i + 1);
+          }
+          break v;
+        }
+        (_, _) => {
+          continue;
+        }
+      }
+    };
+    Some((key, val))
   }
 }

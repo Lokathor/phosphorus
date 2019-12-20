@@ -2,23 +2,20 @@
 
 use phosphorus::*;
 
-use std::{
-  fs::File,
-  io::{BufRead, Read},
-  path::Path,
-};
-
-fn file_bytes<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, std::io::Error> {
-  let mut v = vec![];
-  let mut f = File::open(path)?;
-  f.read_to_end(&mut v)?;
-  Ok(v)
-}
-
 fn main() {
-  let string = String::from_utf8(file_bytes("xml/gl.xml").unwrap()).unwrap();
+  let bytes_vec = std::fs::read("xml/gl.xml").unwrap();
+  let string = String::from_utf8(bytes_vec).unwrap();
   let body = drop_declaration(&string);
   for elem in XmlIterator::new(body) {
     println!("{:?}", elem);
+    match elem {
+      XmlElement::StartTag { attrs, .. }
+      | XmlElement::EmptyTag { attrs, .. } => {
+        for (key, val) in AttributeIterator::new(attrs) {
+          println!("==k:{}, v:{}", key, val);
+        }
+      }
+      _ => (),
+    }
   }
 }
