@@ -61,11 +61,17 @@ pub fn drop_declaration(words: &str) -> &str {
 
 #[derive(Debug, Clone, Copy)]
 pub enum XmlElement<'s> {
+  /// A tag to open a span.
   StartTag { name: &'s str, attrs: &'s str },
+  /// A tag to close a span.
   EndTag { name: &'s str },
+  /// A tag with no span, open and close as one unit.
   EmptyTag { name: &'s str, attrs: &'s str },
+  /// Text that's inside a tag's span.
+  ///
+  /// Text that's escaped with a "CDATA" grouping also is output using this
+  /// variant.
   Text(&'s str),
-  CData(&'s str),
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +82,7 @@ impl<'s> XmlIterator<'s> {
   pub fn new(words: &'s str) -> Self {
     Self { words: words.trim_start() }
   }
+  
   fn move_to(&mut self, i: usize) {
     if i <= self.words.len() {
       self.words = &self.words[i..].trim_start();
@@ -94,7 +101,7 @@ impl<'s> XmlIterator<'s> {
             (gt, '>') => {
               let cdata = &self.words[..end_i];
               self.move_to(gt+1);
-              return Some(XmlElement::CData(cdata));
+              return Some(XmlElement::Text(cdata));
             },
             _ => continue,
           },
@@ -137,9 +144,9 @@ impl<'s> Iterator for XmlIterator<'s> {
           it.next()?;
           match it.next()?.1 {
             '[' => {
-              // cdata, like `<![CDATA[ words ]]>`, so skip `CDATA`, then move
-              // to the position after `[`, and call the sub-function
-              for _ in 0..5 {
+              // cdata, like `<![CDATA[ words ]]>`, so skip `CDATA[`, then move
+              // to the position right after it, then call the sub-function
+              for _ in 0..6 {
                 it.next()?;
               }
               self.move_to(it.peek()?.0);
