@@ -6,3 +6,4 @@ edition = "2018"
 license = "Zlib"
 
 [dependencies]
+hashbrown = "0.6"
