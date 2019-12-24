@@ -18,7 +18,15 @@ A way to query the API levels available.
 
 A way to query the extensions available.
 
+Remove all of the `..` ignoring of stuff in matches. We should always have
+expected the input style or we should reject the file and refuse to parse it
+(because it's added some totally new attribute which might be important but
+that we're not handling)
+
 */
+
+mod types;
+pub use types::*;
 
 /// The output of parsing `gl.xml`.
 ///
@@ -34,6 +42,10 @@ pub struct GlRegistry {
   extensions: Extensions,
 }
 impl GlRegistry {
+  /// Inspect the types of the Registry
+  pub fn types(&self) -> &[Type] {
+    &self.types.0
+  }
   /// Make a new `GlRegistry` from the `gl.xml` file contents.
   pub fn from_gl_xml(whole_file: &str) -> Option<Self> {
     let body = drop_declaration(whole_file);
@@ -132,42 +144,6 @@ fn pull_registry(it: &mut XmlIterator<'_>) -> Option<GlRegistry> {
         pull_extensions(it, &mut registry.extensions)?;
       }
       elem => panic!("unhandled registry element: {:?}", elem),
-    }
-  }
-}
-
-type Type = String;
-#[derive(Debug, Default, Clone)]
-struct Types(Vec<Type>);
-#[must_use]
-fn pull_types(it: &mut XmlIterator<'_>, types: &mut Types) -> Option<()> {
-  loop {
-    match it.next()? {
-      EndTag { name: "types" } => return Some(()),
-      StartTag { name: "type", .. } => {
-        types.0.push(String::new());
-        'type_tag: loop {
-          match it.next()? {
-            EndTag { name: "type" } => {
-              break 'type_tag;
-            }
-            Text(text) => types.0.last_mut()?.push_str(text),
-            EmptyTag { .. } => (),
-            StartTag { name: "name", .. } => {
-              match it.next()? {
-                Text(text) => types.0.last_mut()?.push_str(text),
-                other => panic!("unexpected>{:?}", other),
-              }
-              match it.next()? {
-                EndTag { name: "name" } => (),
-                other => panic!("unexpected>{:?}", other),
-              }
-            }
-            other => panic!("unexpected>{:?}", other),
-          }
-        }
-      }
-      other => panic!("unexpected>{:?}", other),
     }
   }
 }
@@ -333,8 +309,8 @@ struct Command {
   /// You can find this command under some alternate name.
   ///
   /// Generally the "main" version won't have an alias entry, and then one or
-  /// more versions (that were extensions before being stabilized) will all mark
-  /// themselves as being an alias of the main version.
+  /// more versions (that were extensions before being stabilized) will all
+  /// mark themselves as being an alias of the main version.
   alias: Option<String>,
   /// This command has an equivalent "vector" version that just takes a single
   /// pointer instead of however many separate params.

@@ -8,8 +8,9 @@ fn main() {
   let bytes_vec = std::fs::read("xml/gl.xml").unwrap();
   let string = String::from_utf8(bytes_vec).unwrap();
 
-  println!(
-    "registry> {:#?}",
-    phosphorus::GlRegistry::from_gl_xml(&string).unwrap()
-  );
+  let registry = phosphorus::GlRegistry::from_gl_xml(&string).unwrap();
+  //println!("registry> {:#?}", registry);
+  for t in registry.types() {
+    println!("{:?}:\n{}\n", t, t);
+  }
 }

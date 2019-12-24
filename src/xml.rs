@@ -6,7 +6,6 @@ use super::*;
 pub mod gl;
 pub use gl::*;
 
-
 /// Drops the XML declaration and following whitespace off the front of the
 /// string.
 ///
