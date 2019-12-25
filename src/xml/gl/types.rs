@@ -26,11 +26,11 @@ impl core::fmt::Display for Type {
               "c_void"
             } else {
               match self.text.as_str() {
-                "typedef void (*GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe extern \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
-                "typedef void (*GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe extern \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
-                "typedef void (*GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);"=> "Option<unsafe extern \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
-                "typedef void (*GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);" => "Option<unsafe extern \"C\" fn(GLuint,GLenum,GLenum,GLsizei,*const GLchar,*mut c_void)>",
-                "typedef void (*GLVULKANPROCNV)(void);" => "Option<unsafe extern \"C\" fn()>",
+                "typedef void (*GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe extern \"system\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe extern \"system\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);"=> "Option<unsafe extern \"system\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);" => "Option<unsafe extern \"system\" fn(GLuint,GLenum,GLenum,GLsizei,*const GLchar,*mut c_void)>",
+                "typedef void (*GLVULKANPROCNV)(void);" => "Option<unsafe extern \"system\" fn()>",
                 other => panic!("unexpected:{}", other),
               }
             }
