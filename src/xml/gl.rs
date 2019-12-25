@@ -10,9 +10,9 @@ A way to write out all the GL Enums.
 
 A way to write out the commands.
 
-A way to query the API levels available.
+A way to query and use the API levels available.
 
-A way to query the extensions available.
+A way to query and use the extensions available.
 
 Remove all of the `..` ignoring of stuff in matches. We should always have
 expected the input style or we should reject the file and refuse to parse it

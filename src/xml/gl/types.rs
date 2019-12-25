@@ -26,11 +26,11 @@ impl core::fmt::Display for Type {
               "c_void"
             } else {
               match self.text.as_str() {
-                "typedef void (*GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
-                "typedef void (*GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
-                "typedef void (*GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);"=> "Option<unsafe \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
-                "typedef void (*GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);" => "Option<unsafe \"C\" fn(GLuint,GLenum,GLenum,GLsizei,*const,*mut c_void)>",
-                "typedef void (*GLVULKANPROCNV)(void);" => "Option<unsafe \"C\" fn()>",
+                "typedef void (*GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe extern \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe extern \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);"=> "Option<unsafe extern \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);" => "Option<unsafe extern \"C\" fn(GLuint,GLenum,GLenum,GLsizei,*const GLchar,*mut c_void)>",
+                "typedef void (*GLVULKANPROCNV)(void);" => "Option<unsafe extern \"C\" fn()>",
                 other => panic!("unexpected:{}", other),
               }
             }
@@ -51,7 +51,7 @@ impl core::fmt::Display for Type {
           "struct" => {
             assert_eq!(it.next(), Some("__GLsync"));
             assert_eq!(it.next(), Some("*GLsync;"));
-            "*mut __GLsync;\npub struct __GLsync { _priv: u8 }"
+            "*mut __GLsync;\npub struct __GLsync(u8)"
           }
           "GLintptr" => "GLintptr",
           "unsigned" => match it.next().unwrap() {
@@ -97,10 +97,10 @@ impl core::fmt::Display for Type {
       match self.name.as_str() {
         "khrplatform" => Ok(()),
         "struct _cl_context" => {
-          write!(f, "pub struct _cl_context {{ _priv: u8 }};")
+          write!(f, "pub struct _cl_context(u8);")
         }
         "struct _cl_event" => {
-          write!(f, "pub struct _cl_event {{ _priv: u8 }};")
+          write!(f, "pub struct _cl_event(u8);")
         }
         "GLhandleARB" => {
           write!(
