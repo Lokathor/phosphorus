@@ -16,50 +16,77 @@ impl core::fmt::Display for Type {
     if self.text.starts_with("typedef") {
       let c_name = {
         let mut it = self.text.split_whitespace();
-        if it.next() == Some("typedef") {
-          match it.next().unwrap() {
-            "void" => {
-              let next = it.next().unwrap();
-              if next.starts_with('*') {
-                "*mut c_void"
-              } else if next == "GLvoid;" {
-                "c_void"
-              } else {
-                "todo_func"
+        assert_eq!(it.next(), Some("typedef"));
+        match it.next().unwrap() {
+          "void" => {
+            let next = it.next().unwrap();
+            if next.starts_with('*') {
+              "*mut c_void"
+            } else if next == "GLvoid;" {
+              "c_void"
+            } else {
+              match self.text.as_str() {
+                "typedef void (*GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => "Option<unsafe \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);"=> "Option<unsafe \"C\" fn(GLenum,GLenum,GLuint,GLenum,GLsizei,*const GLchar,*const c_void)>",
+                "typedef void (*GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);" => "Option<unsafe \"C\" fn(GLuint,GLenum,GLenum,GLsizei,*const,*mut c_void)>",
+                "typedef void (*GLVULKANPROCNV)(void);" => "Option<unsafe \"C\" fn()>",
+                other => panic!("unexpected:{}", other),
               }
             }
-            "khronos_int8_t" => "i8",
-            "khronos_uint8_t" => "u8",
-            "khronos_int16_t" => "i16",
-            "khronos_uint16_t" => "u16",
-            "int" => "c_int",
-            "khronos_int32_t" => "i32",
-            "khronos_float_t" => "c_float",
-            "double" => "c_double",
-            "char" => "c_char",
-            "khronos_intptr_t" => "isize",
-            "khronos_ssize_t" => "isize",
-            "khronos_int64_t" => "i64",
-            "khronos_uint64_t" => "u64",
-            "struct" => {
-              assert_eq!(it.next(), Some("__GLsync"));
-              assert_eq!(it.next(), Some("*GLsync;"));
-              "*mut __GLsync;\npub struct __GLsync { _priv: u8 }"
-            }
-            "GLintptr" => "GLintptr",
-            "unsigned" => match it.next().unwrap() {
-              "int" => "c_uint",
-              "char" => "c_uchar",
-              "short" => "c_ushort",
-              other => panic!("unexpected unsigned:{}", other),
-            },
-            other => panic!("unexpected:{}", other),
           }
-        } else {
-          // TODO: the no typedef structs
-          "todo"
+          "khronos_int8_t" => "i8",
+          "khronos_uint8_t" => "u8",
+          "khronos_int16_t" => "i16",
+          "khronos_uint16_t" => "u16",
+          "int" => "c_int",
+          "khronos_int32_t" => "i32",
+          "khronos_float_t" => "c_float",
+          "double" => "c_double",
+          "char" => "c_char",
+          "khronos_intptr_t" => "isize",
+          "khronos_ssize_t" => "isize",
+          "khronos_int64_t" => "i64",
+          "khronos_uint64_t" => "u64",
+          "struct" => {
+            assert_eq!(it.next(), Some("__GLsync"));
+            assert_eq!(it.next(), Some("*GLsync;"));
+            "*mut __GLsync;\npub struct __GLsync { _priv: u8 }"
+          }
+          "GLintptr" => "GLintptr",
+          "unsigned" => match it.next().unwrap() {
+            "int" => "c_uint",
+            "char" => "c_uchar",
+            "short" => "c_ushort",
+            other => panic!("unexpected unsigned:{}", other),
+          },
+          other => panic!("unexpected:{}", other),
         }
       };
+      if self.name == "GLDEBUGPROC" {
+        writeln!(
+          f,
+          "/// `fn(source, type, id, severity, length, message, userParam)`"
+        )?;
+      }
+      if self.name == "GLDEBUGPROCARB" {
+        writeln!(
+          f,
+          "/// `fn(source, type, id, severity, length, message, userParam)`"
+        )?;
+      }
+      if self.name == "GLDEBUGPROCKHR" {
+        writeln!(
+          f,
+          "/// `fn(source, type, id, severity, length, message, userParam)`"
+        )?;
+      }
+      if self.name == "GLDEBUGPROCAMD" {
+        writeln!(
+          f,
+          "/// `fn(id, category, severity, length, message, userParam)`"
+        )?;
+      }
       write!(
         f,
         "pub type {r_name} = {c_name};",
@@ -84,6 +111,16 @@ impl core::fmt::Display for Type {
         other => panic!("unexpected:{}", other),
       }
     }
+  }
+}
+impl Type {
+  /// The new alias name.
+  pub fn name(&self) -> &str {
+    &self.name
+  }
+  /// The full C definition of the alias.
+  pub fn text(&self) -> &str {
+    &self.text
   }
 }
 

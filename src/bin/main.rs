@@ -11,6 +11,8 @@ fn main() {
   let registry = phosphorus::GlRegistry::from_gl_xml(&string).unwrap();
   //println!("registry> {:#?}", registry);
   for t in registry.types() {
-    println!("{:?}:\n{}\n", t, t);
+    if t.name() != "khrplatform" {
+      println!("{}", t);
+    }
   }
 }

@@ -6,10 +6,6 @@ use super::{XmlElement::*, *};
 
 TODO:
 
-Use an error type instead of Option<()> all over?
-
-A way to write the GL types out as Rust type aliases.
-
 A way to write out all the GL Enums.
 
 A way to write out the commands.
@@ -23,7 +19,15 @@ expected the input style or we should reject the file and refuse to parse it
 (because it's added some totally new attribute which might be important but
 that we're not handling)
 
+Use an error type instead of Option<()> all over?
+
 */
+
+mod enums;
+pub use enums::*;
+
+mod groups;
+pub use groups::*;
 
 mod types;
 pub use types::*;
@@ -83,12 +87,13 @@ fn pull_registry(it: &mut XmlIterator<'_>) -> Option<GlRegistry> {
         pull_groups(it, &mut registry.groups)?;
       }
       StartTag { name: "enums", attrs } => {
-        for (k, _v) in AttributeIterator::new(attrs) {
-          // LATER: do we want to handle any of these?
+        let mut is_bitmask = false;
+        let mut group = None;
+        for (k, v) in AttributeIterator::new(attrs) {
           match k {
             "namespace" => (),
-            "group" => (),
-            "type" => (),
+            "group" => group = Some(v.to_owned()),
+            "type" => is_bitmask = v == "bitmask",
             "comment" => (),
             "vendor" => (),
             "start" => (),
@@ -96,7 +101,15 @@ fn pull_registry(it: &mut XmlIterator<'_>) -> Option<GlRegistry> {
             _ => panic!("unknown `enums` attributes: {}", attrs),
           }
         }
-        pull_enums(it, &mut registry.enums)?;
+        let group: Option<&mut Group> = if let Some(name) = group {
+          let mut group = Group::default();
+          group.name = name;
+          registry.groups.0.push(group);
+          registry.groups.0.last_mut()
+        } else {
+          None
+        };
+        pull_enums(it, &mut registry.enums, is_bitmask, group)?;
       }
       EmptyTag { name: "enums", attrs } => {
         for (k, _v) in AttributeIterator::new(attrs) {
@@ -144,139 +157,6 @@ fn pull_registry(it: &mut XmlIterator<'_>) -> Option<GlRegistry> {
         pull_extensions(it, &mut registry.extensions)?;
       }
       elem => panic!("unhandled registry element: {:?}", elem),
-    }
-  }
-}
-
-#[derive(Debug, Default, Clone)]
-struct Group {
-  name: String,
-  enums: Vec<String>,
-}
-#[derive(Debug, Default, Clone)]
-struct Groups(Vec<Group>);
-#[must_use]
-fn pull_groups(it: &mut XmlIterator<'_>, groups: &mut Groups) -> Option<()> {
-  loop {
-    match it.next()? {
-      EndTag { name: "groups" } => return Some(()),
-      StartTag { name: "group", attrs } => {
-        let name = match AttributeIterator::new(attrs).next()? {
-          ("name", name) => name.to_owned(),
-          other => panic!("unexpected> {:?}", other),
-        };
-        let mut enums = vec![];
-        'pull_group_enums: loop {
-          match it.next()? {
-            EndTag { name: "group" } => break 'pull_group_enums,
-            EmptyTag { name: "enum", attrs } => {
-              let name = match AttributeIterator::new(attrs).next()? {
-                ("name", name) => name.to_owned(),
-                other => panic!("unexpected> {:?}", other),
-              };
-              enums.push(name);
-            }
-            other => panic!("unexpected> {:?}", other),
-          }
-        }
-        groups.0.push(Group { name, enums });
-      }
-      EmptyTag { name: "group", attrs } => {
-        // Note: This happens in all of two places, `DataType` and
-        // `FfdMaskSGIX`, and they both have a comment saying what the "real"
-        // group is supposed to be. So, we can probably special case this I
-        // guess. However, we don't really use the groups that much right now
-        // anyway so it's not an immediate priority. For now we just record that
-        // we saw them and call it good.
-        let name = match AttributeIterator::new(attrs).next()? {
-          ("name", name) => name.to_owned(),
-          other => panic!("unexpected> {:?}", other),
-        };
-        groups.0.push(Group { name, enums: vec![] });
-      }
-      other => panic!("unexpected> {:?}", other),
-    }
-  }
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
-struct EnumKey {
-  /// Enum name
-  name: String,
-  /// Enum availability (`None` == always)
-  api: Option<String>,
-}
-#[derive(Debug, Default, Clone)]
-struct Enums(HashMap<EnumKey, u64>);
-#[must_use]
-fn pull_enums(it: &mut XmlIterator<'_>, enums: &mut Enums) -> Option<()> {
-  loop {
-    match it.next()? {
-      EndTag { name: "enums" } => return Some(()),
-      EmptyTag { name: "enum", attrs } => {
-        let mut name = None;
-        let mut value = None;
-        let mut alias = None;
-        let mut api = None;
-        for (k, v) in AttributeIterator::new(attrs) {
-          match k {
-            "name" => name = Some(v),
-            "value" => value = Some(v),
-            "alias" => alias = Some(v),
-            "comment" => (),
-            "type" => (),
-            "api" => api = Some(v.to_owned()),
-            _ => panic!("unexpected key> {}; {}", k, attrs),
-          }
-        }
-        let name = name.unwrap().to_owned();
-        let value = value.unwrap();
-        let value: u64 = if value.contains('x') || value.contains('X') {
-          // hex numbers we have to slice off the `Ox` ourselves
-          u64::from_str_radix(&value[2..], 16).unwrap()
-        } else if value.contains('-') {
-          // Some values are given as a negative value, so we parse as `i32`
-          // then cast to `u32`, which will preserve the bit pattern.
-          i64::from_str_radix(&value, 10).unwrap() as u64
-        } else {
-          u64::from_str_radix(&value, 10).unwrap()
-        };
-        let key = EnumKey { name, api: api.clone() };
-        if enums.0.contains_key(&key) {
-          let old = *enums.0.get(&key).unwrap();
-          let new = value;
-          if old != new {
-            panic!(
-              "key overwrite: key: {:?}, old: {:?}, new: {:?}",
-              key, old, new
-            );
-          }
-        } else {
-          enums.0.insert(key, value);
-        }
-        if let Some(alias) = alias {
-          let name = alias.to_owned();
-          let key = EnumKey { name, api: api.clone() };
-          if enums.0.contains_key(&key) {
-            let old = *enums.0.get(&key).unwrap();
-            let new = value;
-            if old != new {
-              panic!(
-                "key overwrite: key: {:?}, old: {:?}, new: {:?}",
-                key, old, new
-              );
-            }
-          } else {
-            enums.0.insert(key, value);
-          }
-        }
-      }
-      EmptyTag { name: "unused", attrs } => {
-        // TODO: We should check if the `unused` tag is somehow used despite the
-        // name, because programming is that bad at naming sometimes.
-        let _ = attrs;
-      }
-      other => panic!("unexpected> {:?}", other),
     }
   }
 }
