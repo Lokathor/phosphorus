@@ -1,18 +1,8 @@
 use super::*;
 
-/// A Group of Enum values.
-///
-/// This helps narrow down what `GLenum` values can be passes as a particular
-/// parameter for a given command.
-#[derive(Debug, Default, Clone)]
-pub struct Group {
-  pub(crate) name: String,
-  pub(crate) enums: Vec<String>,
-}
-
 /// All the Groups.
 #[derive(Debug, Default, Clone)]
-pub struct Groups(pub(crate) Vec<Group>);
+pub struct Groups(pub(crate) HashMap<String, HashSet<String>>);
 
 /// Extracts all the Group definitions from the iterator.
 #[must_use]
@@ -28,7 +18,7 @@ pub fn pull_groups(
           ("name", name) => name.to_owned(),
           other => panic!("unexpected> {:?}", other),
         };
-        let mut enums = vec![];
+        let mut enums = HashSet::new();
         'pull_group_enums: loop {
           match it.next()? {
             EndTag { name: "group" } => break 'pull_group_enums,
@@ -37,12 +27,12 @@ pub fn pull_groups(
                 ("name", name) => name.to_owned(),
                 other => panic!("unexpected> {:?}", other),
               };
-              enums.push(name);
+              enums.insert(name);
             }
             other => panic!("unexpected> {:?}", other),
           }
         }
-        groups.0.push(Group { name, enums });
+        groups.0.insert(name, enums);
       }
       EmptyTag { name: "group", attrs } => {
         // Note: This happens in all of two places, `DataType` and
@@ -55,7 +45,7 @@ pub fn pull_groups(
           ("name", name) => name.to_owned(),
           other => panic!("unexpected> {:?}", other),
         };
-        groups.0.push(Group { name, enums: vec![] });
+        groups.0.insert(name, HashSet::new());
       }
       other => panic!("unexpected> {:?}", other),
     }

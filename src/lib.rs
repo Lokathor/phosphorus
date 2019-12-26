@@ -1,6 +1,7 @@
 #![allow(unused_labels)]
 #![allow(clippy::unused_label)]
 #![allow(clippy::cognitive_complexity)]
+#![allow(clippy::implicit_hasher)]
 #![warn(missing_docs)]
 
 //! `phosphorus` is a GL bindings generator crate.

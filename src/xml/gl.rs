@@ -50,6 +50,14 @@ impl GlRegistry {
   pub fn types(&self) -> &[Type] {
     &self.types.0
   }
+  /// Inspect the groups of the Registry
+  pub fn groups(&self) -> &HashMap<String, HashSet<String>> {
+    &self.groups.0
+  }
+  /// Inspect the enums of the Registry
+  pub fn enums(&self) -> &HashMap<EnumKey, EnumValue> {
+    &self.enums.0
+  }
   /// Make a new `GlRegistry` from the `gl.xml` file contents.
   pub fn from_gl_xml(whole_file: &str) -> Option<Self> {
     let body = drop_declaration(whole_file);
@@ -101,11 +109,8 @@ fn pull_registry(it: &mut XmlIterator<'_>) -> Option<GlRegistry> {
             _ => panic!("unknown `enums` attributes: {}", attrs),
           }
         }
-        let group: Option<&mut Group> = if let Some(name) = group {
-          let mut group = Group::default();
-          group.name = name;
-          registry.groups.0.push(group);
-          registry.groups.0.last_mut()
+        let group: Option<&mut HashSet<String>> = if let Some(name) = group {
+          Some(registry.groups.0.entry(name).or_insert(HashSet::new()))
         } else {
           None
         };

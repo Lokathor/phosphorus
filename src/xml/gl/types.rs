@@ -51,7 +51,7 @@ impl core::fmt::Display for Type {
           "struct" => {
             assert_eq!(it.next(), Some("__GLsync"));
             assert_eq!(it.next(), Some("*GLsync;"));
-            "*mut __GLsync;\npub struct __GLsync(u8)"
+            "*mut __GLsync; pub struct __GLsync(u8)"
           }
           "GLintptr" => "GLintptr",
           "unsigned" => match it.next().unwrap() {
@@ -64,27 +64,27 @@ impl core::fmt::Display for Type {
         }
       };
       if self.name == "GLDEBUGPROC" {
-        writeln!(
+        write!(
           f,
-          "/// `fn(source, type, id, severity, length, message, userParam)`"
+          "#[doc=\"`fn(source, type, id, severity, length, message, userParam)`\"]"
         )?;
       }
       if self.name == "GLDEBUGPROCARB" {
-        writeln!(
+        write!(
           f,
-          "/// `fn(source, type, id, severity, length, message, userParam)`"
+          "#[doc=\"`fn(source, type, id, severity, length, message, userParam)`\"]"
         )?;
       }
       if self.name == "GLDEBUGPROCKHR" {
-        writeln!(
+        write!(
           f,
-          "/// `fn(source, type, id, severity, length, message, userParam)`"
+          "#[doc=\"`fn(source, type, id, severity, length, message, userParam)`\"]"
         )?;
       }
       if self.name == "GLDEBUGPROCAMD" {
-        writeln!(
+        write!(
           f,
-          "/// `fn(id, category, severity, length, message, userParam)`"
+          "#[doc=\"`fn(id, category, severity, length, message, userParam)`\"]"
         )?;
       }
       write!(
@@ -105,7 +105,7 @@ impl core::fmt::Display for Type {
         "GLhandleARB" => {
           write!(
             f,
-            "#[cfg(any(target_os=\"mac_os\", target_os=\"ios\"))]pub type GLhandleARB = *mut c_void;\n#[cfg(not(any(target_os=\"mac_os\", target_os=\"ios\")))]pub type GLhandleARB = c_uint;"
+            "#[cfg(any(target_os=\"mac_os\", target_os=\"ios\"))]pub type GLhandleARB = *mut c_void;#[cfg(not(any(target_os=\"mac_os\", target_os=\"ios\")))]pub type GLhandleARB = c_uint;"
           )
         }
         other => panic!("unexpected:{}", other),

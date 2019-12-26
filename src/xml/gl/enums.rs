@@ -27,9 +27,41 @@ pub enum EnumValue {
   ULL(u64),
 }
 
+/// Allows properly displaying an enum key/value pair.
+#[derive(Debug, Clone)]
+#[allow(missing_docs)]
+pub struct EnumDisplay<'a> {
+  pub key: &'a EnumKey,
+  pub value: &'a EnumValue,
+}
+impl core::fmt::Display for EnumDisplay<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    match self.value {
+      EnumValue::Enum(num) => write!(
+        f,
+        "pub const {name}: GLenum = 0x{num:X};",
+        name = self.key.name,
+        num = num
+      ),
+      EnumValue::Bitmask(mask) => write!(
+        f,
+        "pub const {name}: GLbitfield = 0x{mask:X};",
+        name = self.key.name,
+        mask = mask
+      ),
+      EnumValue::ULL(ull) => write!(
+        f,
+        "pub const {name}: u64 = 0x{ull:X};",
+        name = self.key.name,
+        ull = ull
+      ),
+    }
+  }
+}
+
 /// A map of enum keys to values
 #[derive(Debug, Default, Clone)]
-pub struct Enums(HashMap<EnumKey, EnumValue>);
+pub struct Enums(pub(crate) HashMap<EnumKey, EnumValue>);
 
 /// Grabs an `enums` tag from the iterator.
 ///
@@ -42,7 +74,7 @@ pub fn pull_enums(
   it: &mut XmlIterator<'_>,
   enums: &mut Enums,
   is_bitmask: bool,
-  mut group: Option<&mut Group>,
+  mut group: Option<&mut HashSet<String>>,
 ) -> Option<()> {
   loop {
     match it.next()? {
@@ -99,7 +131,7 @@ pub fn pull_enums(
           }
         } else {
           if let Some(group) = group.as_mut() {
-            group.enums.push(key.name.clone());
+            group.insert(key.name.clone());
           }
           enums.0.insert(key, val);
         }
@@ -117,7 +149,7 @@ pub fn pull_enums(
             }
           } else {
             if let Some(group) = group.as_mut() {
-              group.enums.push(key.name.clone());
+              group.insert(key.name.clone());
             }
             enums.0.insert(key, val);
           }
