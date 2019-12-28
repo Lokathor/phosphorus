@@ -4,7 +4,7 @@ use super::*;
 ///
 /// The `gl.xml` file doesn't actually handle when to include a type or not very
 /// well, so we simply emit _all_ types regardless of feature selected.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Type {
   /// Just the name of the C type alias (for easy searching).
   name: String,

@@ -13,6 +13,9 @@ use hashbrown::*;
 pub mod xml;
 pub use xml::*;
 
+pub mod generators;
+pub use generators::*;
+
 /// The broad categories of GL API
 pub enum ApiCategory {
   /// OpenGL

@@ -82,14 +82,14 @@ pub fn pull_enums(
       EmptyTag { name: "enum", attrs } => {
         let mut name = None;
         let mut value = None;
-        let mut alias = None;
+        //let mut alias = None;
         let mut api = None;
         let mut is_ull = false;
         for (k, v) in AttributeIterator::new(attrs) {
           match k {
             "name" => name = Some(v),
             "value" => value = Some(v),
-            "alias" => alias = Some(v),
+            "alias" => (), //alias = Some(v),
             "comment" => (),
             "type" => is_ull = v == "ull",
             "api" => api = Some(v.to_owned()),
@@ -135,25 +135,25 @@ pub fn pull_enums(
           }
           enums.0.insert(key, val);
         }
-        if let Some(alias) = alias {
-          let name = alias.to_owned();
-          let key = EnumKey { name, api: api.clone() };
-          if enums.0.contains_key(&key) {
-            let old = *enums.0.get(&key).unwrap();
-            let new = val;
-            if old != new {
-              panic!(
-                "key overwrite: key: {:?}, old: {:?}, new: {:?}",
-                key, old, new
-              );
-            }
-          } else {
-            if let Some(group) = group.as_mut() {
-              group.insert(key.name.clone());
-            }
-            enums.0.insert(key, val);
-          }
-        }
+        // if let Some(alias) = alias {
+        //   let name = alias.to_owned();
+        //   let key = EnumKey { name, api: api.clone() };
+        //   if enums.0.contains_key(&key) {
+        //     let old = *enums.0.get(&key).unwrap();
+        //     let new = val;
+        //     if old != new {
+        //       panic!(
+        //         "key overwrite: key: {:?}, old: {:?}, new: {:?}",
+        //         key, old, new
+        //       );
+        //     }
+        //   } else {
+        //     if let Some(group) = group.as_mut() {
+        //       group.insert(key.name.clone());
+        //     }
+        //     enums.0.insert(key, val);
+        //   }
+        // }
       }
       EmptyTag { name: "unused", attrs } => {
         // TODO: We should check if the `unused` tag is somehow used despite the
