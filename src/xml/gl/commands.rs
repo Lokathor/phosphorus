@@ -4,39 +4,43 @@ use super::*;
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Param {
   /// Param type.
-  ptype: String,
+  pub(crate) ptype: String,
   /// Param name.
-  name: String,
+  pub(crate) name: String,
   /// Param group (for enums).
   ///
   /// If there's a group declared for a non-enum param there's probably
   /// something weird going on.
-  group: Option<String>,
+  pub(crate) group: Option<String>,
   /// Param length (for pointers).
   ///
   /// If a length is declared on a non-pointer param there's probably something
   /// weird going on.
-  len: Option<String>,
+  pub(crate) len: Option<String>,
 }
 
 /// A single command's info.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Command {
+  /// Just the name, for easy searching.
+  pub(crate) name: String,
+  /// proto-return type
+  pub(crate) return_type: Option<String>,
   /// The function's C prototype
-  proto: String,
+  pub(crate) full_proto: String,
   /// The group that the prototype return value belongs to, if any.
-  proto_group: Option<String>,
+  pub(crate) return_group: Option<String>,
   /// The function's arguments
-  params: Vec<Param>,
+  pub(crate) params: Vec<Param>,
   /// You can find this command under some alternate name.
   ///
   /// Generally the "main" version won't have an alias entry, and then one or
   /// more versions (that were extensions before being stabilized) will all
   /// mark themselves as being an alias of the main version.
-  alias: Option<String>,
+  pub(crate) alias: Option<String>,
   /// This command has an equivalent "vector" version that just takes a single
   /// pointer instead of however many separate params.
-  vecequiv: Option<String>,
+  pub(crate) vecequiv: Option<String>,
 }
 
 /// All the commands.
@@ -67,18 +71,41 @@ pub fn pull_commands(
             StartTag { name: "proto", attrs } if !seen_proto => {
               for (k, v) in AttributeIterator::new(attrs) {
                 match k {
-                  "group" => command.proto_group = Some(v.to_owned()),
+                  "group" => command.return_group = Some(v.to_owned()),
                   _ => panic!("unknown `proto` attrs: {}", attrs),
                 }
               }
               'gather_proto: loop {
                 match it.next()? {
                   EndTag { name: "proto" } => break 'gather_proto,
-                  Text(text) => command.proto.push_str(text),
-                  StartTag { name: "name", .. } => continue,
-                  EndTag { name: "name" } => continue,
-                  StartTag { name: "ptype", .. } => continue,
-                  EndTag { name: "ptype" } => continue,
+                  StartTag { name: "ptype", .. } => {
+                    match it.next()? {
+                      Text(text) => {
+                        command.return_type = Some(text.to_owned());
+                        command.full_proto.push_str(text);
+                        command.full_proto.push(' ');
+                      }
+                      other => panic!("unexpected> {:?}", other),
+                    }
+                    match it.next()? {
+                      EndTag { name: "ptype" } => (),
+                      other => panic!("unexpected> {:?}", other),
+                    }
+                  }
+                  Text(text) => command.full_proto.push_str(text),
+                  StartTag { name: "name", .. } => {
+                    match it.next()? {
+                      Text(text) => {
+                        command.name.push_str(text);
+                        command.full_proto.push_str(text);
+                      }
+                      other => panic!("unexpected> {:?}", other),
+                    }
+                    match it.next()? {
+                      EndTag { name: "name" } => (),
+                      other => panic!("unexpected> {:?}", other),
+                    }
+                  }
                   other => panic!("unexpected> {:?}", other),
                 }
               }

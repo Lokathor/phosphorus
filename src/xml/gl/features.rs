@@ -1,11 +1,5 @@
 use super::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Profile {
-  Core,
-  Compatibility,
-}
-
 /// An item that the feature requires when it's being targeted.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FeatureRequirement {
@@ -67,12 +61,14 @@ pub fn pull_feature(
             "profile" => match v {
               "core" => profile = Some(Profile::Core),
               "compatibility" => profile = Some(Profile::Compatibility),
+              "common" => (), /* counts as None for our purposes */
               _ => panic!("unknown `require` attrs: {}", attrs),
             },
             _ => panic!("unknown `require` attrs: {}", attrs),
           }
         }
-        let temp = feature.requirements.entry(profile).or_insert(HashSet::new());
+        let temp =
+          feature.requirements.entry(profile).or_insert(HashSet::new());
         'gather_require: loop {
           match it.next()? {
             EndTag { name: "require" } => break 'gather_require,

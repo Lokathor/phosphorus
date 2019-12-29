@@ -9,9 +9,9 @@ use super::*;
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct EnumKey {
   /// Enum name
-  name: String,
-  /// Enum availability (`None` == always)
-  api: Option<String>,
+  pub(crate) name: String,
+  /// Enum availability (eg: "gl", "gles2", `None` == always)
+  pub(crate) api: Option<String>,
 }
 
 /// The value variations that an Enum name can take.

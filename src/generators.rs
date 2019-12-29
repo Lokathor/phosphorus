@@ -88,13 +88,18 @@ fn feature_layers(name: &str) -> &[&'static str] {
   }
 }
 
+/// Lets you prep the output.
+#[derive(Debug, Clone)]
 pub struct Output {
+  name: String,
   types: HashSet<Type>,
   enums: HashMap<String, EnumValue>,
   groups: HashMap<String, HashSet<String>>,
   commands: HashSet<Command>,
 }
+
 impl Output {
+  /// Fills in a new output struct.
   pub fn new(
     reg: &GlRegistry,
     name: &str,
@@ -102,16 +107,137 @@ impl Output {
     extensions: &[&str],
   ) -> Self {
     let mut out = Output {
+      name: name.to_string(),
       types: HashSet::new(),
       enums: HashMap::new(),
       groups: HashMap::new(),
       commands: HashSet::new(),
     };
 
+    let api: String =
+      format!("{:?}", ApiCategory::from_name(name)).to_lowercase();
+
     for feat_name in feature_layers(name) {
       let feature =
         reg.features().iter().find(|f| &f.name == feat_name).unwrap();
-      
+      //println!("feat_name: {}", feat_name);
+      //println!("feature: {}", feature.name);
+      for (req_k, req_vals) in feature.requirements.iter() {
+        // Note: we allow `None` to match our selected profile too!
+        if let Some(p) = req_k {
+          if *p != profile {
+            continue;
+          }
+        }
+        for req in req_vals {
+          //println!("req: {:?}", req);
+          match req {
+            FeatureRequirement::Type { name } => {
+              let t =
+                reg.types().iter().find(|t| &t.name == name).unwrap().clone();
+              out.types.insert(t);
+            }
+            FeatureRequirement::Enum { name } => {
+              let the_api_key =
+                EnumKey { name: name.clone(), api: Some(api.clone()) };
+              let the_none_key = EnumKey { name: name.clone(), api: None };
+              let (k, v) = reg
+                .enums()
+                .iter()
+                .find(|(k, _)| k == &&the_api_key || k == &&the_none_key)
+                .unwrap();
+              out.enums.insert(k.name.clone(), *v);
+            }
+            FeatureRequirement::Command { name } => {
+              let c = reg
+                .commands()
+                .iter()
+                .find(|c| &c.name == name)
+                .unwrap()
+                .clone();
+              out.commands.insert(c);
+            }
+          }
+        }
+      }
+      for (rem_k, rem_vals) in feature.removals.iter() {
+        // Note: we allow `None` to match our selected profile too!
+        if let Some(p) = rem_k {
+          if *p != profile {
+            continue;
+          }
+        }
+        for rem in rem_vals {
+          match rem {
+            FeatureRemoval::Type { name } => {
+              let t = reg.types().iter().find(|t| &t.name == name).unwrap();
+              out.types.remove(t);
+            }
+            FeatureRemoval::Enum { name } => {
+              out.enums.remove(name);
+            }
+            FeatureRemoval::Command { name } => {
+              let c = reg.commands().iter().find(|c| &c.name == name).unwrap();
+              out.commands.remove(c);
+            }
+          }
+        }
+      }
+    }
+
+    // TODO: add extensions here! (before the cmd set is used)
+
+    //println!("groups: {:#?}", reg.groups());
+    //println!("types: {:#?}", reg.types());
+    for cmd in out.commands.iter() {
+      use hashbrown::hash_map::Entry;
+      if let Some(ref ty) = cmd.return_type {
+        let t = reg.types().iter().find(|t| &t.name == ty).unwrap().clone();
+        out.types.insert(t);
+      }
+      if let Some(ref group) = cmd.return_group {
+        match out.groups.entry(group.to_owned()) {
+          Entry::Occupied(_) => (),
+          Entry::Vacant(ve) => {
+            if let Some(gr_set) = reg.groups().get(group) {
+              // adding groups into the output is best effort! There are many
+              // groups "required" that aren't defined in `gl.xml`.
+              ve.insert(gr_set.clone());
+            }
+          }
+        }
+      }
+      for param in cmd.params.iter() {
+        //println!("param: {:#?}", param);
+        let ty = if param.ptype.contains("void") {
+          "GLvoid"
+        } else {
+          let mut t = param.ptype.as_str();
+          if t.starts_with("const ") {
+            t = &t[6..];
+          }
+          if t.contains('*') {
+            t = t.split('*').next().unwrap()
+          }
+          t
+        };
+        //println!("ty:{}", ty);
+        let t = reg.types().iter().find(|t| t.name == ty).unwrap().clone();
+        out.types.insert(t);
+        if let Some(ref group) = param.group {
+          //println!("group: {:#?}", group);
+          match out.groups.entry(group.to_owned()) {
+            Entry::Occupied(_) => (),
+            Entry::Vacant(ve) => {
+              if let Some(gr_set) = reg.groups().get(group) {
+                // adding groups into the output is best effort! There are many
+                // groups "required" that aren't defined in `gl.xml`.
+                ve.insert(gr_set.clone());
+              }
+            }
+          }
+        }
+      }
     }
 
     out

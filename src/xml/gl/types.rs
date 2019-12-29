@@ -7,9 +7,9 @@ use super::*;
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Type {
   /// Just the name of the C type alias (for easy searching).
-  name: String,
+  pub(crate) name: String,
   /// The full text of the C `typedef` declaration.
-  text: String,
+  pub(crate) text: String,
 }
 impl core::fmt::Display for Type {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {

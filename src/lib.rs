@@ -17,6 +17,7 @@ pub mod generators;
 pub use generators::*;
 
 /// The broad categories of GL API
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApiCategory {
   /// OpenGL
   Gl,
@@ -27,13 +28,49 @@ pub enum ApiCategory {
   /// OpenGL Safety Critical 2.0
   Glsc2,
 }
+impl ApiCategory {
+  /// Turn an API Feature Name into an ApiCategory, or panic.
+  ///
+  /// eg: "GL_VERSION_3_3" -> `ApiCategory::Gl`
+  pub fn from_name(name: &str) -> Self {
+    match name {
+      "GL_SC_VERSION_2_0" => Self::Glsc2,
+      "GL_ES_VERSION_3_2" => Self::Gles2,
+      "GL_ES_VERSION_3_1" => Self::Gles2,
+      "GL_ES_VERSION_3_0" => Self::Gles2,
+      "GL_ES_VERSION_2_0" => Self::Gles2,
+      "GL_VERSION_ES_CM_1_0" => Self::Gles1,
+      "GL_VERSION_4_6" => Self::Gl,
+      "GL_VERSION_4_5" => Self::Gl,
+      "GL_VERSION_4_4" => Self::Gl,
+      "GL_VERSION_4_3" => Self::Gl,
+      "GL_VERSION_4_2" => Self::Gl,
+      "GL_VERSION_4_1" => Self::Gl,
+      "GL_VERSION_4_0" => Self::Gl,
+      "GL_VERSION_3_3" => Self::Gl,
+      "GL_VERSION_3_2" => Self::Gl,
+      "GL_VERSION_3_1" => Self::Gl,
+      "GL_VERSION_3_0" => Self::Gl,
+      "GL_VERSION_2_1" => Self::Gl,
+      "GL_VERSION_2_0" => Self::Gl,
+      "GL_VERSION_1_5" => Self::Gl,
+      "GL_VERSION_1_4" => Self::Gl,
+      "GL_VERSION_1_3" => Self::Gl,
+      "GL_VERSION_1_2" => Self::Gl,
+      "GL_VERSION_1_1" => Self::Gl,
+      "GL_VERSION_1_0" => Self::Gl,
+      _ => panic!("Not an ApiCategory: {}", name),
+    }
+  }
+}
 
 /// The two profiles that you can use with GL (if that version uses profiles).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Profile {
   /// The core functionality only
   Core,
-  /// Includes backwards compatability
-  Compatability,
+  /// Includes backwards compatibility
+  Compatibility,
 }
 
 /// Gets the feature name for a given (category, major, minor) triple.
