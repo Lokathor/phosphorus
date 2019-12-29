@@ -187,8 +187,6 @@ impl Output {
 
     // TODO: add extensions here! (before the cmd set is used)
 
-    //println!("groups: {:#?}", reg.groups());
-    //println!("types: {:#?}", reg.types());
     for cmd in out.commands.iter() {
       use hashbrown::hash_map::Entry;
       if let Some(ref ty) = cmd.return_type {
@@ -208,7 +206,8 @@ impl Output {
         }
       }
       for param in cmd.params.iter() {
-        //println!("param: {:#?}", param);
+        // This is just an approximation so we can pull in all the right types,
+        // it doesn't have to parse very properly.
         let ty = if param.ptype.contains("void") {
           "GLvoid"
         } else {
@@ -221,11 +220,9 @@ impl Output {
           }
           t
         };
-        //println!("ty:{}", ty);
         let t = reg.types().iter().find(|t| t.name == ty).unwrap().clone();
         out.types.insert(t);
         if let Some(ref group) = param.group {
-          //println!("group: {:#?}", group);
           match out.groups.entry(group.to_owned()) {
             Entry::Occupied(_) => (),
             Entry::Vacant(ve) => {
