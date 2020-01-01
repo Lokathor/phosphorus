@@ -4,7 +4,7 @@ use super::*;
 ///
 /// The `gl.xml` file doesn't actually handle when to include a type or not very
 /// well, so we simply emit _all_ types regardless of feature selected.
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Type {
   /// Just the name of the C type alias (for easy searching).
   pub(crate) name: String,
@@ -51,7 +51,7 @@ impl core::fmt::Display for Type {
           "struct" => {
             assert_eq!(it.next(), Some("__GLsync"));
             assert_eq!(it.next(), Some("*GLsync;"));
-            "*mut __GLsync; pub struct __GLsync(u8)"
+            r#"*mut __GLsync; #[doc="Treat as \"opaque\"."] pub struct __GLsync(u8)"#
           }
           "GLintptr" => "GLintptr",
           "unsigned" => match it.next().unwrap() {
@@ -97,10 +97,10 @@ impl core::fmt::Display for Type {
       match self.name.as_str() {
         "khrplatform" => Ok(()),
         "struct _cl_context" => {
-          write!(f, "pub struct _cl_context(u8);")
+          write!(f, r#"#[doc="Treat as \"opaque\".\n\nCompatible with OpenCL `cl_context`."] pub struct _cl_context(u8);"#)
         }
         "struct _cl_event" => {
-          write!(f, "pub struct _cl_event(u8);")
+          write!(f, r#"#[doc="Treat as \"opaque\".\n\nCompatible with OpenCL `cl_event`."] pub struct _cl_event(u8);"#)
         }
         "GLhandleARB" => {
           write!(

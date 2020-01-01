@@ -4,6 +4,26 @@ use super::*;
 #[derive(Debug, Default, Clone)]
 pub struct Groups(pub(crate) HashMap<String, HashSet<String>>);
 
+/// Allows properly displaying an enum key/value pair.
+#[derive(Debug, Clone)]
+#[allow(missing_docs)]
+pub struct GroupDisplay<'a> {
+  pub name: &'a String,
+  pub entries: &'a HashSet<String>,
+}
+impl core::fmt::Display for GroupDisplay<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(f, "#[doc=\"{}\\n", self.name)?;
+    let mut enums_v: Vec<&String> = self.entries.iter().collect();
+    enums_v.sort();
+    for enu in enums_v {
+      write!(f, "* `{}`\\n", enu)?;
+    }
+    write!(f, "\"]")?;
+    write!(f, " pub type {} = GLenum;", self.name)
+  }
+}
+
 /// Extracts all the Group definitions from the iterator.
 #[must_use]
 pub fn pull_groups(

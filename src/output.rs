@@ -91,11 +91,24 @@ fn feature_layers(name: &str) -> &[&'static str] {
 /// Lets you prep the output.
 #[derive(Debug, Clone)]
 pub struct Output {
-  name: String,
-  types: HashSet<Type>,
-  enums: HashMap<String, EnumValue>,
-  groups: HashMap<String, HashSet<String>>,
-  commands: HashSet<Command>,
+  /// Feature name
+  pub name: String,
+  /// Profile selected
+  pub profile: Profile,
+  /// Extensions selected,
+  pub extensions: Vec<String>,
+  /// All type aliases required
+  pub types: HashSet<Type>,
+  /// All enums required.
+  ///
+  /// Display with `EnumDisplay`
+  pub enums: HashMap<String, EnumValue>,
+  /// All groups required
+  ///
+  /// Display with `GroupDisplay`
+  pub groups: HashMap<String, HashSet<String>>,
+  /// All commands required.
+  pub commands: HashSet<Command>,
 }
 
 impl Output {
@@ -108,6 +121,8 @@ impl Output {
   ) -> Self {
     let mut out = Output {
       name: name.to_string(),
+      profile,
+      extensions: extensions.iter().map(|s| (*s).to_string()).collect(),
       types: HashSet::new(),
       enums: HashMap::new(),
       groups: HashMap::new(),
@@ -120,8 +135,6 @@ impl Output {
     for feat_name in feature_layers(name) {
       let feature =
         reg.features().iter().find(|f| &f.name == feat_name).unwrap();
-      //println!("feat_name: {}", feat_name);
-      //println!("feature: {}", feature.name);
       for (req_k, req_vals) in feature.requirements.iter() {
         // Note: we allow `None` to match our selected profile too!
         if let Some(p) = req_k {
@@ -130,7 +143,6 @@ impl Output {
           }
         }
         for req in req_vals {
-          //println!("req: {:?}", req);
           match req {
             FeatureRequirement::Type { name } => {
               let t =
@@ -185,7 +197,55 @@ impl Output {
       }
     }
 
-    // TODO: add extensions here! (before the cmd set is used)
+    for extension_name in extensions {
+      let extension = reg
+        .extensions()
+        .iter()
+        .find(|ex| {
+          &ex.name == extension_name
+            && ex.supported.split('|').any(|s| s == api)
+        })
+        .unwrap();
+      for req in extension.requirements.iter() {
+        // if an API is specified but it's not our API, skip
+        if req.api.as_ref().map(|s| s != &api).unwrap_or(false) {
+          continue;
+        }
+        // if a profile is specified but it's not our profile, skip
+        if req.profile.as_ref().map(|s| s != &api).unwrap_or(false) {
+          continue;
+        }
+        for item in req.items.iter() {
+          match item {
+            FeatureRequirement::Type { name } => {
+              let t =
+                reg.types().iter().find(|t| &t.name == name).unwrap().clone();
+              out.types.insert(t);
+            }
+            FeatureRequirement::Enum { name } => {
+              let the_api_key =
+                EnumKey { name: name.clone(), api: Some(api.clone()) };
+              let the_none_key = EnumKey { name: name.clone(), api: None };
+              let (k, v) = reg
+                .enums()
+                .iter()
+                .find(|(k, _)| k == &&the_api_key || k == &&the_none_key)
+                .unwrap();
+              out.enums.insert(k.name.clone(), *v);
+            }
+            FeatureRequirement::Command { name } => {
+              let c = reg
+                .commands()
+                .iter()
+                .find(|c| &c.name == name)
+                .unwrap()
+                .clone();
+              out.commands.insert(c);
+            }
+          }
+        }
+      }
+    }
 
     for cmd in out.commands.iter() {
       use hashbrown::hash_map::Entry;
@@ -241,8 +301,7 @@ impl Output {
   }
 }
 
-// TODO: generate the lib.rs for an API level + extensions
+// TODO: ability to output Commands
 
-// TODO: generate the global_loader.rs for an API level + extensions
-
-// TODO: generate the struct_loader.rs for an API level + extensions
+// TODO: emit all output as a single file using internal modules so that users
+// can break it up if they choose.

@@ -9,9 +9,9 @@ use super::*;
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct EnumKey {
   /// Enum name
-  pub(crate) name: String,
+  pub name: String,
   /// Enum availability (eg: "gl", "gles2", `None` == always)
-  pub(crate) api: Option<String>,
+  pub api: Option<String>,
 }
 
 /// The value variations that an Enum name can take.
@@ -36,23 +36,26 @@ pub struct EnumDisplay<'a> {
 }
 impl core::fmt::Display for EnumDisplay<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    // trim off the `GL_` prefix if the alternate is requested.
+    let the_name =
+      if f.alternate() { &self.key.name[3..] } else { &self.key.name };
     match self.value {
       EnumValue::Enum(num) => write!(
         f,
         "pub const {name}: GLenum = 0x{num:X};",
-        name = self.key.name,
+        name = the_name,
         num = num
       ),
       EnumValue::Bitmask(mask) => write!(
         f,
-        "pub const {name}: GLbitfield = 0x{mask:X};",
-        name = self.key.name,
+        "pub const {name}: GLbitfield = 0x{mask:08X};",
+        name = the_name,
         mask = mask
       ),
       EnumValue::ULL(ull) => write!(
         f,
         "pub const {name}: u64 = 0x{ull:X};",
-        name = self.key.name,
+        name = the_name,
         ull = ull
       ),
     }

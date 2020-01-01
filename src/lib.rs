@@ -3,6 +3,7 @@
 #![allow(clippy::cognitive_complexity)]
 #![allow(clippy::implicit_hasher)]
 #![warn(missing_docs)]
+#![allow(clippy::len_zero)]
 
 //! `phosphorus` is a GL bindings generator crate.
 //!
@@ -13,8 +14,8 @@ use hashbrown::*;
 pub mod xml;
 pub use xml::*;
 
-pub mod generators;
-pub use generators::*;
+pub mod output;
+pub use output::*;
 
 /// The broad categories of GL API
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -71,6 +72,11 @@ pub enum Profile {
   Core,
   /// Includes backwards compatibility
   Compatibility,
+}
+impl core::fmt::Display for Profile {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(f, "{:?}", self)
+  }
 }
 
 /// Gets the feature name for a given (category, major, minor) triple.

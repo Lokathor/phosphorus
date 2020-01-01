@@ -18,6 +18,49 @@ pub struct Param {
   /// weird going on.
   pub(crate) len: Option<String>,
 }
+impl Param {
+  fn rust_param_type(&self) -> String {
+    if self.ptype == "GLenum" || self.ptype == "GLbitfield" {
+      if let Some(s) = self.group.as_ref() {
+        s.to_owned()
+      } else {
+        self.ptype.to_owned()
+      }
+    } else if self.ptype.contains('*') {
+      if self.ptype == "const GLchar *const*"
+        || self.ptype == "const GLchar*const*"
+      {
+        return "*const *const GLchar".to_owned();
+      } else if self.ptype == "const void *const*" {
+        return "*const *const c_void".to_owned();
+      } else if self.ptype == "void **" {
+        return "*mut *mut c_void".to_owned();
+      }
+      let star_count = self.ptype.chars().filter(|c| *c == '*').count();
+      assert_eq!(star_count, 1, "unhandled: {}", self.ptype);
+      // TODO: handle special pointer types for known lengths!
+      let mut out = String::new();
+      out.push('*');
+      if self.ptype.contains("const") {
+        out.push_str("const ");
+        let term = if self.ptype.contains("void") {
+          "c_void "
+        } else {
+          self.ptype.split_whitespace().nth(1).unwrap()
+        };
+        out.push_str(&term[..term.len() - 1]);
+      } else {
+        out.push_str("mut ");
+        let term =
+          if self.ptype.contains("void") { "c_void " } else { &self.ptype };
+        out.push_str(&term[..term.len() - 1]);
+      }
+      out
+    } else {
+      self.ptype.clone()
+    }
+  }
+}
 
 /// A single command's info.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
@@ -41,6 +84,54 @@ pub struct Command {
   /// This command has an equivalent "vector" version that just takes a single
   /// pointer instead of however many separate params.
   pub(crate) vecequiv: Option<String>,
+}
+impl Command {
+  fn rust_fn_type(&self) -> String {
+    let mut out = String::new();
+    out.push_str("unsafe extern \"system\" fn(");
+    for param in self.params.iter() {
+      out.push_str(&param.rust_param_type());
+      out.push_str(", ");
+    }
+    if self.params.len() > 0 {
+      out.pop();
+      out.pop();
+    }
+    out.push_str(")");
+    if let Some(s) = self.return_type.as_ref() {
+      out.push_str(" -> ");
+      out.push_str(s);
+    }
+    out
+  }
+}
+
+/// Displayer for a global version of a given Command.
+pub struct GlobalCommand<'c> {
+  /// The Command to display.
+  pub command: &'c Command,
+}
+impl core::fmt::Display for GlobalCommand<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    let the_name =
+      if f.alternate() { &self.command.name[2..] } else { &self.command.name };
+    let rust_fn_type = self.command.rust_fn_type();
+    let type_alias_name = format!("{}_t", the_name);
+    write!(f, "type {} = {};", type_alias_name, rust_fn_type)?;
+    write!(
+      f,
+      " static {}_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());",
+      the_name
+    )?;
+    write!(f, " const {}_str: &str = \"{}\\0\";", the_name, self.command.name)?;
+    write!(
+      f,
+      " #[doc(hidden)] pub fn load_{}() {{ unimplemented!() }}",
+      the_name
+    )?;
+    write!(f, " pub fn {}() {{ unimplemented!() }}", the_name)?;
+    Ok(())
+  }
 }
 
 /// All the commands.

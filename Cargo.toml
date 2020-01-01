@@ -7,3 +7,11 @@ license = "Zlib"
 
 [dependencies]
 hashbrown = "0.6"
+
+[dev-dependencies]
+chlorine = "1"
+
+[features]
+global_loader = []
+struct_loader = []
+default = ["global_loader", "struct_loader"]
