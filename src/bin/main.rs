@@ -176,6 +176,7 @@ fn main() {
   }
 
   {
+    let fn_prefix = "gl";
     println!();
     println!(r#"#[cfg(feature="global_loader")]"#);
     println!("pub use global_loader::*;");
@@ -186,6 +187,20 @@ fn main() {
     println!("  use core::mem::transmute;");
     println!("  use core::ops::Not;");
     println!("  use core::sync::atomic::{{AtomicPtr, Ordering}};");
+    println!();
+    println!("  #[doc = \"Loads all the global GL functions.\\n\\nGiven a function from C string pointer to GL function pointer, loads all the GL functions.\\n\\n## Safety\\nThis can check for nulls and other common error values, but otherwise mostly trusts whatever pointer is returned.\"]");
+    println!("  pub unsafe fn global_load<F>(mut f: F)");
+    println!("    where F: FnMut(*const c_char) -> *mut c_void");
+    println!("  {{");
+    for command in output.commands.iter() {
+      let name = &command.name[2..];
+      println!(
+        "    load_{fn_prefix}{name}(&mut f);",
+        name = name,
+        fn_prefix = fn_prefix
+      )
+    }
+    println!("  }}");
     let mut command_v: Vec<String> = output
       .commands
       .iter()

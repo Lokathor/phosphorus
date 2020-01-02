@@ -16,7 +16,7 @@ pub struct Param {
   ///
   /// If a length is declared on a non-pointer param there's probably something
   /// weird going on.
-  pub(crate) len: Option<String>,
+  pub len: Option<String>,
 }
 impl Param {
   fn rust_param_type(&self) -> String {
@@ -66,7 +66,7 @@ impl Param {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Command {
   /// Just the name, for easy searching.
-  pub(crate) name: String,
+  pub name: String,
   /// proto-return type
   pub(crate) return_type: Option<String>,
   /// The function's C prototype
@@ -74,7 +74,7 @@ pub struct Command {
   /// The group that the prototype return value belongs to, if any.
   pub(crate) return_group: Option<String>,
   /// The function's arguments
-  pub(crate) params: Vec<Param>,
+  pub params: Vec<Param>,
   /// You can find this command under some alternate name.
   ///
   /// Generally the "main" version won't have an alias entry, and then one or
@@ -215,6 +215,10 @@ impl core::fmt::Display for GlobalCommand<'_> {
       the_name = the_name,
       ptr_name = ptr_name,
     )?;
+    // TODO: Spec links on all commands.
+    // TODO: doc the lengths of pointers.
+    // TODO: mention alternates
+    // TODO: mention vector forms.
     write!(f, " #[inline] pub unsafe fn {the_name}({param_names_and_types}){return_tag} {{ 
       #[cfg(feature = \"trace_calls\")] {{ std::println!(\"calling {{}}\", &{str_name}[..{str_name}.len()-1]); }} let p = {ptr_name}.load(Ordering::Relaxed); if p.is_null() {{ panic!(\"{{}} not loaded\", &{str_name}[..{str_name}.len()-1]) }} let out = transmute::<*mut c_void, {type_alias_name}>(p)({param_names}); {error_check} out }}", the_name = the_name, ptr_name = ptr_name, type_alias_name = type_alias_name, str_name = str_name, param_names_and_types = param_names_and_types, return_tag = return_tag, param_names = param_names, error_check = error_check)?;
     Ok(())
