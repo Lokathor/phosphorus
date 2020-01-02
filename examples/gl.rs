@@ -1,6 +1,14 @@
-#![no_std]
+#![cfg_attr(
+  not(any(feature = "trace_calls", feature = "error_checks")),
+  no_std
+)]
 #![allow(bad_style)]
 #![allow(clippy::unreadable_literal)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::let_and_return)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::many_single_char_names)]
 
 /*
 Bindings for GL.
@@ -1049,18 +1057,32 @@ fn fn_ptr_ok(p: *const c_void) -> bool {
 }
 
 #[cfg(any(feature = "global_loader", feature = "struct_loader"))]
-use core::ptr::NonNull;
-#[cfg(any(feature = "global_loader", feature = "struct_loader"))]
 fn call_loader(
-  loader: &mut dyn FnMut(*const c_char) -> *const c_void,
+  loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
   name: &[u8],
-) -> Option<NonNull<c_void>> {
+) -> *mut c_void {
   debug_assert!(*name.last().unwrap() == 0_u8);
   let p = loader(name.as_ptr() as *const c_char);
   if fn_ptr_ok(p) {
-    NonNull::new(p as *mut c_void)
+    p
   } else {
-    None
+    core::ptr::null_mut()
+  }
+}
+
+#[cfg(feature = "error_checks")]
+use std::borrow::Cow;
+#[cfg(feature = "error_checks")]
+fn error_name_for(err: GLenum) -> Cow<'static, str> {
+  match err {
+    GL_INVALID_ENUM => Cow::Borrowed("GL_INVALID_ENUM"),
+    GL_INVALID_VALUE => Cow::Borrowed("GL_INVALID_VALUE"),
+    GL_INVALID_OPERATION => Cow::Borrowed("GL_INVALID_OPERATION"),
+    GL_INVALID_FRAMEBUFFER_OPERATION => {
+      Cow::Borrowed("GL_INVALID_FRAMEBUFFER_OPERATION")
+    }
+    GL_OUT_OF_MEMORY => Cow::Borrowed("GL_OUT_OF_MEMORY"),
+    _ => Cow::Owned(format!("0x{:X}", err)),
   }
 }
 
@@ -1070,227 +1092,497 @@ pub use global_loader::*;
 pub mod global_loader {
   use super::*;
   use core::{
+    mem::transmute,
+    ops::Not,
     ptr::null_mut,
     sync::atomic::{AtomicPtr, Ordering},
   };
 
-  type glGetUniformfv_t =
-    unsafe extern "system" fn(GLuint, GLint, *mut GLfloat);
-  static glGetUniformfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetUniformfv_str: &str = "glGetUniformfv\0";
+  type glActiveTexture_t = unsafe extern "system" fn(TextureUnit);
+  static glActiveTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glActiveTexture_str: &str = "glActiveTexture\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGetUniformfv() {
-    unimplemented!()
+  pub unsafe fn load_glActiveTexture(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glActiveTexture_p.store(
+      call_loader(loader, glActiveTexture_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glGetUniformfv() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glActiveTexture_is_loaded() -> bool {
+    glActiveTexture_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glActiveTexture(texture: TextureUnit) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glActiveTexture_str[..glActiveTexture_str.len() - 1]
+      );
+    }
+    let p = glActiveTexture_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glActiveTexture_str[..glActiveTexture_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glActiveTexture_t>(p)(texture);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glActiveTexture_str[..glActiveTexture_str.len() - 1],
+          texture,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glUniform2uiv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
-  static glUniform2uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform2uiv_str: &str = "glUniform2uiv\0";
+  type glAttachShader_t = unsafe extern "system" fn(GLuint, GLuint);
+  static glAttachShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glAttachShader_str: &str = "glAttachShader\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glUniform2uiv() {
-    unimplemented!()
+  pub unsafe fn load_glAttachShader(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glAttachShader_p.store(
+      call_loader(loader, glAttachShader_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glUniform2uiv() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glAttachShader_is_loaded() -> bool {
+    glAttachShader_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glAttachShader(program: GLuint, shader: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glAttachShader_str[..glAttachShader_str.len() - 1]
+      );
+    }
+    let p = glAttachShader_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glAttachShader_str[..glAttachShader_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glAttachShader_t>(p)(program, shader);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glAttachShader_str[..glAttachShader_str.len() - 1],
+          program,
+          shader,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBeginConditionalRender_t =
+    unsafe extern "system" fn(GLuint, ConditionalRenderMode);
+  static glBeginConditionalRender_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glBeginConditionalRender_str: &str = "glBeginConditionalRender\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBeginConditionalRender(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBeginConditionalRender_p.store(
+      call_loader(loader, glBeginConditionalRender_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBeginConditionalRender_is_loaded() -> bool {
+    glBeginConditionalRender_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBeginConditionalRender(
+    id: GLuint,
+    mode: ConditionalRenderMode,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBeginConditionalRender_str[..glBeginConditionalRender_str.len() - 1]
+      );
+    }
+    let p = glBeginConditionalRender_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBeginConditionalRender_str[..glBeginConditionalRender_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBeginConditionalRender_t>(p)(id, mode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}) error: {err_name}",
+          &glBeginConditionalRender_str
+            [..glBeginConditionalRender_str.len() - 1],
+          id,
+          mode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBeginQuery_t = unsafe extern "system" fn(QueryTarget, GLuint);
+  static glBeginQuery_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBeginQuery_str: &str = "glBeginQuery\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBeginQuery(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBeginQuery_p
+      .store(call_loader(loader, glBeginQuery_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBeginQuery_is_loaded() -> bool {
+    glBeginQuery_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBeginQuery(target: QueryTarget, id: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBeginQuery_str[..glBeginQuery_str.len() - 1]
+      );
+    }
+    let p = glBeginQuery_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glBeginQuery_str[..glBeginQuery_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glBeginQuery_t>(p)(target, id);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glBeginQuery_str[..glBeginQuery_str.len() - 1],
+          target,
+          id,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBeginTransformFeedback_t = unsafe extern "system" fn(PrimitiveType);
+  static glBeginTransformFeedback_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glBeginTransformFeedback_str: &str = "glBeginTransformFeedback\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBeginTransformFeedback(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBeginTransformFeedback_p.store(
+      call_loader(loader, glBeginTransformFeedback_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBeginTransformFeedback_is_loaded() -> bool {
+    glBeginTransformFeedback_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBeginTransformFeedback(primitiveMode: PrimitiveType) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBeginTransformFeedback_str[..glBeginTransformFeedback_str.len() - 1]
+      );
+    }
+    let p = glBeginTransformFeedback_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBeginTransformFeedback_str[..glBeginTransformFeedback_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glBeginTransformFeedback_t>(p)(primitiveMode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glBeginTransformFeedback_str
+            [..glBeginTransformFeedback_str.len() - 1],
+          primitiveMode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBindAttribLocation_t =
+    unsafe extern "system" fn(GLuint, GLuint, *const GLchar);
+  static glBindAttribLocation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBindAttribLocation_str: &str = "glBindAttribLocation\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBindAttribLocation(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindAttribLocation_p.store(
+      call_loader(loader, glBindAttribLocation_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindAttribLocation_is_loaded() -> bool {
+    glBindAttribLocation_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindAttribLocation(
+    program: GLuint,
+    index: GLuint,
+    name: *const GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindAttribLocation_str[..glBindAttribLocation_str.len() - 1]
+      );
+    }
+    let p = glBindAttribLocation_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindAttribLocation_str[..glBindAttribLocation_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glBindAttribLocation_t>(p)(program, index, name);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glBindAttribLocation_str[..glBindAttribLocation_str.len() - 1],
+          program,
+          index,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBindBufferBase_t =
+    unsafe extern "system" fn(BufferTargetARB, GLuint, GLuint);
+  static glBindBufferBase_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBindBufferBase_str: &str = "glBindBufferBase\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBindBufferBase(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindBufferBase_p.store(
+      call_loader(loader, glBindBufferBase_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindBufferBase_is_loaded() -> bool {
+    glBindBufferBase_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindBufferBase(
+    target: BufferTargetARB,
+    index: GLuint,
+    buffer: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindBufferBase_str[..glBindBufferBase_str.len() - 1]
+      );
+    }
+    let p = glBindBufferBase_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindBufferBase_str[..glBindBufferBase_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glBindBufferBase_t>(p)(target, index, buffer);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glBindBufferBase_str[..glBindBufferBase_str.len() - 1],
+          target,
+          index,
+          buffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBindBufferRange_t = unsafe extern "system" fn(
+    BufferTargetARB,
+    GLuint,
+    GLuint,
+    GLintptr,
+    GLsizeiptr,
+  );
+  static glBindBufferRange_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBindBufferRange_str: &str = "glBindBufferRange\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBindBufferRange(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindBufferRange_p.store(
+      call_loader(loader, glBindBufferRange_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindBufferRange_is_loaded() -> bool {
+    glBindBufferRange_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindBufferRange(
+    target: BufferTargetARB,
+    index: GLuint,
+    buffer: GLuint,
+    offset: GLintptr,
+    size: GLsizeiptr,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindBufferRange_str[..glBindBufferRange_str.len() - 1]
+      );
+    }
+    let p = glBindBufferRange_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindBufferRange_str[..glBindBufferRange_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBindBufferRange_t>(p)(
+      target, index, buffer, offset, size,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glBindBufferRange_str[..glBindBufferRange_str.len() - 1],
+          target,
+          index,
+          buffer,
+          offset,
+          size,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glBindBuffer_t = unsafe extern "system" fn(BufferTargetARB, GLuint);
   static glBindBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glBindBuffer_str: &str = "glBindBuffer\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBindBuffer() {
-    unimplemented!()
+  pub unsafe fn load_glBindBuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindBuffer_p
+      .store(call_loader(loader, glBindBuffer_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glBindBuffer() {
-    unimplemented!()
-  }
-
-  type glBlendFunc_t =
-    unsafe extern "system" fn(BlendingFactor, BlendingFactor);
-  static glBlendFunc_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBlendFunc_str: &str = "glBlendFunc\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBlendFunc() {
-    unimplemented!()
+  pub fn glBindBuffer_is_loaded() -> bool {
+    glBindBuffer_p.load(Ordering::Relaxed).is_null().not()
   }
-  pub fn glBlendFunc() {
-    unimplemented!()
-  }
-
-  type glUniform3uiv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
-  static glUniform3uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform3uiv_str: &str = "glUniform3uiv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform3uiv() {
-    unimplemented!()
-  }
-  pub fn glUniform3uiv() {
-    unimplemented!()
-  }
-
-  type glGetVertexAttribfv_t =
-    unsafe extern "system" fn(GLuint, VertexAttribPropertyARB, *mut GLfloat);
-  static glGetVertexAttribfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetVertexAttribfv_str: &str = "glGetVertexAttribfv\0";
-  #[doc(hidden)]
-  pub fn load_glGetVertexAttribfv() {
-    unimplemented!()
-  }
-  pub fn glGetVertexAttribfv() {
-    unimplemented!()
-  }
-
-  type glDrawElementsInstanced_t = unsafe extern "system" fn(
-    PrimitiveType,
-    GLsizei,
-    DrawElementsType,
-    *const c_void,
-    GLsizei,
-  );
-  static glDrawElementsInstanced_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glDrawElementsInstanced_str: &str = "glDrawElementsInstanced\0";
-  #[doc(hidden)]
-  pub fn load_glDrawElementsInstanced() {
-    unimplemented!()
-  }
-  pub fn glDrawElementsInstanced() {
-    unimplemented!()
-  }
-
-  type glTexSubImage3D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-    GLsizei,
-    PixelFormat,
-    PixelType,
-    *const c_void,
-  );
-  static glTexSubImage3D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexSubImage3D_str: &str = "glTexSubImage3D\0";
-  #[doc(hidden)]
-  pub fn load_glTexSubImage3D() {
-    unimplemented!()
-  }
-  pub fn glTexSubImage3D() {
-    unimplemented!()
-  }
-
-  type glGetIntegerv_t = unsafe extern "system" fn(GetPName, *mut GLint);
-  static glGetIntegerv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetIntegerv_str: &str = "glGetIntegerv\0";
-  #[doc(hidden)]
-  pub fn load_glGetIntegerv() {
-    unimplemented!()
-  }
-  pub fn glGetIntegerv() {
-    unimplemented!()
-  }
-
-  type glMapBufferRange_t = unsafe extern "system" fn(
-    BufferTargetARB,
-    GLintptr,
-    GLsizeiptr,
-    MapBufferAccessMask,
-  );
-  static glMapBufferRange_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glMapBufferRange_str: &str = "glMapBufferRange\0";
-  #[doc(hidden)]
-  pub fn load_glMapBufferRange() {
-    unimplemented!()
-  }
-  pub fn glMapBufferRange() {
-    unimplemented!()
-  }
-
-  type glGetTexParameterIiv_t =
-    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLint);
-  static glGetTexParameterIiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetTexParameterIiv_str: &str = "glGetTexParameterIiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetTexParameterIiv() {
-    unimplemented!()
-  }
-  pub fn glGetTexParameterIiv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib2sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
-  static glVertexAttrib2sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib2sv_str: &str = "glVertexAttrib2sv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib2sv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib2sv() {
-    unimplemented!()
-  }
-
-  type glUniform1fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
-  static glUniform1fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform1fv_str: &str = "glUniform1fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform1fv() {
-    unimplemented!()
-  }
-  pub fn glUniform1fv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib2s_t = unsafe extern "system" fn(GLuint, GLshort, GLshort);
-  static glVertexAttrib2s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib2s_str: &str = "glVertexAttrib2s\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib2s() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib2s() {
-    unimplemented!()
-  }
-
-  type glUniform4i_t =
-    unsafe extern "system" fn(GLint, GLint, GLint, GLint, GLint);
-  static glUniform4i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform4i_str: &str = "glUniform4i\0";
-  #[doc(hidden)]
-  pub fn load_glUniform4i() {
-    unimplemented!()
-  }
-  pub fn glUniform4i() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4bv_t = unsafe extern "system" fn(GLuint, *const GLbyte);
-  static glVertexAttribI4bv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4bv_str: &str = "glVertexAttribI4bv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4bv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4bv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
-  static glVertexAttrib4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4uiv_str: &str = "glVertexAttrib4uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4uiv() {
-    unimplemented!()
+  #[inline]
+  pub unsafe fn glBindBuffer(target: BufferTargetARB, buffer: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindBuffer_str[..glBindBuffer_str.len() - 1]
+      );
+    }
+    let p = glBindBuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glBindBuffer_str[..glBindBuffer_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glBindBuffer_t>(p)(target, buffer);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glBindBuffer_str[..glBindBuffer_str.len() - 1],
+          target,
+          buffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glBindFragDataLocationIndexed_t =
@@ -1299,986 +1591,548 @@ pub mod global_loader {
     AtomicPtr::new(null_mut());
   const glBindFragDataLocationIndexed_str: &str =
     "glBindFragDataLocationIndexed\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBindFragDataLocationIndexed() {
-    unimplemented!()
+  pub unsafe fn load_glBindFragDataLocationIndexed(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindFragDataLocationIndexed_p.store(
+      call_loader(loader, glBindFragDataLocationIndexed_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glBindFragDataLocationIndexed() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindFragDataLocationIndexed_is_loaded() -> bool {
+    glBindFragDataLocationIndexed_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindFragDataLocationIndexed(
+    program: GLuint,
+    colorNumber: GLuint,
+    index: GLuint,
+    name: *const GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindFragDataLocationIndexed_str
+          [..glBindFragDataLocationIndexed_str.len() - 1]
+      );
+    }
+    let p = glBindFragDataLocationIndexed_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindFragDataLocationIndexed_str
+          [..glBindFragDataLocationIndexed_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBindFragDataLocationIndexed_t>(p)(
+      program,
+      colorNumber,
+      index,
+      name,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glBindFragDataLocationIndexed_str
+            [..glBindFragDataLocationIndexed_str.len() - 1],
+          program,
+          colorNumber,
+          index,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBindFragDataLocation_t =
+    unsafe extern "system" fn(GLuint, GLuint, *const GLchar);
+  static glBindFragDataLocation_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glBindFragDataLocation_str: &str = "glBindFragDataLocation\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBindFragDataLocation(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindFragDataLocation_p.store(
+      call_loader(loader, glBindFragDataLocation_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindFragDataLocation_is_loaded() -> bool {
+    glBindFragDataLocation_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindFragDataLocation(
+    program: GLuint,
+    color: GLuint,
+    name: *const GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindFragDataLocation_str[..glBindFragDataLocation_str.len() - 1]
+      );
+    }
+    let p = glBindFragDataLocation_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindFragDataLocation_str[..glBindFragDataLocation_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBindFragDataLocation_t>(p)(
+      program, color, name,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glBindFragDataLocation_str[..glBindFragDataLocation_str.len() - 1],
+          program,
+          color,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBindFramebuffer_t =
+    unsafe extern "system" fn(FramebufferTarget, GLuint);
+  static glBindFramebuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBindFramebuffer_str: &str = "glBindFramebuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBindFramebuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindFramebuffer_p.store(
+      call_loader(loader, glBindFramebuffer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindFramebuffer_is_loaded() -> bool {
+    glBindFramebuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindFramebuffer(
+    target: FramebufferTarget,
+    framebuffer: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindFramebuffer_str[..glBindFramebuffer_str.len() - 1]
+      );
+    }
+    let p = glBindFramebuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindFramebuffer_str[..glBindFramebuffer_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glBindFramebuffer_t>(p)(target, framebuffer);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glBindFramebuffer_str[..glBindFramebuffer_str.len() - 1],
+          target,
+          framebuffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glBindRenderbuffer_t =
     unsafe extern "system" fn(RenderbufferTarget, GLuint);
   static glBindRenderbuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glBindRenderbuffer_str: &str = "glBindRenderbuffer\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBindRenderbuffer() {
-    unimplemented!()
+  pub unsafe fn load_glBindRenderbuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindRenderbuffer_p.store(
+      call_loader(loader, glBindRenderbuffer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glBindRenderbuffer() {
-    unimplemented!()
-  }
-
-  type glIsFramebuffer_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsFramebuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsFramebuffer_str: &str = "glIsFramebuffer\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glIsFramebuffer() {
-    unimplemented!()
-  }
-  pub fn glIsFramebuffer() {
-    unimplemented!()
-  }
-
-  type glGetShaderiv_t =
-    unsafe extern "system" fn(GLuint, ShaderParameterName, *mut GLint);
-  static glGetShaderiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetShaderiv_str: &str = "glGetShaderiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetShaderiv() {
-    unimplemented!()
-  }
-  pub fn glGetShaderiv() {
-    unimplemented!()
-  }
-
-  type glFrontFace_t = unsafe extern "system" fn(FrontFaceDirection);
-  static glFrontFace_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glFrontFace_str: &str = "glFrontFace\0";
-  #[doc(hidden)]
-  pub fn load_glFrontFace() {
-    unimplemented!()
-  }
-  pub fn glFrontFace() {
-    unimplemented!()
-  }
-
-  type glUniform3fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
-  static glUniform3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform3fv_str: &str = "glUniform3fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform3fv() {
-    unimplemented!()
-  }
-  pub fn glUniform3fv() {
-    unimplemented!()
-  }
-
-  type glCheckFramebufferStatus_t =
-    unsafe extern "system" fn(FramebufferTarget) -> GLenum;
-  static glCheckFramebufferStatus_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glCheckFramebufferStatus_str: &str = "glCheckFramebufferStatus\0";
-  #[doc(hidden)]
-  pub fn load_glCheckFramebufferStatus() {
-    unimplemented!()
-  }
-  pub fn glCheckFramebufferStatus() {
-    unimplemented!()
-  }
-
-  type glGetTexImage_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    PixelFormat,
-    PixelType,
-    *mut c_void,
-  );
-  static glGetTexImage_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetTexImage_str: &str = "glGetTexImage\0";
-  #[doc(hidden)]
-  pub fn load_glGetTexImage() {
-    unimplemented!()
-  }
-  pub fn glGetTexImage() {
-    unimplemented!()
-  }
-
-  type glTexParameterfv_t = unsafe extern "system" fn(
-    TextureTarget,
-    TextureParameterName,
-    *const GLfloat,
-  );
-  static glTexParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexParameterfv_str: &str = "glTexParameterfv\0";
-  #[doc(hidden)]
-  pub fn load_glTexParameterfv() {
-    unimplemented!()
-  }
-  pub fn glTexParameterfv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4iv_t = unsafe extern "system" fn(GLuint, *const GLint);
-  static glVertexAttribI4iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4iv_str: &str = "glVertexAttribI4iv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4iv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4iv() {
-    unimplemented!()
-  }
-
-  type glGenVertexArrays_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
-  static glGenVertexArrays_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenVertexArrays_str: &str = "glGenVertexArrays\0";
-  #[doc(hidden)]
-  pub fn load_glGenVertexArrays() {
-    unimplemented!()
-  }
-  pub fn glGenVertexArrays() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib3f_t =
-    unsafe extern "system" fn(GLuint, GLfloat, GLfloat, GLfloat);
-  static glVertexAttrib3f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib3f_str: &str = "glVertexAttrib3f\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib3f() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib3f() {
-    unimplemented!()
-  }
-
-  type glStencilOp_t =
-    unsafe extern "system" fn(StencilOp, StencilOp, StencilOp);
-  static glStencilOp_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glStencilOp_str: &str = "glStencilOp\0";
-  #[doc(hidden)]
-  pub fn load_glStencilOp() {
-    unimplemented!()
-  }
-  pub fn glStencilOp() {
-    unimplemented!()
-  }
-
-  type glBufferData_t = unsafe extern "system" fn(
-    BufferTargetARB,
-    GLsizeiptr,
-    *const c_void,
-    BufferUsageARB,
-  );
-  static glBufferData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBufferData_str: &str = "glBufferData\0";
-  #[doc(hidden)]
-  pub fn load_glBufferData() {
-    unimplemented!()
-  }
-  pub fn glBufferData() {
-    unimplemented!()
-  }
-
-  type glDepthRange_t = unsafe extern "system" fn(GLdouble, GLdouble);
-  static glDepthRange_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDepthRange_str: &str = "glDepthRange\0";
-  #[doc(hidden)]
-  pub fn load_glDepthRange() {
-    unimplemented!()
-  }
-  pub fn glDepthRange() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib2d_t =
-    unsafe extern "system" fn(GLuint, GLdouble, GLdouble);
-  static glVertexAttrib2d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib2d_str: &str = "glVertexAttrib2d\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib2d() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib2d() {
-    unimplemented!()
-  }
-
-  type glUniform2i_t = unsafe extern "system" fn(GLint, GLint, GLint);
-  static glUniform2i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform2i_str: &str = "glUniform2i\0";
-  #[doc(hidden)]
-  pub fn load_glUniform2i() {
-    unimplemented!()
-  }
-  pub fn glUniform2i() {
-    unimplemented!()
-  }
-
-  type glTexImage1D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLsizei,
-    GLint,
-    PixelFormat,
-    PixelType,
-    *const c_void,
-  );
-  static glTexImage1D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexImage1D_str: &str = "glTexImage1D\0";
-  #[doc(hidden)]
-  pub fn load_glTexImage1D() {
-    unimplemented!()
-  }
-  pub fn glTexImage1D() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI2iv_t = unsafe extern "system" fn(GLuint, *const GLint);
-  static glVertexAttribI2iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI2iv_str: &str = "glVertexAttribI2iv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI2iv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI2iv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI3iv_t = unsafe extern "system" fn(GLuint, *const GLint);
-  static glVertexAttribI3iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI3iv_str: &str = "glVertexAttribI3iv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI3iv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI3iv() {
-    unimplemented!()
-  }
-
-  type glGetTexParameteriv_t =
-    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLint);
-  static glGetTexParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetTexParameteriv_str: &str = "glGetTexParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glGetTexParameteriv() {
-    unimplemented!()
-  }
-  pub fn glGetTexParameteriv() {
-    unimplemented!()
-  }
-
-  type glUniform3f_t =
-    unsafe extern "system" fn(GLint, GLfloat, GLfloat, GLfloat);
-  static glUniform3f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform3f_str: &str = "glUniform3f\0";
-  #[doc(hidden)]
-  pub fn load_glUniform3f() {
-    unimplemented!()
-  }
-  pub fn glUniform3f() {
-    unimplemented!()
-  }
-
-  type glStencilFuncSeparate_t = unsafe extern "system" fn(
-    StencilFaceDirection,
-    StencilFunction,
-    GLint,
-    GLuint,
-  );
-  static glStencilFuncSeparate_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glStencilFuncSeparate_str: &str = "glStencilFuncSeparate\0";
-  #[doc(hidden)]
-  pub fn load_glStencilFuncSeparate() {
-    unimplemented!()
-  }
-  pub fn glStencilFuncSeparate() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI1uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
-  static glVertexAttribI1uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI1uiv_str: &str = "glVertexAttribI1uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI1uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI1uiv() {
-    unimplemented!()
-  }
-
-  type glGetShaderInfoLog_t =
-    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar);
-  static glGetShaderInfoLog_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetShaderInfoLog_str: &str = "glGetShaderInfoLog\0";
-  #[doc(hidden)]
-  pub fn load_glGetShaderInfoLog() {
-    unimplemented!()
-  }
-  pub fn glGetShaderInfoLog() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix2fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix2fv_str: &str = "glUniformMatrix2fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix2fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix2fv() {
-    unimplemented!()
-  }
-
-  type glGenSamplers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
-  static glGenSamplers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenSamplers_str: &str = "glGenSamplers\0";
-  #[doc(hidden)]
-  pub fn load_glGenSamplers() {
-    unimplemented!()
-  }
-  pub fn glGenSamplers() {
-    unimplemented!()
-  }
-
-  type glDisable_t = unsafe extern "system" fn(EnableCap);
-  static glDisable_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDisable_str: &str = "glDisable\0";
-  #[doc(hidden)]
-  pub fn load_glDisable() {
-    unimplemented!()
-  }
-  pub fn glDisable() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib1sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
-  static glVertexAttrib1sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib1sv_str: &str = "glVertexAttrib1sv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib1sv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib1sv() {
-    unimplemented!()
-  }
-
-  type glUniform3i_t = unsafe extern "system" fn(GLint, GLint, GLint, GLint);
-  static glUniform3i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform3i_str: &str = "glUniform3i\0";
-  #[doc(hidden)]
-  pub fn load_glUniform3i() {
-    unimplemented!()
-  }
-  pub fn glUniform3i() {
-    unimplemented!()
-  }
-
-  type glEnablei_t = unsafe extern "system" fn(EnableCap, GLuint);
-  static glEnablei_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glEnablei_str: &str = "glEnablei\0";
-  #[doc(hidden)]
-  pub fn load_glEnablei() {
-    unimplemented!()
-  }
-  pub fn glEnablei() {
-    unimplemented!()
-  }
-
-  type glGetQueryiv_t =
-    unsafe extern "system" fn(QueryTarget, QueryParameterName, *mut GLint);
-  static glGetQueryiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetQueryiv_str: &str = "glGetQueryiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetQueryiv() {
-    unimplemented!()
-  }
-  pub fn glGetQueryiv() {
-    unimplemented!()
-  }
-
-  type glClearBufferfv_t =
-    unsafe extern "system" fn(Buffer, GLint, *const GLfloat);
-  static glClearBufferfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClearBufferfv_str: &str = "glClearBufferfv\0";
-  #[doc(hidden)]
-  pub fn load_glClearBufferfv() {
-    unimplemented!()
-  }
-  pub fn glClearBufferfv() {
-    unimplemented!()
-  }
-
-  type glBlendEquation_t = unsafe extern "system" fn(BlendEquationModeEXT);
-  static glBlendEquation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBlendEquation_str: &str = "glBlendEquation\0";
-  #[doc(hidden)]
-  pub fn load_glBlendEquation() {
-    unimplemented!()
-  }
-  pub fn glBlendEquation() {
-    unimplemented!()
-  }
-
-  type glUniform1ui_t = unsafe extern "system" fn(GLint, GLuint);
-  static glUniform1ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform1ui_str: &str = "glUniform1ui\0";
-  #[doc(hidden)]
-  pub fn load_glUniform1ui() {
-    unimplemented!()
-  }
-  pub fn glUniform1ui() {
-    unimplemented!()
-  }
-
-  type glColorMask_t =
-    unsafe extern "system" fn(GLboolean, GLboolean, GLboolean, GLboolean);
-  static glColorMask_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glColorMask_str: &str = "glColorMask\0";
-  #[doc(hidden)]
-  pub fn load_glColorMask() {
-    unimplemented!()
-  }
-  pub fn glColorMask() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix3x4fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix3x4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix3x4fv_str: &str = "glUniformMatrix3x4fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix3x4fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix3x4fv() {
-    unimplemented!()
-  }
-
-  type glIsRenderbuffer_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsRenderbuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsRenderbuffer_str: &str = "glIsRenderbuffer\0";
-  #[doc(hidden)]
-  pub fn load_glIsRenderbuffer() {
-    unimplemented!()
-  }
-  pub fn glIsRenderbuffer() {
-    unimplemented!()
-  }
-
-  type glGetSamplerParameterIuiv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterI, *mut GLuint);
-  static glGetSamplerParameterIuiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetSamplerParameterIuiv_str: &str = "glGetSamplerParameterIuiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetSamplerParameterIuiv() {
-    unimplemented!()
-  }
-  pub fn glGetSamplerParameterIuiv() {
-    unimplemented!()
-  }
-
-  type glFramebufferTexture2D_t = unsafe extern "system" fn(
-    FramebufferTarget,
-    FramebufferAttachment,
-    TextureTarget,
-    GLuint,
-    GLint,
-  );
-  static glFramebufferTexture2D_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glFramebufferTexture2D_str: &str = "glFramebufferTexture2D\0";
-  #[doc(hidden)]
-  pub fn load_glFramebufferTexture2D() {
-    unimplemented!()
-  }
-  pub fn glFramebufferTexture2D() {
-    unimplemented!()
-  }
-
-  type glDeleteQueries_t = unsafe extern "system" fn(GLsizei, *const GLuint);
-  static glDeleteQueries_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteQueries_str: &str = "glDeleteQueries\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteQueries() {
-    unimplemented!()
-  }
-  pub fn glDeleteQueries() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
-  static glVertexAttribI4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4uiv_str: &str = "glVertexAttribI4uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4uiv() {
-    unimplemented!()
-  }
-
-  type glGetRenderbufferParameteriv_t = unsafe extern "system" fn(
-    RenderbufferTarget,
-    RenderbufferParameterName,
-    *mut GLint,
-  );
-  static glGetRenderbufferParameteriv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetRenderbufferParameteriv_str: &str =
-    "glGetRenderbufferParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glGetRenderbufferParameteriv() {
-    unimplemented!()
-  }
-  pub fn glGetRenderbufferParameteriv() {
-    unimplemented!()
-  }
-
-  type glIsEnabled_t = unsafe extern "system" fn(EnableCap) -> GLboolean;
-  static glIsEnabled_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsEnabled_str: &str = "glIsEnabled\0";
-  #[doc(hidden)]
-  pub fn load_glIsEnabled() {
-    unimplemented!()
-  }
-  pub fn glIsEnabled() {
-    unimplemented!()
-  }
-
-  type glGetTexLevelParameterfv_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GetTextureParameter,
-    *mut GLfloat,
-  );
-  static glGetTexLevelParameterfv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetTexLevelParameterfv_str: &str = "glGetTexLevelParameterfv\0";
-  #[doc(hidden)]
-  pub fn load_glGetTexLevelParameterfv() {
-    unimplemented!()
-  }
-  pub fn glGetTexLevelParameterfv() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix4fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix4fv_str: &str = "glUniformMatrix4fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix4fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix4fv() {
-    unimplemented!()
-  }
-
-  type glCompileShader_t = unsafe extern "system" fn(GLuint);
-  static glCompileShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCompileShader_str: &str = "glCompileShader\0";
-  #[doc(hidden)]
-  pub fn load_glCompileShader() {
-    unimplemented!()
-  }
-  pub fn glCompileShader() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP3uiv_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    *const GLuint,
-  );
-  static glVertexAttribP3uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP3uiv_str: &str = "glVertexAttribP3uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribP3uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribP3uiv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribIPointer_t = unsafe extern "system" fn(
-    GLuint,
-    GLint,
-    VertexAttribPointerType,
-    GLsizei,
-    *const c_void,
-  );
-  static glVertexAttribIPointer_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glVertexAttribIPointer_str: &str = "glVertexAttribIPointer\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribIPointer() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribIPointer() {
-    unimplemented!()
+  pub fn glBindRenderbuffer_is_loaded() -> bool {
+    glBindRenderbuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindRenderbuffer(
+    target: RenderbufferTarget,
+    renderbuffer: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindRenderbuffer_str[..glBindRenderbuffer_str.len() - 1]
+      );
+    }
+    let p = glBindRenderbuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindRenderbuffer_str[..glBindRenderbuffer_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glBindRenderbuffer_t>(p)(target, renderbuffer);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glBindRenderbuffer_str[..glBindRenderbuffer_str.len() - 1],
+          target,
+          renderbuffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glBindSampler_t = unsafe extern "system" fn(GLuint, GLuint);
   static glBindSampler_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glBindSampler_str: &str = "glBindSampler\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBindSampler() {
-    unimplemented!()
+  pub unsafe fn load_glBindSampler(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindSampler_p.store(
+      call_loader(loader, glBindSampler_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glBindSampler() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindSampler_is_loaded() -> bool {
+    glBindSampler_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindSampler(unit: GLuint, sampler: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindSampler_str[..glBindSampler_str.len() - 1]
+      );
+    }
+    let p = glBindSampler_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glBindSampler_str[..glBindSampler_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glBindSampler_t>(p)(unit, sampler);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glBindSampler_str[..glBindSampler_str.len() - 1],
+          unit,
+          sampler,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glGenQueries_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
-  static glGenQueries_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenQueries_str: &str = "glGenQueries\0";
+  type glBindTexture_t = unsafe extern "system" fn(TextureTarget, GLuint);
+  static glBindTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBindTexture_str: &str = "glBindTexture\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGenQueries() {
-    unimplemented!()
+  pub unsafe fn load_glBindTexture(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindTexture_p.store(
+      call_loader(loader, glBindTexture_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glGenQueries() {
-    unimplemented!()
-  }
-
-  type glUniform4f_t =
-    unsafe extern "system" fn(GLint, GLfloat, GLfloat, GLfloat, GLfloat);
-  static glUniform4f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform4f_str: &str = "glUniform4f\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glUniform4f() {
-    unimplemented!()
+  pub fn glBindTexture_is_loaded() -> bool {
+    glBindTexture_p.load(Ordering::Relaxed).is_null().not()
   }
-  pub fn glUniform4f() {
-    unimplemented!()
-  }
-
-  type glGetActiveAttrib_t = unsafe extern "system" fn(
-    GLuint,
-    GLuint,
-    GLsizei,
-    *mut GLsizei,
-    *mut GLint,
-    *mut GLenum,
-    *mut GLchar,
-  );
-  static glGetActiveAttrib_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetActiveAttrib_str: &str = "glGetActiveAttrib\0";
-  #[doc(hidden)]
-  pub fn load_glGetActiveAttrib() {
-    unimplemented!()
-  }
-  pub fn glGetActiveAttrib() {
-    unimplemented!()
-  }
-
-  type glClearColor_t =
-    unsafe extern "system" fn(GLfloat, GLfloat, GLfloat, GLfloat);
-  static glClearColor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClearColor_str: &str = "glClearColor\0";
-  #[doc(hidden)]
-  pub fn load_glClearColor() {
-    unimplemented!()
-  }
-  pub fn glClearColor() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4Nusv_t =
-    unsafe extern "system" fn(GLuint, *const GLushort);
-  static glVertexAttrib4Nusv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4Nusv_str: &str = "glVertexAttrib4Nusv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4Nusv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4Nusv() {
-    unimplemented!()
-  }
-
-  type glTexImage2D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-    GLint,
-    PixelFormat,
-    PixelType,
-    *const c_void,
-  );
-  static glTexImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexImage2D_str: &str = "glTexImage2D\0";
-  #[doc(hidden)]
-  pub fn load_glTexImage2D() {
-    unimplemented!()
-  }
-  pub fn glTexImage2D() {
-    unimplemented!()
-  }
-
-  type glBindAttribLocation_t =
-    unsafe extern "system" fn(GLuint, GLuint, *const GLchar);
-  static glBindAttribLocation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBindAttribLocation_str: &str = "glBindAttribLocation\0";
-  #[doc(hidden)]
-  pub fn load_glBindAttribLocation() {
-    unimplemented!()
-  }
-  pub fn glBindAttribLocation() {
-    unimplemented!()
-  }
-
-  type glGetVertexAttribIiv_t =
-    unsafe extern "system" fn(GLuint, VertexAttribEnum, *mut GLint);
-  static glGetVertexAttribIiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetVertexAttribIiv_str: &str = "glGetVertexAttribIiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetVertexAttribIiv() {
-    unimplemented!()
-  }
-  pub fn glGetVertexAttribIiv() {
-    unimplemented!()
-  }
-
-  type glGenRenderbuffers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
-  static glGenRenderbuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenRenderbuffers_str: &str = "glGenRenderbuffers\0";
-  #[doc(hidden)]
-  pub fn load_glGenRenderbuffers() {
-    unimplemented!()
-  }
-  pub fn glGenRenderbuffers() {
-    unimplemented!()
-  }
-
-  type glDrawRangeElements_t = unsafe extern "system" fn(
-    PrimitiveType,
-    GLuint,
-    GLuint,
-    GLsizei,
-    DrawElementsType,
-    *const c_void,
-  );
-  static glDrawRangeElements_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDrawRangeElements_str: &str = "glDrawRangeElements\0";
-  #[doc(hidden)]
-  pub fn load_glDrawRangeElements() {
-    unimplemented!()
-  }
-  pub fn glDrawRangeElements() {
-    unimplemented!()
-  }
-
-  type glGetBufferParameteriv_t =
-    unsafe extern "system" fn(BufferTargetARB, BufferPNameARB, *mut GLint);
-  static glGetBufferParameteriv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetBufferParameteriv_str: &str = "glGetBufferParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glGetBufferParameteriv() {
-    unimplemented!()
-  }
-  pub fn glGetBufferParameteriv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP2ui_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    GLuint,
-  );
-  static glVertexAttribP2ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP2ui_str: &str = "glVertexAttribP2ui\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribP2ui() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribP2ui() {
-    unimplemented!()
-  }
-
-  type glPixelStoref_t =
-    unsafe extern "system" fn(PixelStoreParameter, GLfloat);
-  static glPixelStoref_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPixelStoref_str: &str = "glPixelStoref\0";
-  #[doc(hidden)]
-  pub fn load_glPixelStoref() {
-    unimplemented!()
-  }
-  pub fn glPixelStoref() {
-    unimplemented!()
+  #[inline]
+  pub unsafe fn glBindTexture(target: TextureTarget, texture: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindTexture_str[..glBindTexture_str.len() - 1]
+      );
+    }
+    let p = glBindTexture_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glBindTexture_str[..glBindTexture_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glBindTexture_t>(p)(target, texture);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glBindTexture_str[..glBindTexture_str.len() - 1],
+          target,
+          texture,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glBindVertexArray_t = unsafe extern "system" fn(GLuint);
   static glBindVertexArray_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glBindVertexArray_str: &str = "glBindVertexArray\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBindVertexArray() {
-    unimplemented!()
+  pub unsafe fn load_glBindVertexArray(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBindVertexArray_p.store(
+      call_loader(loader, glBindVertexArray_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glBindVertexArray() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBindVertexArray_is_loaded() -> bool {
+    glBindVertexArray_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBindVertexArray(array: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBindVertexArray_str[..glBindVertexArray_str.len() - 1]
+      );
+    }
+    let p = glBindVertexArray_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBindVertexArray_str[..glBindVertexArray_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBindVertexArray_t>(p)(array);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glBindVertexArray_str[..glBindVertexArray_str.len() - 1],
+          array,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glVertexAttrib4f_t =
-    unsafe extern "system" fn(GLuint, GLfloat, GLfloat, GLfloat, GLfloat);
-  static glVertexAttrib4f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4f_str: &str = "glVertexAttrib4f\0";
+  type glBlendColor_t =
+    unsafe extern "system" fn(GLfloat, GLfloat, GLfloat, GLfloat);
+  static glBlendColor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBlendColor_str: &str = "glBlendColor\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glVertexAttrib4f() {
-    unimplemented!()
+  pub unsafe fn load_glBlendColor(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBlendColor_p
+      .store(call_loader(loader, glBlendColor_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glVertexAttrib4f() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBlendColor_is_loaded() -> bool {
+    glBlendColor_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBlendColor(
+    red: GLfloat,
+    green: GLfloat,
+    blue: GLfloat,
+    alpha: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBlendColor_str[..glBlendColor_str.len() - 1]
+      );
+    }
+    let p = glBlendColor_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glBlendColor_str[..glBlendColor_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glBlendColor_t>(p)(red, green, blue, alpha);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glBlendColor_str[..glBlendColor_str.len() - 1],
+          red,
+          green,
+          blue,
+          alpha,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glGetQueryObjectui64v_t =
-    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLuint64);
-  static glGetQueryObjectui64v_p: AtomicPtr<c_void> =
+  type glBlendEquationSeparate_t =
+    unsafe extern "system" fn(BlendEquationModeEXT, BlendEquationModeEXT);
+  static glBlendEquationSeparate_p: AtomicPtr<c_void> =
     AtomicPtr::new(null_mut());
-  const glGetQueryObjectui64v_str: &str = "glGetQueryObjectui64v\0";
+  const glBlendEquationSeparate_str: &str = "glBlendEquationSeparate\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGetQueryObjectui64v() {
-    unimplemented!()
+  pub unsafe fn load_glBlendEquationSeparate(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBlendEquationSeparate_p.store(
+      call_loader(loader, glBlendEquationSeparate_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glGetQueryObjectui64v() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBlendEquationSeparate_is_loaded() -> bool {
+    glBlendEquationSeparate_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBlendEquationSeparate(
+    modeRGB: BlendEquationModeEXT,
+    modeAlpha: BlendEquationModeEXT,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBlendEquationSeparate_str[..glBlendEquationSeparate_str.len() - 1]
+      );
+    }
+    let p = glBlendEquationSeparate_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBlendEquationSeparate_str[..glBlendEquationSeparate_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBlendEquationSeparate_t>(p)(
+      modeRGB, modeAlpha,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}) error: {err_name}",
+          &glBlendEquationSeparate_str[..glBlendEquationSeparate_str.len() - 1],
+          modeRGB,
+          modeAlpha,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glGetFloatv_t = unsafe extern "system" fn(GetPName, *mut GLfloat);
-  static glGetFloatv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetFloatv_str: &str = "glGetFloatv\0";
+  type glBlendEquation_t = unsafe extern "system" fn(BlendEquationModeEXT);
+  static glBlendEquation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBlendEquation_str: &str = "glBlendEquation\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGetFloatv() {
-    unimplemented!()
+  pub unsafe fn load_glBlendEquation(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBlendEquation_p.store(
+      call_loader(loader, glBlendEquation_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glGetFloatv() {
-    unimplemented!()
-  }
-
-  type glFramebufferTexture_t = unsafe extern "system" fn(
-    FramebufferTarget,
-    FramebufferAttachment,
-    GLuint,
-    GLint,
-  );
-  static glFramebufferTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glFramebufferTexture_str: &str = "glFramebufferTexture\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glFramebufferTexture() {
-    unimplemented!()
+  pub fn glBlendEquation_is_loaded() -> bool {
+    glBlendEquation_p.load(Ordering::Relaxed).is_null().not()
   }
-  pub fn glFramebufferTexture() {
-    unimplemented!()
-  }
-
-  type glLineWidth_t = unsafe extern "system" fn(GLfloat);
-  static glLineWidth_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glLineWidth_str: &str = "glLineWidth\0";
-  #[doc(hidden)]
-  pub fn load_glLineWidth() {
-    unimplemented!()
-  }
-  pub fn glLineWidth() {
-    unimplemented!()
-  }
-
-  type glStencilFunc_t =
-    unsafe extern "system" fn(StencilFunction, GLint, GLuint);
-  static glStencilFunc_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glStencilFunc_str: &str = "glStencilFunc\0";
-  #[doc(hidden)]
-  pub fn load_glStencilFunc() {
-    unimplemented!()
-  }
-  pub fn glStencilFunc() {
-    unimplemented!()
-  }
-
-  type glBeginQuery_t = unsafe extern "system" fn(QueryTarget, GLuint);
-  static glBeginQuery_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBeginQuery_str: &str = "glBeginQuery\0";
-  #[doc(hidden)]
-  pub fn load_glBeginQuery() {
-    unimplemented!()
-  }
-  pub fn glBeginQuery() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP4uiv_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    *const GLuint,
-  );
-  static glVertexAttribP4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP4uiv_str: &str = "glVertexAttribP4uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribP4uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribP4uiv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib1d_t = unsafe extern "system" fn(GLuint, GLdouble);
-  static glVertexAttrib1d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib1d_str: &str = "glVertexAttrib1d\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib1d() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib1d() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI3i_t =
-    unsafe extern "system" fn(GLuint, GLint, GLint, GLint);
-  static glVertexAttribI3i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI3i_str: &str = "glVertexAttribI3i\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI3i() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI3i() {
-    unimplemented!()
-  }
-
-  type glUniform3iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
-  static glUniform3iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform3iv_str: &str = "glUniform3iv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform3iv() {
-    unimplemented!()
-  }
-  pub fn glUniform3iv() {
-    unimplemented!()
-  }
-
-  type glEndQuery_t = unsafe extern "system" fn(QueryTarget);
-  static glEndQuery_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glEndQuery_str: &str = "glEndQuery\0";
-  #[doc(hidden)]
-  pub fn load_glEndQuery() {
-    unimplemented!()
-  }
-  pub fn glEndQuery() {
-    unimplemented!()
-  }
-
-  type glMultiDrawArrays_t = unsafe extern "system" fn(
-    PrimitiveType,
-    *const GLint,
-    *const GLsizei,
-    GLsizei,
-  );
-  static glMultiDrawArrays_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glMultiDrawArrays_str: &str = "glMultiDrawArrays\0";
-  #[doc(hidden)]
-  pub fn load_glMultiDrawArrays() {
-    unimplemented!()
-  }
-  pub fn glMultiDrawArrays() {
-    unimplemented!()
+  #[inline]
+  pub unsafe fn glBlendEquation(mode: BlendEquationModeEXT) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBlendEquation_str[..glBlendEquation_str.len() - 1]
+      );
+    }
+    let p = glBlendEquation_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBlendEquation_str[..glBlendEquation_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBlendEquation_t>(p)(mode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glBlendEquation_str[..glBlendEquation_str.len() - 1],
+          mode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glBlendFuncSeparate_t = unsafe extern "system" fn(
@@ -2289,561 +2143,1059 @@ pub mod global_loader {
   );
   static glBlendFuncSeparate_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glBlendFuncSeparate_str: &str = "glBlendFuncSeparate\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBlendFuncSeparate() {
-    unimplemented!()
+  pub unsafe fn load_glBlendFuncSeparate(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBlendFuncSeparate_p.store(
+      call_loader(loader, glBlendFuncSeparate_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glBlendFuncSeparate() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBlendFuncSeparate_is_loaded() -> bool {
+    glBlendFuncSeparate_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBlendFuncSeparate(
+    sfactorRGB: BlendingFactor,
+    dfactorRGB: BlendingFactor,
+    sfactorAlpha: BlendingFactor,
+    dfactorAlpha: BlendingFactor,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBlendFuncSeparate_str[..glBlendFuncSeparate_str.len() - 1]
+      );
+    }
+    let p = glBlendFuncSeparate_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBlendFuncSeparate_str[..glBlendFuncSeparate_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBlendFuncSeparate_t>(p)(
+      sfactorRGB,
+      dfactorRGB,
+      sfactorAlpha,
+      dfactorAlpha,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}, 0x{:X}) error: {err_name}",
+          &glBlendFuncSeparate_str[..glBlendFuncSeparate_str.len() - 1],
+          sfactorRGB,
+          dfactorRGB,
+          sfactorAlpha,
+          dfactorAlpha,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glVertexAttrib4d_t =
-    unsafe extern "system" fn(GLuint, GLdouble, GLdouble, GLdouble, GLdouble);
-  static glVertexAttrib4d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4d_str: &str = "glVertexAttrib4d\0";
+  type glBlendFunc_t =
+    unsafe extern "system" fn(BlendingFactor, BlendingFactor);
+  static glBlendFunc_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBlendFunc_str: &str = "glBlendFunc\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glVertexAttrib4d() {
-    unimplemented!()
+  pub unsafe fn load_glBlendFunc(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBlendFunc_p
+      .store(call_loader(loader, glBlendFunc_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glVertexAttrib4d() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBlendFunc_is_loaded() -> bool {
+    glBlendFunc_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBlendFunc(sfactor: BlendingFactor, dfactor: BlendingFactor) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBlendFunc_str[..glBlendFunc_str.len() - 1]
+      );
+    }
+    let p = glBlendFunc_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glBlendFunc_str[..glBlendFunc_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glBlendFunc_t>(p)(sfactor, dfactor);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}) error: {err_name}",
+          &glBlendFunc_str[..glBlendFunc_str.len() - 1],
+          sfactor,
+          dfactor,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBlitFramebuffer_t = unsafe extern "system" fn(
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    ClearBufferMask,
+    BlitFramebufferFilter,
+  );
+  static glBlitFramebuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBlitFramebuffer_str: &str = "glBlitFramebuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBlitFramebuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBlitFramebuffer_p.store(
+      call_loader(loader, glBlitFramebuffer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBlitFramebuffer_is_loaded() -> bool {
+    glBlitFramebuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBlitFramebuffer(
+    srcX0: GLint,
+    srcY0: GLint,
+    srcX1: GLint,
+    srcY1: GLint,
+    dstX0: GLint,
+    dstY0: GLint,
+    dstX1: GLint,
+    dstY1: GLint,
+    mask: ClearBufferMask,
+    filter: BlitFramebufferFilter,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBlitFramebuffer_str[..glBlitFramebuffer_str.len() - 1]
+      );
+    }
+    let p = glBlitFramebuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBlitFramebuffer_str[..glBlitFramebuffer_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBlitFramebuffer_t>(p)(
+      srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, 0x{:X}) error: {err_name}", &glBlitFramebuffer_str[..glBlitFramebuffer_str.len()-1], srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter,  err_name = error_name_for(err));
+      }
+    }
+    out
+  }
+
+  type glBufferData_t = unsafe extern "system" fn(
+    BufferTargetARB,
+    GLsizeiptr,
+    *const c_void,
+    BufferUsageARB,
+  );
+  static glBufferData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBufferData_str: &str = "glBufferData\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBufferData(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBufferData_p
+      .store(call_loader(loader, glBufferData_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBufferData_is_loaded() -> bool {
+    glBufferData_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBufferData(
+    target: BufferTargetARB,
+    size: GLsizeiptr,
+    data: *const c_void,
+    usage: BufferUsageARB,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBufferData_str[..glBufferData_str.len() - 1]
+      );
+    }
+    let p = glBufferData_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glBufferData_str[..glBufferData_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glBufferData_t>(p)(target, size, data, usage);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, 0x{:X}) error: {err_name}",
+          &glBufferData_str[..glBufferData_str.len() - 1],
+          target,
+          size,
+          data,
+          usage,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glBufferSubData_t = unsafe extern "system" fn(
+    BufferTargetARB,
+    GLintptr,
+    GLsizeiptr,
+    *const c_void,
+  );
+  static glBufferSubData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glBufferSubData_str: &str = "glBufferSubData\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glBufferSubData(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glBufferSubData_p.store(
+      call_loader(loader, glBufferSubData_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glBufferSubData_is_loaded() -> bool {
+    glBufferSubData_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glBufferSubData(
+    target: BufferTargetARB,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    data: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glBufferSubData_str[..glBufferSubData_str.len() - 1]
+      );
+    }
+    let p = glBufferSubData_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glBufferSubData_str[..glBufferSubData_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glBufferSubData_t>(p)(
+      target, offset, size, data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glBufferSubData_str[..glBufferSubData_str.len() - 1],
+          target,
+          offset,
+          size,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glCheckFramebufferStatus_t =
+    unsafe extern "system" fn(FramebufferTarget) -> GLenum;
+  static glCheckFramebufferStatus_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glCheckFramebufferStatus_str: &str = "glCheckFramebufferStatus\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glCheckFramebufferStatus(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCheckFramebufferStatus_p.store(
+      call_loader(loader, glCheckFramebufferStatus_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCheckFramebufferStatus_is_loaded() -> bool {
+    glCheckFramebufferStatus_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCheckFramebufferStatus(target: FramebufferTarget) -> GLenum {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCheckFramebufferStatus_str[..glCheckFramebufferStatus_str.len() - 1]
+      );
+    }
+    let p = glCheckFramebufferStatus_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCheckFramebufferStatus_str[..glCheckFramebufferStatus_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCheckFramebufferStatus_t>(p)(target);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glCheckFramebufferStatus_str
+            [..glCheckFramebufferStatus_str.len() - 1],
+          target,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClampColor_t =
+    unsafe extern "system" fn(ClampColorTargetARB, ClampColorModeARB);
+  static glClampColor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClampColor_str: &str = "glClampColor\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClampColor(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClampColor_p
+      .store(call_loader(loader, glClampColor_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClampColor_is_loaded() -> bool {
+    glClampColor_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClampColor(
+    target: ClampColorTargetARB,
+    clamp: ClampColorModeARB,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClampColor_str[..glClampColor_str.len() - 1]
+      );
+    }
+    let p = glClampColor_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glClampColor_str[..glClampColor_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glClampColor_t>(p)(target, clamp);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}) error: {err_name}",
+          &glClampColor_str[..glClampColor_str.len() - 1],
+          target,
+          clamp,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClearBufferfi_t =
+    unsafe extern "system" fn(Buffer, GLint, GLfloat, GLint);
+  static glClearBufferfi_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClearBufferfi_str: &str = "glClearBufferfi\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClearBufferfi(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClearBufferfi_p.store(
+      call_loader(loader, glClearBufferfi_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClearBufferfi_is_loaded() -> bool {
+    glClearBufferfi_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClearBufferfi(
+    buffer: Buffer,
+    drawbuffer: GLint,
+    depth: GLfloat,
+    stencil: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClearBufferfi_str[..glClearBufferfi_str.len() - 1]
+      );
+    }
+    let p = glClearBufferfi_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glClearBufferfi_str[..glClearBufferfi_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glClearBufferfi_t>(p)(
+      buffer, drawbuffer, depth, stencil,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glClearBufferfi_str[..glClearBufferfi_str.len() - 1],
+          buffer,
+          drawbuffer,
+          depth,
+          stencil,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClearBufferfv_t =
+    unsafe extern "system" fn(Buffer, GLint, *const GLfloat);
+  static glClearBufferfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClearBufferfv_str: &str = "glClearBufferfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClearBufferfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClearBufferfv_p.store(
+      call_loader(loader, glClearBufferfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClearBufferfv_is_loaded() -> bool {
+    glClearBufferfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClearBufferfv(
+    buffer: Buffer,
+    drawbuffer: GLint,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClearBufferfv_str[..glClearBufferfv_str.len() - 1]
+      );
+    }
+    let p = glClearBufferfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glClearBufferfv_str[..glClearBufferfv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glClearBufferfv_t>(p)(buffer, drawbuffer, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glClearBufferfv_str[..glClearBufferfv_str.len() - 1],
+          buffer,
+          drawbuffer,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClearBufferiv_t =
+    unsafe extern "system" fn(Buffer, GLint, *const GLint);
+  static glClearBufferiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClearBufferiv_str: &str = "glClearBufferiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClearBufferiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClearBufferiv_p.store(
+      call_loader(loader, glClearBufferiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClearBufferiv_is_loaded() -> bool {
+    glClearBufferiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClearBufferiv(
+    buffer: Buffer,
+    drawbuffer: GLint,
+    value: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClearBufferiv_str[..glClearBufferiv_str.len() - 1]
+      );
+    }
+    let p = glClearBufferiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glClearBufferiv_str[..glClearBufferiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glClearBufferiv_t>(p)(buffer, drawbuffer, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glClearBufferiv_str[..glClearBufferiv_str.len() - 1],
+          buffer,
+          drawbuffer,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClearBufferuiv_t =
+    unsafe extern "system" fn(Buffer, GLint, *const GLuint);
+  static glClearBufferuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClearBufferuiv_str: &str = "glClearBufferuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClearBufferuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClearBufferuiv_p.store(
+      call_loader(loader, glClearBufferuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClearBufferuiv_is_loaded() -> bool {
+    glClearBufferuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClearBufferuiv(
+    buffer: Buffer,
+    drawbuffer: GLint,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClearBufferuiv_str[..glClearBufferuiv_str.len() - 1]
+      );
+    }
+    let p = glClearBufferuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glClearBufferuiv_str[..glClearBufferuiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glClearBufferuiv_t>(p)(
+      buffer, drawbuffer, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glClearBufferuiv_str[..glClearBufferuiv_str.len() - 1],
+          buffer,
+          drawbuffer,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClearColor_t =
+    unsafe extern "system" fn(GLfloat, GLfloat, GLfloat, GLfloat);
+  static glClearColor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClearColor_str: &str = "glClearColor\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClearColor(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClearColor_p
+      .store(call_loader(loader, glClearColor_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClearColor_is_loaded() -> bool {
+    glClearColor_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClearColor(
+    red: GLfloat,
+    green: GLfloat,
+    blue: GLfloat,
+    alpha: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClearColor_str[..glClearColor_str.len() - 1]
+      );
+    }
+    let p = glClearColor_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glClearColor_str[..glClearColor_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glClearColor_t>(p)(red, green, blue, alpha);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glClearColor_str[..glClearColor_str.len() - 1],
+          red,
+          green,
+          blue,
+          alpha,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClearDepth_t = unsafe extern "system" fn(GLdouble);
+  static glClearDepth_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClearDepth_str: &str = "glClearDepth\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClearDepth(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClearDepth_p
+      .store(call_loader(loader, glClearDepth_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClearDepth_is_loaded() -> bool {
+    glClearDepth_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClearDepth(depth: GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClearDepth_str[..glClearDepth_str.len() - 1]
+      );
+    }
+    let p = glClearDepth_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glClearDepth_str[..glClearDepth_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glClearDepth_t>(p)(depth);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glClearDepth_str[..glClearDepth_str.len() - 1],
+          depth,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glClearStencil_t = unsafe extern "system" fn(GLint);
   static glClearStencil_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glClearStencil_str: &str = "glClearStencil\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glClearStencil() {
-    unimplemented!()
+  pub unsafe fn load_glClearStencil(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClearStencil_p.store(
+      call_loader(loader, glClearStencil_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glClearStencil() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClearStencil_is_loaded() -> bool {
+    glClearStencil_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClearStencil(s: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClearStencil_str[..glClearStencil_str.len() - 1]
+      );
+    }
+    let p = glClearStencil_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glClearStencil_str[..glClearStencil_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glClearStencil_t>(p)(s);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glClearStencil_str[..glClearStencil_str.len() - 1],
+          s,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glFramebufferTexture3D_t = unsafe extern "system" fn(
-    FramebufferTarget,
-    FramebufferAttachment,
-    TextureTarget,
+  type glClear_t = unsafe extern "system" fn(ClearBufferMask);
+  static glClear_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClear_str: &str = "glClear\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClear(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClear_p
+      .store(call_loader(loader, glClear_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClear_is_loaded() -> bool {
+    glClear_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClear(mask: ClearBufferMask) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glClear_str[..glClear_str.len() - 1]);
+    }
+    let p = glClear_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glClear_str[..glClear_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glClear_t>(p)(mask);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glClear_str[..glClear_str.len() - 1],
+          mask,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glClientWaitSync_t =
+    unsafe extern "system" fn(GLsync, SyncObjectMask, GLuint64) -> GLenum;
+  static glClientWaitSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glClientWaitSync_str: &str = "glClientWaitSync\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glClientWaitSync(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glClientWaitSync_p.store(
+      call_loader(loader, glClientWaitSync_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glClientWaitSync_is_loaded() -> bool {
+    glClientWaitSync_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glClientWaitSync(
+    sync: GLsync,
+    flags: SyncObjectMask,
+    timeout: GLuint64,
+  ) -> GLenum {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glClientWaitSync_str[..glClientWaitSync_str.len() - 1]
+      );
+    }
+    let p = glClientWaitSync_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glClientWaitSync_str[..glClientWaitSync_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glClientWaitSync_t>(p)(sync, flags, timeout);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glClientWaitSync_str[..glClientWaitSync_str.len() - 1],
+          sync,
+          flags,
+          timeout,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glColorMask_t =
+    unsafe extern "system" fn(GLboolean, GLboolean, GLboolean, GLboolean);
+  static glColorMask_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glColorMask_str: &str = "glColorMask\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glColorMask(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glColorMask_p
+      .store(call_loader(loader, glColorMask_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glColorMask_is_loaded() -> bool {
+    glColorMask_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glColorMask(
+    red: GLboolean,
+    green: GLboolean,
+    blue: GLboolean,
+    alpha: GLboolean,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glColorMask_str[..glColorMask_str.len() - 1]
+      );
+    }
+    let p = glColorMask_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glColorMask_str[..glColorMask_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glColorMask_t>(p)(red, green, blue, alpha);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glColorMask_str[..glColorMask_str.len() - 1],
+          red,
+          green,
+          blue,
+          alpha,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glColorMaski_t = unsafe extern "system" fn(
     GLuint,
-    GLint,
-    GLint,
+    GLboolean,
+    GLboolean,
+    GLboolean,
+    GLboolean,
   );
-  static glFramebufferTexture3D_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glFramebufferTexture3D_str: &str = "glFramebufferTexture3D\0";
+  static glColorMaski_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glColorMaski_str: &str = "glColorMaski\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glFramebufferTexture3D() {
-    unimplemented!()
+  pub unsafe fn load_glColorMaski(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glColorMaski_p
+      .store(call_loader(loader, glColorMaski_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glFramebufferTexture3D() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glColorMaski_is_loaded() -> bool {
+    glColorMaski_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glColorMaski(
+    index: GLuint,
+    r: GLboolean,
+    g: GLboolean,
+    b: GLboolean,
+    a: GLboolean,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glColorMaski_str[..glColorMaski_str.len() - 1]
+      );
+    }
+    let p = glColorMaski_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glColorMaski_str[..glColorMaski_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glColorMaski_t>(p)(index, r, g, b, a);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glColorMaski_str[..glColorMaski_str.len() - 1],
+          index,
+          r,
+          g,
+          b,
+          a,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glDepthFunc_t = unsafe extern "system" fn(DepthFunction);
-  static glDepthFunc_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDepthFunc_str: &str = "glDepthFunc\0";
+  type glCompileShader_t = unsafe extern "system" fn(GLuint);
+  static glCompileShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCompileShader_str: &str = "glCompileShader\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glDepthFunc() {
-    unimplemented!()
+  pub unsafe fn load_glCompileShader(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCompileShader_p.store(
+      call_loader(loader, glCompileShader_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glDepthFunc() {
-    unimplemented!()
-  }
-
-  type glGetShaderSource_t =
-    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar);
-  static glGetShaderSource_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetShaderSource_str: &str = "glGetShaderSource\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGetShaderSource() {
-    unimplemented!()
-  }
-  pub fn glGetShaderSource() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4ui_t =
-    unsafe extern "system" fn(GLuint, GLuint, GLuint, GLuint, GLuint);
-  static glVertexAttribI4ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4ui_str: &str = "glVertexAttribI4ui\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4ui() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4ui() {
-    unimplemented!()
-  }
-
-  type glGetUniformBlockIndex_t =
-    unsafe extern "system" fn(GLuint, *const GLchar) -> GLuint;
-  static glGetUniformBlockIndex_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetUniformBlockIndex_str: &str = "glGetUniformBlockIndex\0";
-  #[doc(hidden)]
-  pub fn load_glGetUniformBlockIndex() {
-    unimplemented!()
-  }
-  pub fn glGetUniformBlockIndex() {
-    unimplemented!()
-  }
-
-  type glGenTextures_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
-  static glGenTextures_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenTextures_str: &str = "glGenTextures\0";
-  #[doc(hidden)]
-  pub fn load_glGenTextures() {
-    unimplemented!()
-  }
-  pub fn glGenTextures() {
-    unimplemented!()
-  }
-
-  type glGetUniformiv_t = unsafe extern "system" fn(GLuint, GLint, *mut GLint);
-  static glGetUniformiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetUniformiv_str: &str = "glGetUniformiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetUniformiv() {
-    unimplemented!()
-  }
-  pub fn glGetUniformiv() {
-    unimplemented!()
-  }
-
-  type glCreateShader_t = unsafe extern "system" fn(ShaderType) -> GLuint;
-  static glCreateShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCreateShader_str: &str = "glCreateShader\0";
-  #[doc(hidden)]
-  pub fn load_glCreateShader() {
-    unimplemented!()
-  }
-  pub fn glCreateShader() {
-    unimplemented!()
-  }
-
-  type glUniform3ui_t =
-    unsafe extern "system" fn(GLint, GLuint, GLuint, GLuint);
-  static glUniform3ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform3ui_str: &str = "glUniform3ui\0";
-  #[doc(hidden)]
-  pub fn load_glUniform3ui() {
-    unimplemented!()
-  }
-  pub fn glUniform3ui() {
-    unimplemented!()
-  }
-
-  type glUniform1iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
-  static glUniform1iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform1iv_str: &str = "glUniform1iv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform1iv() {
-    unimplemented!()
-  }
-  pub fn glUniform1iv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
-  static glVertexAttrib4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4fv_str: &str = "glVertexAttrib4fv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4fv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4fv() {
-    unimplemented!()
-  }
-
-  type glIsBuffer_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsBuffer_str: &str = "glIsBuffer\0";
-  #[doc(hidden)]
-  pub fn load_glIsBuffer() {
-    unimplemented!()
-  }
-  pub fn glIsBuffer() {
-    unimplemented!()
-  }
-
-  type glGetQueryObjectiv_t =
-    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLint);
-  static glGetQueryObjectiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetQueryObjectiv_str: &str = "glGetQueryObjectiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetQueryObjectiv() {
-    unimplemented!()
-  }
-  pub fn glGetQueryObjectiv() {
-    unimplemented!()
-  }
-
-  type glDrawElements_t = unsafe extern "system" fn(
-    PrimitiveType,
-    GLsizei,
-    DrawElementsType,
-    *const c_void,
-  );
-  static glDrawElements_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDrawElements_str: &str = "glDrawElements\0";
-  #[doc(hidden)]
-  pub fn load_glDrawElements() {
-    unimplemented!()
-  }
-  pub fn glDrawElements() {
-    unimplemented!()
-  }
-
-  type glCompressedTexSubImage1D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLsizei,
-    PixelFormat,
-    GLsizei,
-    *const c_void,
-  );
-  static glCompressedTexSubImage1D_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glCompressedTexSubImage1D_str: &str = "glCompressedTexSubImage1D\0";
-  #[doc(hidden)]
-  pub fn load_glCompressedTexSubImage1D() {
-    unimplemented!()
-  }
-  pub fn glCompressedTexSubImage1D() {
-    unimplemented!()
-  }
-
-  type glGetMultisamplefv_t =
-    unsafe extern "system" fn(GetMultisamplePNameNV, GLuint, *mut GLfloat);
-  static glGetMultisamplefv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetMultisamplefv_str: &str = "glGetMultisamplefv\0";
-  #[doc(hidden)]
-  pub fn load_glGetMultisamplefv() {
-    unimplemented!()
-  }
-  pub fn glGetMultisamplefv() {
-    unimplemented!()
-  }
-
-  type glUniform1f_t = unsafe extern "system" fn(GLint, GLfloat);
-  static glUniform1f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform1f_str: &str = "glUniform1f\0";
-  #[doc(hidden)]
-  pub fn load_glUniform1f() {
-    unimplemented!()
-  }
-  pub fn glUniform1f() {
-    unimplemented!()
-  }
-
-  type glPolygonOffset_t = unsafe extern "system" fn(GLfloat, GLfloat);
-  static glPolygonOffset_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPolygonOffset_str: &str = "glPolygonOffset\0";
-  #[doc(hidden)]
-  pub fn load_glPolygonOffset() {
-    unimplemented!()
-  }
-  pub fn glPolygonOffset() {
-    unimplemented!()
-  }
-
-  type glSamplerParameterIuiv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterI, *const GLuint);
-  static glSamplerParameterIuiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glSamplerParameterIuiv_str: &str = "glSamplerParameterIuiv\0";
-  #[doc(hidden)]
-  pub fn load_glSamplerParameterIuiv() {
-    unimplemented!()
-  }
-  pub fn glSamplerParameterIuiv() {
-    unimplemented!()
-  }
-
-  type glBlendEquationSeparate_t =
-    unsafe extern "system" fn(BlendEquationModeEXT, BlendEquationModeEXT);
-  static glBlendEquationSeparate_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glBlendEquationSeparate_str: &str = "glBlendEquationSeparate\0";
-  #[doc(hidden)]
-  pub fn load_glBlendEquationSeparate() {
-    unimplemented!()
-  }
-  pub fn glBlendEquationSeparate() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI1iv_t = unsafe extern "system" fn(GLuint, *const GLint);
-  static glVertexAttribI1iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI1iv_str: &str = "glVertexAttribI1iv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI1iv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI1iv() {
-    unimplemented!()
-  }
-
-  type glPointParameteri_t =
-    unsafe extern "system" fn(PointParameterNameARB, GLint);
-  static glPointParameteri_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPointParameteri_str: &str = "glPointParameteri\0";
-  #[doc(hidden)]
-  pub fn load_glPointParameteri() {
-    unimplemented!()
-  }
-  pub fn glPointParameteri() {
-    unimplemented!()
-  }
-
-  type glGetError_t = unsafe extern "system" fn() -> GLenum;
-  static glGetError_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetError_str: &str = "glGetError\0";
-  #[doc(hidden)]
-  pub fn load_glGetError() {
-    unimplemented!()
-  }
-  pub fn glGetError() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix2x4fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix2x4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix2x4fv_str: &str = "glUniformMatrix2x4fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix2x4fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix2x4fv() {
-    unimplemented!()
-  }
-
-  type glBeginConditionalRender_t =
-    unsafe extern "system" fn(GLuint, ConditionalRenderMode);
-  static glBeginConditionalRender_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glBeginConditionalRender_str: &str = "glBeginConditionalRender\0";
-  #[doc(hidden)]
-  pub fn load_glBeginConditionalRender() {
-    unimplemented!()
-  }
-  pub fn glBeginConditionalRender() {
-    unimplemented!()
-  }
-
-  type glDrawElementsInstancedBaseVertex_t = unsafe extern "system" fn(
-    PrimitiveType,
-    GLsizei,
-    DrawElementsType,
-    *const c_void,
-    GLsizei,
-    GLint,
-  );
-  static glDrawElementsInstancedBaseVertex_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glDrawElementsInstancedBaseVertex_str: &str =
-    "glDrawElementsInstancedBaseVertex\0";
-  #[doc(hidden)]
-  pub fn load_glDrawElementsInstancedBaseVertex() {
-    unimplemented!()
-  }
-  pub fn glDrawElementsInstancedBaseVertex() {
-    unimplemented!()
-  }
-
-  type glGetFragDataLocation_t =
-    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
-  static glGetFragDataLocation_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetFragDataLocation_str: &str = "glGetFragDataLocation\0";
-  #[doc(hidden)]
-  pub fn load_glGetFragDataLocation() {
-    unimplemented!()
-  }
-  pub fn glGetFragDataLocation() {
-    unimplemented!()
-  }
-
-  type glUniform1uiv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
-  static glUniform1uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform1uiv_str: &str = "glUniform1uiv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform1uiv() {
-    unimplemented!()
-  }
-  pub fn glUniform1uiv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4bv_t = unsafe extern "system" fn(GLuint, *const GLbyte);
-  static glVertexAttrib4bv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4bv_str: &str = "glVertexAttrib4bv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4bv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4bv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4Nub_t =
-    unsafe extern "system" fn(GLuint, GLubyte, GLubyte, GLubyte, GLubyte);
-  static glVertexAttrib4Nub_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4Nub_str: &str = "glVertexAttrib4Nub\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4Nub() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4Nub() {
-    unimplemented!()
-  }
-
-  type glUniform2ui_t = unsafe extern "system" fn(GLint, GLuint, GLuint);
-  static glUniform2ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform2ui_str: &str = "glUniform2ui\0";
-  #[doc(hidden)]
-  pub fn load_glUniform2ui() {
-    unimplemented!()
-  }
-  pub fn glUniform2ui() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4i_t =
-    unsafe extern "system" fn(GLuint, GLint, GLint, GLint, GLint);
-  static glVertexAttribI4i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4i_str: &str = "glVertexAttribI4i\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4i() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4i() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib3s_t =
-    unsafe extern "system" fn(GLuint, GLshort, GLshort, GLshort);
-  static glVertexAttrib3s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib3s_str: &str = "glVertexAttrib3s\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib3s() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib3s() {
-    unimplemented!()
-  }
-
-  type glGetTransformFeedbackVarying_t = unsafe extern "system" fn(
-    GLuint,
-    GLuint,
-    GLsizei,
-    *mut GLsizei,
-    *mut GLsizei,
-    *mut GLenum,
-    *mut GLchar,
-  );
-  static glGetTransformFeedbackVarying_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetTransformFeedbackVarying_str: &str =
-    "glGetTransformFeedbackVarying\0";
-  #[doc(hidden)]
-  pub fn load_glGetTransformFeedbackVarying() {
-    unimplemented!()
-  }
-  pub fn glGetTransformFeedbackVarying() {
-    unimplemented!()
-  }
-
-  type glGetVertexAttribIuiv_t =
-    unsafe extern "system" fn(GLuint, VertexAttribEnum, *mut GLuint);
-  static glGetVertexAttribIuiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetVertexAttribIuiv_str: &str = "glGetVertexAttribIuiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetVertexAttribIuiv() {
-    unimplemented!()
-  }
-  pub fn glGetVertexAttribIuiv() {
-    unimplemented!()
-  }
-
-  type glEnableVertexAttribArray_t = unsafe extern "system" fn(GLuint);
-  static glEnableVertexAttribArray_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glEnableVertexAttribArray_str: &str = "glEnableVertexAttribArray\0";
-  #[doc(hidden)]
-  pub fn load_glEnableVertexAttribArray() {
-    unimplemented!()
-  }
-  pub fn glEnableVertexAttribArray() {
-    unimplemented!()
-  }
-
-  type glGetBufferParameteri64v_t =
-    unsafe extern "system" fn(BufferTargetARB, BufferPNameARB, *mut GLint64);
-  static glGetBufferParameteri64v_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetBufferParameteri64v_str: &str = "glGetBufferParameteri64v\0";
-  #[doc(hidden)]
-  pub fn load_glGetBufferParameteri64v() {
-    unimplemented!()
-  }
-  pub fn glGetBufferParameteri64v() {
-    unimplemented!()
-  }
-
-  type glCopyTexSubImage1D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLsizei,
-  );
-  static glCopyTexSubImage1D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCopyTexSubImage1D_str: &str = "glCopyTexSubImage1D\0";
-  #[doc(hidden)]
-  pub fn load_glCopyTexSubImage1D() {
-    unimplemented!()
-  }
-  pub fn glCopyTexSubImage1D() {
-    unimplemented!()
-  }
-
-  type glDeleteSamplers_t = unsafe extern "system" fn(GLsizei, *const GLuint);
-  static glDeleteSamplers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteSamplers_str: &str = "glDeleteSamplers\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteSamplers() {
-    unimplemented!()
-  }
-  pub fn glDeleteSamplers() {
-    unimplemented!()
-  }
-
-  type glIsEnabledi_t =
-    unsafe extern "system" fn(EnableCap, GLuint) -> GLboolean;
-  static glIsEnabledi_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsEnabledi_str: &str = "glIsEnabledi\0";
-  #[doc(hidden)]
-  pub fn load_glIsEnabledi() {
-    unimplemented!()
-  }
-  pub fn glIsEnabledi() {
-    unimplemented!()
-  }
-
-  type glPixelStorei_t = unsafe extern "system" fn(PixelStoreParameter, GLint);
-  static glPixelStorei_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPixelStorei_str: &str = "glPixelStorei\0";
-  #[doc(hidden)]
-  pub fn load_glPixelStorei() {
-    unimplemented!()
-  }
-  pub fn glPixelStorei() {
-    unimplemented!()
+  pub fn glCompileShader_is_loaded() -> bool {
+    glCompileShader_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCompileShader(shader: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCompileShader_str[..glCompileShader_str.len() - 1]
+      );
+    }
+    let p = glCompileShader_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCompileShader_str[..glCompileShader_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCompileShader_t>(p)(shader);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glCompileShader_str[..glCompileShader_str.len() - 1],
+          shader,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glCompressedTexImage1D_t = unsafe extern "system" fn(
@@ -2858,1452 +3210,146 @@ pub mod global_loader {
   static glCompressedTexImage1D_p: AtomicPtr<c_void> =
     AtomicPtr::new(null_mut());
   const glCompressedTexImage1D_str: &str = "glCompressedTexImage1D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glCompressedTexImage1D() {
-    unimplemented!()
+  pub unsafe fn load_glCompressedTexImage1D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCompressedTexImage1D_p.store(
+      call_loader(loader, glCompressedTexImage1D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glCompressedTexImage1D() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCompressedTexImage1D_is_loaded() -> bool {
+    glCompressedTexImage1D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCompressedTexImage1D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: InternalFormat,
+    width: GLsizei,
+    border: GLint,
+    imageSize: GLsizei,
+    data: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCompressedTexImage1D_str[..glCompressedTexImage1D_str.len() - 1]
+      );
+    }
+    let p = glCompressedTexImage1D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCompressedTexImage1D_str[..glCompressedTexImage1D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCompressedTexImage1D_t>(p)(
+      target,
+      level,
+      internalformat,
+      width,
+      border,
+      imageSize,
+      data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glCompressedTexImage1D_str[..glCompressedTexImage1D_str.len() - 1],
+          target,
+          level,
+          internalformat,
+          width,
+          border,
+          imageSize,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glVertexAttrib2f_t = unsafe extern "system" fn(GLuint, GLfloat, GLfloat);
-  static glVertexAttrib2f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib2f_str: &str = "glVertexAttrib2f\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib2f() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib2f() {
-    unimplemented!()
-  }
-
-  type glTexParameterIiv_t = unsafe extern "system" fn(
-    TextureTarget,
-    TextureParameterName,
-    *const GLint,
-  );
-  static glTexParameterIiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexParameterIiv_str: &str = "glTexParameterIiv\0";
-  #[doc(hidden)]
-  pub fn load_glTexParameterIiv() {
-    unimplemented!()
-  }
-  pub fn glTexParameterIiv() {
-    unimplemented!()
-  }
-
-  type glFenceSync_t =
-    unsafe extern "system" fn(SyncCondition, GLbitfield) -> GLsync;
-  static glFenceSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glFenceSync_str: &str = "glFenceSync\0";
-  #[doc(hidden)]
-  pub fn load_glFenceSync() {
-    unimplemented!()
-  }
-  pub fn glFenceSync() {
-    unimplemented!()
-  }
-
-  type glGetAttachedShaders_t =
-    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLuint);
-  static glGetAttachedShaders_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetAttachedShaders_str: &str = "glGetAttachedShaders\0";
-  #[doc(hidden)]
-  pub fn load_glGetAttachedShaders() {
-    unimplemented!()
-  }
-  pub fn glGetAttachedShaders() {
-    unimplemented!()
-  }
-
-  type glClampColor_t =
-    unsafe extern "system" fn(ClampColorTargetARB, ClampColorModeARB);
-  static glClampColor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClampColor_str: &str = "glClampColor\0";
-  #[doc(hidden)]
-  pub fn load_glClampColor() {
-    unimplemented!()
-  }
-  pub fn glClampColor() {
-    unimplemented!()
-  }
-
-  type glHint_t = unsafe extern "system" fn(HintTarget, HintMode);
-  static glHint_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glHint_str: &str = "glHint\0";
-  #[doc(hidden)]
-  pub fn load_glHint() {
-    unimplemented!()
-  }
-  pub fn glHint() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4Nubv_t =
-    unsafe extern "system" fn(GLuint, *const GLubyte);
-  static glVertexAttrib4Nubv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4Nubv_str: &str = "glVertexAttrib4Nubv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4Nubv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4Nubv() {
-    unimplemented!()
-  }
-
-  type glGetTexParameterIuiv_t =
-    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLuint);
-  static glGetTexParameterIuiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetTexParameterIuiv_str: &str = "glGetTexParameterIuiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetTexParameterIuiv() {
-    unimplemented!()
-  }
-  pub fn glGetTexParameterIuiv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
-  static glVertexAttrib4sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4sv_str: &str = "glVertexAttrib4sv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4sv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4sv() {
-    unimplemented!()
-  }
-
-  type glCompressedTexSubImage2D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-    PixelFormat,
-    GLsizei,
-    *const c_void,
-  );
-  static glCompressedTexSubImage2D_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glCompressedTexSubImage2D_str: &str = "glCompressedTexSubImage2D\0";
-  #[doc(hidden)]
-  pub fn load_glCompressedTexSubImage2D() {
-    unimplemented!()
-  }
-  pub fn glCompressedTexSubImage2D() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4Niv_t = unsafe extern "system" fn(GLuint, *const GLint);
-  static glVertexAttrib4Niv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4Niv_str: &str = "glVertexAttrib4Niv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4Niv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4Niv() {
-    unimplemented!()
-  }
-
-  type glTexParameterf_t =
-    unsafe extern "system" fn(TextureTarget, TextureParameterName, GLfloat);
-  static glTexParameterf_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexParameterf_str: &str = "glTexParameterf\0";
-  #[doc(hidden)]
-  pub fn load_glTexParameterf() {
-    unimplemented!()
-  }
-  pub fn glTexParameterf() {
-    unimplemented!()
-  }
-
-  type glFramebufferTexture1D_t = unsafe extern "system" fn(
-    FramebufferTarget,
-    FramebufferAttachment,
-    TextureTarget,
-    GLuint,
-    GLint,
-  );
-  static glFramebufferTexture1D_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glFramebufferTexture1D_str: &str = "glFramebufferTexture1D\0";
-  #[doc(hidden)]
-  pub fn load_glFramebufferTexture1D() {
-    unimplemented!()
-  }
-  pub fn glFramebufferTexture1D() {
-    unimplemented!()
-  }
-
-  type glTexImage2DMultisample_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLsizei,
-    InternalFormat,
-    GLsizei,
-    GLsizei,
-    GLboolean,
-  );
-  static glTexImage2DMultisample_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glTexImage2DMultisample_str: &str = "glTexImage2DMultisample\0";
-  #[doc(hidden)]
-  pub fn load_glTexImage2DMultisample() {
-    unimplemented!()
-  }
-  pub fn glTexImage2DMultisample() {
-    unimplemented!()
-  }
-
-  type glUniform2f_t = unsafe extern "system" fn(GLint, GLfloat, GLfloat);
-  static glUniform2f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform2f_str: &str = "glUniform2f\0";
-  #[doc(hidden)]
-  pub fn load_glUniform2f() {
-    unimplemented!()
-  }
-  pub fn glUniform2f() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix4x2fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix4x2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix4x2fv_str: &str = "glUniformMatrix4x2fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix4x2fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix4x2fv() {
-    unimplemented!()
-  }
-
-  type glPointSize_t = unsafe extern "system" fn(GLfloat);
-  static glPointSize_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPointSize_str: &str = "glPointSize\0";
-  #[doc(hidden)]
-  pub fn load_glPointSize() {
-    unimplemented!()
-  }
-  pub fn glPointSize() {
-    unimplemented!()
-  }
-
-  type glTexImage3D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-    GLsizei,
-    GLint,
-    PixelFormat,
-    PixelType,
-    *const c_void,
-  );
-  static glTexImage3D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexImage3D_str: &str = "glTexImage3D\0";
-  #[doc(hidden)]
-  pub fn load_glTexImage3D() {
-    unimplemented!()
-  }
-  pub fn glTexImage3D() {
-    unimplemented!()
-  }
-
-  type glFramebufferRenderbuffer_t = unsafe extern "system" fn(
-    FramebufferTarget,
-    FramebufferAttachment,
-    RenderbufferTarget,
-    GLuint,
-  );
-  static glFramebufferRenderbuffer_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glFramebufferRenderbuffer_str: &str = "glFramebufferRenderbuffer\0";
-  #[doc(hidden)]
-  pub fn load_glFramebufferRenderbuffer() {
-    unimplemented!()
-  }
-  pub fn glFramebufferRenderbuffer() {
-    unimplemented!()
-  }
-
-  type glReadPixels_t = unsafe extern "system" fn(
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-    PixelFormat,
-    PixelType,
-    *mut c_void,
-  );
-  static glReadPixels_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glReadPixels_str: &str = "glReadPixels\0";
-  #[doc(hidden)]
-  pub fn load_glReadPixels() {
-    unimplemented!()
-  }
-  pub fn glReadPixels() {
-    unimplemented!()
-  }
-
-  type glGetInteger64v_t = unsafe extern "system" fn(GetPName, *mut GLint64);
-  static glGetInteger64v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetInteger64v_str: &str = "glGetInteger64v\0";
-  #[doc(hidden)]
-  pub fn load_glGetInteger64v() {
-    unimplemented!()
-  }
-  pub fn glGetInteger64v() {
-    unimplemented!()
-  }
-
-  type glGetCompressedTexImage_t =
-    unsafe extern "system" fn(TextureTarget, GLint, *mut c_void);
-  static glGetCompressedTexImage_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetCompressedTexImage_str: &str = "glGetCompressedTexImage\0";
-  #[doc(hidden)]
-  pub fn load_glGetCompressedTexImage() {
-    unimplemented!()
-  }
-  pub fn glGetCompressedTexImage() {
-    unimplemented!()
-  }
-
-  type glGetActiveUniform_t = unsafe extern "system" fn(
-    GLuint,
-    GLuint,
-    GLsizei,
-    *mut GLsizei,
-    *mut GLint,
-    *mut GLenum,
-    *mut GLchar,
-  );
-  static glGetActiveUniform_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetActiveUniform_str: &str = "glGetActiveUniform\0";
-  #[doc(hidden)]
-  pub fn load_glGetActiveUniform() {
-    unimplemented!()
-  }
-  pub fn glGetActiveUniform() {
-    unimplemented!()
-  }
-
-  type glDeleteVertexArrays_t =
-    unsafe extern "system" fn(GLsizei, *const GLuint);
-  static glDeleteVertexArrays_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteVertexArrays_str: &str = "glDeleteVertexArrays\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteVertexArrays() {
-    unimplemented!()
-  }
-  pub fn glDeleteVertexArrays() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
-  static glVertexAttrib4dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4dv_str: &str = "glVertexAttrib4dv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4dv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4dv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI3ui_t =
-    unsafe extern "system" fn(GLuint, GLuint, GLuint, GLuint);
-  static glVertexAttribI3ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI3ui_str: &str = "glVertexAttribI3ui\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI3ui() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI3ui() {
-    unimplemented!()
-  }
-
-  type glIsQuery_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsQuery_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsQuery_str: &str = "glIsQuery\0";
-  #[doc(hidden)]
-  pub fn load_glIsQuery() {
-    unimplemented!()
-  }
-  pub fn glIsQuery() {
-    unimplemented!()
-  }
-
-  type glRenderbufferStorageMultisample_t = unsafe extern "system" fn(
-    RenderbufferTarget,
-    GLsizei,
-    InternalFormat,
-    GLsizei,
-    GLsizei,
-  );
-  static glRenderbufferStorageMultisample_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glRenderbufferStorageMultisample_str: &str =
-    "glRenderbufferStorageMultisample\0";
-  #[doc(hidden)]
-  pub fn load_glRenderbufferStorageMultisample() {
-    unimplemented!()
-  }
-  pub fn glRenderbufferStorageMultisample() {
-    unimplemented!()
-  }
-
-  type glDetachShader_t = unsafe extern "system" fn(GLuint, GLuint);
-  static glDetachShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDetachShader_str: &str = "glDetachShader\0";
-  #[doc(hidden)]
-  pub fn load_glDetachShader() {
-    unimplemented!()
-  }
-  pub fn glDetachShader() {
-    unimplemented!()
-  }
-
-  type glTransformFeedbackVaryings_t = unsafe extern "system" fn(
-    GLuint,
-    GLsizei,
-    *const *const GLchar,
-    TransformFeedbackBufferMode,
-  );
-  static glTransformFeedbackVaryings_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glTransformFeedbackVaryings_str: &str = "glTransformFeedbackVaryings\0";
-  #[doc(hidden)]
-  pub fn load_glTransformFeedbackVaryings() {
-    unimplemented!()
-  }
-  pub fn glTransformFeedbackVaryings() {
-    unimplemented!()
-  }
-
-  type glGetUniformuiv_t =
-    unsafe extern "system" fn(GLuint, GLint, *mut GLuint);
-  static glGetUniformuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetUniformuiv_str: &str = "glGetUniformuiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetUniformuiv() {
-    unimplemented!()
-  }
-  pub fn glGetUniformuiv() {
-    unimplemented!()
-  }
-
-  type glTexBuffer_t =
-    unsafe extern "system" fn(TextureTarget, InternalFormat, GLuint);
-  static glTexBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexBuffer_str: &str = "glTexBuffer\0";
-  #[doc(hidden)]
-  pub fn load_glTexBuffer() {
-    unimplemented!()
-  }
-  pub fn glTexBuffer() {
-    unimplemented!()
-  }
-
-  type glFlushMappedBufferRange_t =
-    unsafe extern "system" fn(BufferTargetARB, GLintptr, GLsizeiptr);
-  static glFlushMappedBufferRange_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glFlushMappedBufferRange_str: &str = "glFlushMappedBufferRange\0";
-  #[doc(hidden)]
-  pub fn load_glFlushMappedBufferRange() {
-    unimplemented!()
-  }
-  pub fn glFlushMappedBufferRange() {
-    unimplemented!()
-  }
-
-  type glGetString_t = unsafe extern "system" fn(StringName) -> GLubyte;
-  static glGetString_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetString_str: &str = "glGetString\0";
-  #[doc(hidden)]
-  pub fn load_glGetString() {
-    unimplemented!()
-  }
-  pub fn glGetString() {
-    unimplemented!()
-  }
-
-  type glMultiDrawElements_t = unsafe extern "system" fn(
-    PrimitiveType,
-    *const GLsizei,
-    DrawElementsType,
-    *const *const c_void,
-    GLsizei,
-  );
-  static glMultiDrawElements_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glMultiDrawElements_str: &str = "glMultiDrawElements\0";
-  #[doc(hidden)]
-  pub fn load_glMultiDrawElements() {
-    unimplemented!()
-  }
-  pub fn glMultiDrawElements() {
-    unimplemented!()
-  }
-
-  type glGetSamplerParameterfv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterF, *mut GLfloat);
-  static glGetSamplerParameterfv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetSamplerParameterfv_str: &str = "glGetSamplerParameterfv\0";
-  #[doc(hidden)]
-  pub fn load_glGetSamplerParameterfv() {
-    unimplemented!()
-  }
-  pub fn glGetSamplerParameterfv() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix2x3fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix2x3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix2x3fv_str: &str = "glUniformMatrix2x3fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix2x3fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix2x3fv() {
-    unimplemented!()
-  }
-
-  type glRenderbufferStorage_t = unsafe extern "system" fn(
-    RenderbufferTarget,
-    InternalFormat,
-    GLsizei,
-    GLsizei,
-  );
-  static glRenderbufferStorage_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glRenderbufferStorage_str: &str = "glRenderbufferStorage\0";
-  #[doc(hidden)]
-  pub fn load_glRenderbufferStorage() {
-    unimplemented!()
-  }
-  pub fn glRenderbufferStorage() {
-    unimplemented!()
-  }
-
-  type glGetInteger64i_v_t =
-    unsafe extern "system" fn(GLenum, GLuint, *mut GLint64);
-  static glGetInteger64i_v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetInteger64i_v_str: &str = "glGetInteger64i_v\0";
-  #[doc(hidden)]
-  pub fn load_glGetInteger64i_v() {
-    unimplemented!()
-  }
-  pub fn glGetInteger64i_v() {
-    unimplemented!()
-  }
-
-  type glPointParameterf_t =
-    unsafe extern "system" fn(PointParameterNameARB, GLfloat);
-  static glPointParameterf_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPointParameterf_str: &str = "glPointParameterf\0";
-  #[doc(hidden)]
-  pub fn load_glPointParameterf() {
-    unimplemented!()
-  }
-  pub fn glPointParameterf() {
-    unimplemented!()
-  }
-
-  type glCopyTexImage2D_t = unsafe extern "system" fn(
+  type glCompressedTexImage2D_t = unsafe extern "system" fn(
     TextureTarget,
     GLint,
     InternalFormat,
-    GLint,
-    GLint,
     GLsizei,
     GLsizei,
     GLint,
-  );
-  static glCopyTexImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCopyTexImage2D_str: &str = "glCopyTexImage2D\0";
-  #[doc(hidden)]
-  pub fn load_glCopyTexImage2D() {
-    unimplemented!()
-  }
-  pub fn glCopyTexImage2D() {
-    unimplemented!()
-  }
-
-  type glGetUniformIndices_t = unsafe extern "system" fn(
-    GLuint,
-    GLsizei,
-    *const *const GLchar,
-    *mut GLuint,
-  );
-  static glGetUniformIndices_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetUniformIndices_str: &str = "glGetUniformIndices\0";
-  #[doc(hidden)]
-  pub fn load_glGetUniformIndices() {
-    unimplemented!()
-  }
-  pub fn glGetUniformIndices() {
-    unimplemented!()
-  }
-
-  type glUniform2iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
-  static glUniform2iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform2iv_str: &str = "glUniform2iv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform2iv() {
-    unimplemented!()
-  }
-  pub fn glUniform2iv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib3fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
-  static glVertexAttrib3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib3fv_str: &str = "glVertexAttrib3fv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib3fv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib3fv() {
-    unimplemented!()
-  }
-
-  type glGetActiveUniformBlockiv_t =
-    unsafe extern "system" fn(GLuint, GLuint, UniformBlockPName, *mut GLint);
-  static glGetActiveUniformBlockiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetActiveUniformBlockiv_str: &str = "glGetActiveUniformBlockiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetActiveUniformBlockiv() {
-    unimplemented!()
-  }
-  pub fn glGetActiveUniformBlockiv() {
-    unimplemented!()
-  }
-
-  type glTexParameteriv_t = unsafe extern "system" fn(
-    TextureTarget,
-    TextureParameterName,
-    *const GLint,
-  );
-  static glTexParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexParameteriv_str: &str = "glTexParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glTexParameteriv() {
-    unimplemented!()
-  }
-  pub fn glTexParameteriv() {
-    unimplemented!()
-  }
-
-  type glTexParameteri_t =
-    unsafe extern "system" fn(TextureTarget, TextureParameterName, GLint);
-  static glTexParameteri_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexParameteri_str: &str = "glTexParameteri\0";
-  #[doc(hidden)]
-  pub fn load_glTexParameteri() {
-    unimplemented!()
-  }
-  pub fn glTexParameteri() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix3x2fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix3x2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix3x2fv_str: &str = "glUniformMatrix3x2fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix3x2fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix3x2fv() {
-    unimplemented!()
-  }
-
-  type glFinish_t = unsafe extern "system" fn();
-  static glFinish_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glFinish_str: &str = "glFinish\0";
-  #[doc(hidden)]
-  pub fn load_glFinish() {
-    unimplemented!()
-  }
-  pub fn glFinish() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib2fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
-  static glVertexAttrib2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib2fv_str: &str = "glVertexAttrib2fv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib2fv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib2fv() {
-    unimplemented!()
-  }
-
-  type glBindFragDataLocation_t =
-    unsafe extern "system" fn(GLuint, GLuint, *const GLchar);
-  static glBindFragDataLocation_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glBindFragDataLocation_str: &str = "glBindFragDataLocation\0";
-  #[doc(hidden)]
-  pub fn load_glBindFragDataLocation() {
-    unimplemented!()
-  }
-  pub fn glBindFragDataLocation() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP1uiv_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    *const GLuint,
-  );
-  static glVertexAttribP1uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP1uiv_str: &str = "glVertexAttribP1uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribP1uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribP1uiv() {
-    unimplemented!()
-  }
-
-  type glDisableVertexAttribArray_t = unsafe extern "system" fn(GLuint);
-  static glDisableVertexAttribArray_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glDisableVertexAttribArray_str: &str = "glDisableVertexAttribArray\0";
-  #[doc(hidden)]
-  pub fn load_glDisableVertexAttribArray() {
-    unimplemented!()
-  }
-  pub fn glDisableVertexAttribArray() {
-    unimplemented!()
-  }
-
-  type glClear_t = unsafe extern "system" fn(ClearBufferMask);
-  static glClear_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClear_str: &str = "glClear\0";
-  #[doc(hidden)]
-  pub fn load_glClear() {
-    unimplemented!()
-  }
-  pub fn glClear() {
-    unimplemented!()
-  }
-
-  type glDeleteTextures_t = unsafe extern "system" fn(GLsizei, *const GLuint);
-  static glDeleteTextures_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteTextures_str: &str = "glDeleteTextures\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteTextures() {
-    unimplemented!()
-  }
-  pub fn glDeleteTextures() {
-    unimplemented!()
-  }
-
-  type glCopyTexSubImage3D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-  );
-  static glCopyTexSubImage3D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCopyTexSubImage3D_str: &str = "glCopyTexSubImage3D\0";
-  #[doc(hidden)]
-  pub fn load_glCopyTexSubImage3D() {
-    unimplemented!()
-  }
-  pub fn glCopyTexSubImage3D() {
-    unimplemented!()
-  }
-
-  type glBufferSubData_t = unsafe extern "system" fn(
-    BufferTargetARB,
-    GLintptr,
-    GLsizeiptr,
-    *const c_void,
-  );
-  static glBufferSubData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBufferSubData_str: &str = "glBufferSubData\0";
-  #[doc(hidden)]
-  pub fn load_glBufferSubData() {
-    unimplemented!()
-  }
-  pub fn glBufferSubData() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4Nbv_t = unsafe extern "system" fn(GLuint, *const GLbyte);
-  static glVertexAttrib4Nbv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4Nbv_str: &str = "glVertexAttrib4Nbv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4Nbv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4Nbv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4ubv_t =
-    unsafe extern "system" fn(GLuint, *const GLubyte);
-  static glVertexAttribI4ubv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4ubv_str: &str = "glVertexAttribI4ubv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4ubv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4ubv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4usv_t =
-    unsafe extern "system" fn(GLuint, *const GLushort);
-  static glVertexAttrib4usv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4usv_str: &str = "glVertexAttrib4usv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4usv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4usv() {
-    unimplemented!()
-  }
-
-  type glBindBufferRange_t = unsafe extern "system" fn(
-    BufferTargetARB,
-    GLuint,
-    GLuint,
-    GLintptr,
-    GLsizeiptr,
-  );
-  static glBindBufferRange_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBindBufferRange_str: &str = "glBindBufferRange\0";
-  #[doc(hidden)]
-  pub fn load_glBindBufferRange() {
-    unimplemented!()
-  }
-  pub fn glBindBufferRange() {
-    unimplemented!()
-  }
-
-  type glCopyTexSubImage2D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-  );
-  static glCopyTexSubImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCopyTexSubImage2D_str: &str = "glCopyTexSubImage2D\0";
-  #[doc(hidden)]
-  pub fn load_glCopyTexSubImage2D() {
-    unimplemented!()
-  }
-  pub fn glCopyTexSubImage2D() {
-    unimplemented!()
-  }
-
-  type glVertexAttribPointer_t = unsafe extern "system" fn(
-    GLuint,
-    GLint,
-    VertexAttribPointerType,
-    GLboolean,
     GLsizei,
     *const c_void,
   );
-  static glVertexAttribPointer_p: AtomicPtr<c_void> =
+  static glCompressedTexImage2D_p: AtomicPtr<c_void> =
     AtomicPtr::new(null_mut());
-  const glVertexAttribPointer_str: &str = "glVertexAttribPointer\0";
+  const glCompressedTexImage2D_str: &str = "glCompressedTexImage2D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glVertexAttribPointer() {
-    unimplemented!()
+  pub unsafe fn load_glCompressedTexImage2D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCompressedTexImage2D_p.store(
+      call_loader(loader, glCompressedTexImage2D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glVertexAttribPointer() {
-    unimplemented!()
-  }
-
-  type glSampleCoverage_t = unsafe extern "system" fn(GLfloat, GLboolean);
-  static glSampleCoverage_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glSampleCoverage_str: &str = "glSampleCoverage\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glSampleCoverage() {
-    unimplemented!()
-  }
-  pub fn glSampleCoverage() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib1fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
-  static glVertexAttrib1fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib1fv_str: &str = "glVertexAttrib1fv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib1fv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib1fv() {
-    unimplemented!()
-  }
-
-  type glScissor_t = unsafe extern "system" fn(GLint, GLint, GLsizei, GLsizei);
-  static glScissor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glScissor_str: &str = "glScissor\0";
-  #[doc(hidden)]
-  pub fn load_glScissor() {
-    unimplemented!()
-  }
-  pub fn glScissor() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix4x3fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix4x3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix4x3fv_str: &str = "glUniformMatrix4x3fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniformMatrix4x3fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix4x3fv() {
-    unimplemented!()
-  }
-
-  type glLinkProgram_t = unsafe extern "system" fn(GLuint);
-  static glLinkProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glLinkProgram_str: &str = "glLinkProgram\0";
-  #[doc(hidden)]
-  pub fn load_glLinkProgram() {
-    unimplemented!()
-  }
-  pub fn glLinkProgram() {
-    unimplemented!()
-  }
-
-  type glFramebufferTextureLayer_t = unsafe extern "system" fn(
-    FramebufferTarget,
-    FramebufferAttachment,
-    GLuint,
-    GLint,
-    GLint,
-  );
-  static glFramebufferTextureLayer_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glFramebufferTextureLayer_str: &str = "glFramebufferTextureLayer\0";
-  #[doc(hidden)]
-  pub fn load_glFramebufferTextureLayer() {
-    unimplemented!()
-  }
-  pub fn glFramebufferTextureLayer() {
-    unimplemented!()
-  }
-
-  type glUniform4ui_t =
-    unsafe extern "system" fn(GLint, GLuint, GLuint, GLuint, GLuint);
-  static glUniform4ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform4ui_str: &str = "glUniform4ui\0";
-  #[doc(hidden)]
-  pub fn load_glUniform4ui() {
-    unimplemented!()
-  }
-  pub fn glUniform4ui() {
-    unimplemented!()
-  }
-
-  type glGetBufferSubData_t = unsafe extern "system" fn(
-    BufferTargetARB,
-    GLintptr,
-    GLsizeiptr,
-    *mut c_void,
-  );
-  static glGetBufferSubData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetBufferSubData_str: &str = "glGetBufferSubData\0";
-  #[doc(hidden)]
-  pub fn load_glGetBufferSubData() {
-    unimplemented!()
-  }
-  pub fn glGetBufferSubData() {
-    unimplemented!()
-  }
-
-  type glTexImage3DMultisample_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLsizei,
-    InternalFormat,
-    GLsizei,
-    GLsizei,
-    GLsizei,
-    GLboolean,
-  );
-  static glTexImage3DMultisample_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glTexImage3DMultisample_str: &str = "glTexImage3DMultisample\0";
-  #[doc(hidden)]
-  pub fn load_glTexImage3DMultisample() {
-    unimplemented!()
-  }
-  pub fn glTexImage3DMultisample() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI2ui_t = unsafe extern "system" fn(GLuint, GLuint, GLuint);
-  static glVertexAttribI2ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI2ui_str: &str = "glVertexAttribI2ui\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI2ui() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI2ui() {
-    unimplemented!()
-  }
-
-  type glDrawRangeElementsBaseVertex_t = unsafe extern "system" fn(
-    PrimitiveType,
-    GLuint,
-    GLuint,
-    GLsizei,
-    DrawElementsType,
-    *const c_void,
-    GLint,
-  );
-  static glDrawRangeElementsBaseVertex_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glDrawRangeElementsBaseVertex_str: &str =
-    "glDrawRangeElementsBaseVertex\0";
-  #[doc(hidden)]
-  pub fn load_glDrawRangeElementsBaseVertex() {
-    unimplemented!()
-  }
-  pub fn glDrawRangeElementsBaseVertex() {
-    unimplemented!()
-  }
-
-  type glActiveTexture_t = unsafe extern "system" fn(TextureUnit);
-  static glActiveTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glActiveTexture_str: &str = "glActiveTexture\0";
-  #[doc(hidden)]
-  pub fn load_glActiveTexture() {
-    unimplemented!()
-  }
-  pub fn glActiveTexture() {
-    unimplemented!()
-  }
-
-  type glGetSamplerParameterIiv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterI, *mut GLint);
-  static glGetSamplerParameterIiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetSamplerParameterIiv_str: &str = "glGetSamplerParameterIiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetSamplerParameterIiv() {
-    unimplemented!()
-  }
-  pub fn glGetSamplerParameterIiv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4usv_t =
-    unsafe extern "system" fn(GLuint, *const GLushort);
-  static glVertexAttribI4usv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4usv_str: &str = "glVertexAttribI4usv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4usv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4usv() {
-    unimplemented!()
-  }
-
-  type glSampleMaski_t = unsafe extern "system" fn(GLuint, GLbitfield);
-  static glSampleMaski_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glSampleMaski_str: &str = "glSampleMaski\0";
-  #[doc(hidden)]
-  pub fn load_glSampleMaski() {
-    unimplemented!()
-  }
-  pub fn glSampleMaski() {
-    unimplemented!()
-  }
-
-  type glColorMaski_t = unsafe extern "system" fn(
-    GLuint,
-    GLboolean,
-    GLboolean,
-    GLboolean,
-    GLboolean,
-  );
-  static glColorMaski_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glColorMaski_str: &str = "glColorMaski\0";
-  #[doc(hidden)]
-  pub fn load_glColorMaski() {
-    unimplemented!()
-  }
-  pub fn glColorMaski() {
-    unimplemented!()
-  }
-
-  type glTexParameterIuiv_t = unsafe extern "system" fn(
-    TextureTarget,
-    TextureParameterName,
-    *const GLuint,
-  );
-  static glTexParameterIuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexParameterIuiv_str: &str = "glTexParameterIuiv\0";
-  #[doc(hidden)]
-  pub fn load_glTexParameterIuiv() {
-    unimplemented!()
-  }
-  pub fn glTexParameterIuiv() {
-    unimplemented!()
-  }
-
-  type glGetSynciv_t = unsafe extern "system" fn(
-    GLsync,
-    SyncParameterName,
-    GLsizei,
-    *mut GLsizei,
-    *mut GLint,
-  );
-  static glGetSynciv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetSynciv_str: &str = "glGetSynciv\0";
-  #[doc(hidden)]
-  pub fn load_glGetSynciv() {
-    unimplemented!()
-  }
-  pub fn glGetSynciv() {
-    unimplemented!()
-  }
-
-  type glDrawBuffer_t = unsafe extern "system" fn(DrawBufferMode);
-  static glDrawBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDrawBuffer_str: &str = "glDrawBuffer\0";
-  #[doc(hidden)]
-  pub fn load_glDrawBuffer() {
-    unimplemented!()
-  }
-  pub fn glDrawBuffer() {
-    unimplemented!()
-  }
-
-  type glViewport_t = unsafe extern "system" fn(GLint, GLint, GLsizei, GLsizei);
-  static glViewport_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glViewport_str: &str = "glViewport\0";
-  #[doc(hidden)]
-  pub fn load_glViewport() {
-    unimplemented!()
-  }
-  pub fn glViewport() {
-    unimplemented!()
-  }
-
-  type glGetVertexAttribiv_t =
-    unsafe extern "system" fn(GLuint, VertexAttribPropertyARB, *mut GLint);
-  static glGetVertexAttribiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetVertexAttribiv_str: &str = "glGetVertexAttribiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetVertexAttribiv() {
-    unimplemented!()
-  }
-  pub fn glGetVertexAttribiv() {
-    unimplemented!()
-  }
-
-  type glDrawBuffers_t = unsafe extern "system" fn(GLsizei, *const GLenum);
-  static glDrawBuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDrawBuffers_str: &str = "glDrawBuffers\0";
-  #[doc(hidden)]
-  pub fn load_glDrawBuffers() {
-    unimplemented!()
-  }
-  pub fn glDrawBuffers() {
-    unimplemented!()
-  }
-
-  type glGetTexParameterfv_t =
-    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLfloat);
-  static glGetTexParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetTexParameterfv_str: &str = "glGetTexParameterfv\0";
-  #[doc(hidden)]
-  pub fn load_glGetTexParameterfv() {
-    unimplemented!()
-  }
-  pub fn glGetTexParameterfv() {
-    unimplemented!()
-  }
-
-  type glIsSampler_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsSampler_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsSampler_str: &str = "glIsSampler\0";
-  #[doc(hidden)]
-  pub fn load_glIsSampler() {
-    unimplemented!()
-  }
-  pub fn glIsSampler() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP2uiv_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    *const GLuint,
-  );
-  static glVertexAttribP2uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP2uiv_str: &str = "glVertexAttribP2uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribP2uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribP2uiv() {
-    unimplemented!()
-  }
-
-  type glDrawArraysInstanced_t =
-    unsafe extern "system" fn(PrimitiveType, GLint, GLsizei, GLsizei);
-  static glDrawArraysInstanced_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glDrawArraysInstanced_str: &str = "glDrawArraysInstanced\0";
-  #[doc(hidden)]
-  pub fn load_glDrawArraysInstanced() {
-    unimplemented!()
-  }
-  pub fn glDrawArraysInstanced() {
-    unimplemented!()
-  }
-
-  type glGetAttribLocation_t =
-    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
-  static glGetAttribLocation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetAttribLocation_str: &str = "glGetAttribLocation\0";
-  #[doc(hidden)]
-  pub fn load_glGetAttribLocation() {
-    unimplemented!()
-  }
-  pub fn glGetAttribLocation() {
-    unimplemented!()
-  }
-
-  type glGetTexLevelParameteriv_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GetTextureParameter,
-    *mut GLint,
-  );
-  static glGetTexLevelParameteriv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetTexLevelParameteriv_str: &str = "glGetTexLevelParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glGetTexLevelParameteriv() {
-    unimplemented!()
-  }
-  pub fn glGetTexLevelParameteriv() {
-    unimplemented!()
-  }
-
-  type glDepthMask_t = unsafe extern "system" fn(GLboolean);
-  static glDepthMask_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDepthMask_str: &str = "glDepthMask\0";
-  #[doc(hidden)]
-  pub fn load_glDepthMask() {
-    unimplemented!()
-  }
-  pub fn glDepthMask() {
-    unimplemented!()
-  }
-
-  type glClearBufferuiv_t =
-    unsafe extern "system" fn(Buffer, GLint, *const GLuint);
-  static glClearBufferuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClearBufferuiv_str: &str = "glClearBufferuiv\0";
-  #[doc(hidden)]
-  pub fn load_glClearBufferuiv() {
-    unimplemented!()
-  }
-  pub fn glClearBufferuiv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI2uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
-  static glVertexAttribI2uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI2uiv_str: &str = "glVertexAttribI2uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI2uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI2uiv() {
-    unimplemented!()
-  }
-
-  type glMultiDrawElementsBaseVertex_t = unsafe extern "system" fn(
-    PrimitiveType,
-    *const GLsizei,
-    DrawElementsType,
-    *const *const c_void,
-    GLsizei,
-    *const GLint,
-  );
-  static glMultiDrawElementsBaseVertex_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glMultiDrawElementsBaseVertex_str: &str =
-    "glMultiDrawElementsBaseVertex\0";
-  #[doc(hidden)]
-  pub fn load_glMultiDrawElementsBaseVertex() {
-    unimplemented!()
-  }
-  pub fn glMultiDrawElementsBaseVertex() {
-    unimplemented!()
-  }
-
-  type glCreateProgram_t = unsafe extern "system" fn() -> GLuint;
-  static glCreateProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCreateProgram_str: &str = "glCreateProgram\0";
-  #[doc(hidden)]
-  pub fn load_glCreateProgram() {
-    unimplemented!()
-  }
-  pub fn glCreateProgram() {
-    unimplemented!()
-  }
-
-  type glDisablei_t = unsafe extern "system" fn(EnableCap, GLuint);
-  static glDisablei_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDisablei_str: &str = "glDisablei\0";
-  #[doc(hidden)]
-  pub fn load_glDisablei() {
-    unimplemented!()
-  }
-  pub fn glDisablei() {
-    unimplemented!()
-  }
-
-  type glTexSubImage2D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLint,
-    GLsizei,
-    GLsizei,
-    PixelFormat,
-    PixelType,
-    *const c_void,
-  );
-  static glTexSubImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexSubImage2D_str: &str = "glTexSubImage2D\0";
-  #[doc(hidden)]
-  pub fn load_glTexSubImage2D() {
-    unimplemented!()
-  }
-  pub fn glTexSubImage2D() {
-    unimplemented!()
-  }
-
-  type glGetIntegeri_v_t =
-    unsafe extern "system" fn(GLenum, GLuint, *mut GLint);
-  static glGetIntegeri_v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetIntegeri_v_str: &str = "glGetIntegeri_v\0";
-  #[doc(hidden)]
-  pub fn load_glGetIntegeri_v() {
-    unimplemented!()
-  }
-  pub fn glGetIntegeri_v() {
-    unimplemented!()
-  }
-
-  type glIsVertexArray_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsVertexArray_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsVertexArray_str: &str = "glIsVertexArray\0";
-  #[doc(hidden)]
-  pub fn load_glIsVertexArray() {
-    unimplemented!()
-  }
-  pub fn glIsVertexArray() {
-    unimplemented!()
-  }
-
-  type glDeleteShader_t = unsafe extern "system" fn(GLuint);
-  static glDeleteShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteShader_str: &str = "glDeleteShader\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteShader() {
-    unimplemented!()
-  }
-  pub fn glDeleteShader() {
-    unimplemented!()
-  }
-
-  type glPolygonMode_t = unsafe extern "system" fn(MaterialFace, PolygonMode);
-  static glPolygonMode_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPolygonMode_str: &str = "glPolygonMode\0";
-  #[doc(hidden)]
-  pub fn load_glPolygonMode() {
-    unimplemented!()
-  }
-  pub fn glPolygonMode() {
-    unimplemented!()
-  }
-
-  type glReadBuffer_t = unsafe extern "system" fn(ReadBufferMode);
-  static glReadBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glReadBuffer_str: &str = "glReadBuffer\0";
-  #[doc(hidden)]
-  pub fn load_glReadBuffer() {
-    unimplemented!()
-  }
-  pub fn glReadBuffer() {
-    unimplemented!()
-  }
-
-  type glDeleteFramebuffers_t =
-    unsafe extern "system" fn(GLsizei, *const GLuint);
-  static glDeleteFramebuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteFramebuffers_str: &str = "glDeleteFramebuffers\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteFramebuffers() {
-    unimplemented!()
-  }
-  pub fn glDeleteFramebuffers() {
-    unimplemented!()
-  }
-
-  type glWaitSync_t = unsafe extern "system" fn(GLsync, GLbitfield, GLuint64);
-  static glWaitSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glWaitSync_str: &str = "glWaitSync\0";
-  #[doc(hidden)]
-  pub fn load_glWaitSync() {
-    unimplemented!()
-  }
-  pub fn glWaitSync() {
-    unimplemented!()
-  }
-
-  type glGetBufferPointerv_t = unsafe extern "system" fn(
-    BufferTargetARB,
-    BufferPointerNameARB,
-    *mut *mut c_void,
-  );
-  static glGetBufferPointerv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetBufferPointerv_str: &str = "glGetBufferPointerv\0";
-  #[doc(hidden)]
-  pub fn load_glGetBufferPointerv() {
-    unimplemented!()
-  }
-  pub fn glGetBufferPointerv() {
-    unimplemented!()
+  pub fn glCompressedTexImage2D_is_loaded() -> bool {
+    glCompressedTexImage2D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCompressedTexImage2D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: InternalFormat,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+    imageSize: GLsizei,
+    data: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCompressedTexImage2D_str[..glCompressedTexImage2D_str.len() - 1]
+      );
+    }
+    let p = glCompressedTexImage2D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCompressedTexImage2D_str[..glCompressedTexImage2D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCompressedTexImage2D_t>(p)(
+      target,
+      level,
+      internalformat,
+      width,
+      height,
+      border,
+      imageSize,
+      data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}", &glCompressedTexImage2D_str[..glCompressedTexImage2D_str.len()-1], target, level, internalformat, width, height, border, imageSize, data,  err_name = error_name_for(err));
+      }
+    }
+    out
   }
 
   type glCompressedTexImage3D_t = unsafe extern "system" fn(
@@ -4320,149 +3366,214 @@ pub mod global_loader {
   static glCompressedTexImage3D_p: AtomicPtr<c_void> =
     AtomicPtr::new(null_mut());
   const glCompressedTexImage3D_str: &str = "glCompressedTexImage3D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glCompressedTexImage3D() {
-    unimplemented!()
+  pub unsafe fn load_glCompressedTexImage3D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCompressedTexImage3D_p.store(
+      call_loader(loader, glCompressedTexImage3D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glCompressedTexImage3D() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCompressedTexImage3D_is_loaded() -> bool {
+    glCompressedTexImage3D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCompressedTexImage3D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: InternalFormat,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    border: GLint,
+    imageSize: GLsizei,
+    data: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCompressedTexImage3D_str[..glCompressedTexImage3D_str.len() - 1]
+      );
+    }
+    let p = glCompressedTexImage3D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCompressedTexImage3D_str[..glCompressedTexImage3D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCompressedTexImage3D_t>(p)(
+      target,
+      level,
+      internalformat,
+      width,
+      height,
+      depth,
+      border,
+      imageSize,
+      data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}", &glCompressedTexImage3D_str[..glCompressedTexImage3D_str.len()-1], target, level, internalformat, width, height, depth, border, imageSize, data,  err_name = error_name_for(err));
+      }
+    }
+    out
   }
 
-  type glCullFace_t = unsafe extern "system" fn(CullFaceMode);
-  static glCullFace_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCullFace_str: &str = "glCullFace\0";
-  #[doc(hidden)]
-  pub fn load_glCullFace() {
-    unimplemented!()
-  }
-  pub fn glCullFace() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4ubv_t = unsafe extern "system" fn(GLuint, *const GLubyte);
-  static glVertexAttrib4ubv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4ubv_str: &str = "glVertexAttrib4ubv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4ubv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4ubv() {
-    unimplemented!()
-  }
-
-  type glStencilOpSeparate_t = unsafe extern "system" fn(
-    StencilFaceDirection,
-    StencilOp,
-    StencilOp,
-    StencilOp,
+  type glCompressedTexSubImage1D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLsizei,
+    PixelFormat,
+    GLsizei,
+    *const c_void,
   );
-  static glStencilOpSeparate_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glStencilOpSeparate_str: &str = "glStencilOpSeparate\0";
+  static glCompressedTexSubImage1D_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glCompressedTexSubImage1D_str: &str = "glCompressedTexSubImage1D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glStencilOpSeparate() {
-    unimplemented!()
+  pub unsafe fn load_glCompressedTexSubImage1D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCompressedTexSubImage1D_p.store(
+      call_loader(loader, glCompressedTexSubImage1D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glStencilOpSeparate() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCompressedTexSubImage1D_is_loaded() -> bool {
+    glCompressedTexSubImage1D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCompressedTexSubImage1D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    width: GLsizei,
+    format: PixelFormat,
+    imageSize: GLsizei,
+    data: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCompressedTexSubImage1D_str
+          [..glCompressedTexSubImage1D_str.len() - 1]
+      );
+    }
+    let p = glCompressedTexSubImage1D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCompressedTexSubImage1D_str
+          [..glCompressedTexSubImage1D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCompressedTexSubImage1D_t>(p)(
+      target, level, xoffset, width, format, imageSize, data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glCompressedTexSubImage1D_str
+            [..glCompressedTexSubImage1D_str.len() - 1],
+          target,
+          level,
+          xoffset,
+          width,
+          format,
+          imageSize,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glCopyBufferSubData_t = unsafe extern "system" fn(
-    CopyBufferSubDataTarget,
-    CopyBufferSubDataTarget,
-    GLintptr,
-    GLintptr,
-    GLsizeiptr,
+  type glCompressedTexSubImage2D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+    PixelFormat,
+    GLsizei,
+    *const c_void,
   );
-  static glCopyBufferSubData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glCopyBufferSubData_str: &str = "glCopyBufferSubData\0";
+  static glCompressedTexSubImage2D_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glCompressedTexSubImage2D_str: &str = "glCompressedTexSubImage2D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glCopyBufferSubData() {
-    unimplemented!()
+  pub unsafe fn load_glCompressedTexSubImage2D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCompressedTexSubImage2D_p.store(
+      call_loader(loader, glCompressedTexSubImage2D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glCopyBufferSubData() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP3ui_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    GLuint,
-  );
-  static glVertexAttribP3ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP3ui_str: &str = "glVertexAttribP3ui\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glVertexAttribP3ui() {
-    unimplemented!()
+  pub fn glCompressedTexSubImage2D_is_loaded() -> bool {
+    glCompressedTexSubImage2D_p.load(Ordering::Relaxed).is_null().not()
   }
-  pub fn glVertexAttribP3ui() {
-    unimplemented!()
-  }
-
-  type glUniform4iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
-  static glUniform4iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform4iv_str: &str = "glUniform4iv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform4iv() {
-    unimplemented!()
-  }
-  pub fn glUniform4iv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib1dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
-  static glVertexAttrib1dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib1dv_str: &str = "glVertexAttrib1dv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib1dv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib1dv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4Nuiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
-  static glVertexAttrib4Nuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4Nuiv_str: &str = "glVertexAttrib4Nuiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4Nuiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4Nuiv() {
-    unimplemented!()
-  }
-
-  type glGenBuffers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
-  static glGenBuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenBuffers_str: &str = "glGenBuffers\0";
-  #[doc(hidden)]
-  pub fn load_glGenBuffers() {
-    unimplemented!()
-  }
-  pub fn glGenBuffers() {
-    unimplemented!()
-  }
-
-  type glBindTexture_t = unsafe extern "system" fn(TextureTarget, GLuint);
-  static glBindTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBindTexture_str: &str = "glBindTexture\0";
-  #[doc(hidden)]
-  pub fn load_glBindTexture() {
-    unimplemented!()
-  }
-  pub fn glBindTexture() {
-    unimplemented!()
-  }
-
-  type glAttachShader_t = unsafe extern "system" fn(GLuint, GLuint);
-  static glAttachShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glAttachShader_str: &str = "glAttachShader\0";
-  #[doc(hidden)]
-  pub fn load_glAttachShader() {
-    unimplemented!()
-  }
-  pub fn glAttachShader() {
-    unimplemented!()
+  #[inline]
+  pub unsafe fn glCompressedTexSubImage2D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: PixelFormat,
+    imageSize: GLsizei,
+    data: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCompressedTexSubImage2D_str
+          [..glCompressedTexSubImage2D_str.len() - 1]
+      );
+    }
+    let p = glCompressedTexSubImage2D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCompressedTexSubImage2D_str
+          [..glCompressedTexSubImage2D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCompressedTexSubImage2D_t>(p)(
+      target, level, xoffset, yoffset, width, height, format, imageSize, data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}", &glCompressedTexSubImage2D_str[..glCompressedTexSubImage2D_str.len()-1], target, level, xoffset, yoffset, width, height, format, imageSize, data,  err_name = error_name_for(err));
+      }
+    }
+    out
   }
 
   type glCompressedTexSubImage3D_t = unsafe extern "system" fn(
@@ -4481,667 +3592,135 @@ pub mod global_loader {
   static glCompressedTexSubImage3D_p: AtomicPtr<c_void> =
     AtomicPtr::new(null_mut());
   const glCompressedTexSubImage3D_str: &str = "glCompressedTexSubImage3D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glCompressedTexSubImage3D() {
-    unimplemented!()
+  pub unsafe fn load_glCompressedTexSubImage3D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCompressedTexSubImage3D_p.store(
+      call_loader(loader, glCompressedTexSubImage3D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glCompressedTexSubImage3D() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCompressedTexSubImage3D_is_loaded() -> bool {
+    glCompressedTexSubImage3D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCompressedTexSubImage3D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: PixelFormat,
+    imageSize: GLsizei,
+    data: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCompressedTexSubImage3D_str
+          [..glCompressedTexSubImage3D_str.len() - 1]
+      );
+    }
+    let p = glCompressedTexSubImage3D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCompressedTexSubImage3D_str
+          [..glCompressedTexSubImage3D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCompressedTexSubImage3D_t>(p)(
+      target, level, xoffset, yoffset, zoffset, width, height, depth, format,
+      imageSize, data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}", &glCompressedTexSubImage3D_str[..glCompressedTexSubImage3D_str.len()-1], target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, data,  err_name = error_name_for(err));
+      }
+    }
+    out
   }
 
-  type glEndConditionalRender_t = unsafe extern "system" fn();
-  static glEndConditionalRender_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glEndConditionalRender_str: &str = "glEndConditionalRender\0";
-  #[doc(hidden)]
-  pub fn load_glEndConditionalRender() {
-    unimplemented!()
-  }
-  pub fn glEndConditionalRender() {
-    unimplemented!()
-  }
-
-  type glIsShader_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsShader_str: &str = "glIsShader\0";
-  #[doc(hidden)]
-  pub fn load_glIsShader() {
-    unimplemented!()
-  }
-  pub fn glIsShader() {
-    unimplemented!()
-  }
-
-  type glClientWaitSync_t =
-    unsafe extern "system" fn(GLsync, SyncObjectMask, GLuint64) -> GLenum;
-  static glClientWaitSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClientWaitSync_str: &str = "glClientWaitSync\0";
-  #[doc(hidden)]
-  pub fn load_glClientWaitSync() {
-    unimplemented!()
-  }
-  pub fn glClientWaitSync() {
-    unimplemented!()
-  }
-
-  type glPointParameteriv_t =
-    unsafe extern "system" fn(PointParameterNameARB, *const GLint);
-  static glPointParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPointParameteriv_str: &str = "glPointParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glPointParameteriv() {
-    unimplemented!()
-  }
-  pub fn glPointParameteriv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib1f_t = unsafe extern "system" fn(GLuint, GLfloat);
-  static glVertexAttrib1f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib1f_str: &str = "glVertexAttrib1f\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib1f() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib1f() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib3sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
-  static glVertexAttrib3sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib3sv_str: &str = "glVertexAttrib3sv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib3sv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib3sv() {
-    unimplemented!()
-  }
-
-  type glSamplerParameterf_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterF, GLfloat);
-  static glSamplerParameterf_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glSamplerParameterf_str: &str = "glSamplerParameterf\0";
-  #[doc(hidden)]
-  pub fn load_glSamplerParameterf() {
-    unimplemented!()
-  }
-  pub fn glSamplerParameterf() {
-    unimplemented!()
-  }
-
-  type glIsTexture_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsTexture_str: &str = "glIsTexture\0";
-  #[doc(hidden)]
-  pub fn load_glIsTexture() {
-    unimplemented!()
-  }
-  pub fn glIsTexture() {
-    unimplemented!()
-  }
-
-  type glTexSubImage1D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    GLint,
-    GLsizei,
-    PixelFormat,
-    PixelType,
-    *const c_void,
+  type glCopyBufferSubData_t = unsafe extern "system" fn(
+    CopyBufferSubDataTarget,
+    CopyBufferSubDataTarget,
+    GLintptr,
+    GLintptr,
+    GLsizeiptr,
   );
-  static glTexSubImage1D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glTexSubImage1D_str: &str = "glTexSubImage1D\0";
+  static glCopyBufferSubData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCopyBufferSubData_str: &str = "glCopyBufferSubData\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glTexSubImage1D() {
-    unimplemented!()
+  pub unsafe fn load_glCopyBufferSubData(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCopyBufferSubData_p.store(
+      call_loader(loader, glCopyBufferSubData_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glTexSubImage1D() {
-    unimplemented!()
-  }
-
-  type glUniformMatrix3fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
-  static glUniformMatrix3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniformMatrix3fv_str: &str = "glUniformMatrix3fv\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glUniformMatrix3fv() {
-    unimplemented!()
-  }
-  pub fn glUniformMatrix3fv() {
-    unimplemented!()
-  }
-
-  type glUniform1i_t = unsafe extern "system" fn(GLint, GLint);
-  static glUniform1i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform1i_str: &str = "glUniform1i\0";
-  #[doc(hidden)]
-  pub fn load_glUniform1i() {
-    unimplemented!()
-  }
-  pub fn glUniform1i() {
-    unimplemented!()
-  }
-
-  type glBindBufferBase_t =
-    unsafe extern "system" fn(BufferTargetARB, GLuint, GLuint);
-  static glBindBufferBase_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBindBufferBase_str: &str = "glBindBufferBase\0";
-  #[doc(hidden)]
-  pub fn load_glBindBufferBase() {
-    unimplemented!()
-  }
-  pub fn glBindBufferBase() {
-    unimplemented!()
-  }
-
-  type glBlendColor_t =
-    unsafe extern "system" fn(GLfloat, GLfloat, GLfloat, GLfloat);
-  static glBlendColor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBlendColor_str: &str = "glBlendColor\0";
-  #[doc(hidden)]
-  pub fn load_glBlendColor() {
-    unimplemented!()
-  }
-  pub fn glBlendColor() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4s_t =
-    unsafe extern "system" fn(GLuint, GLshort, GLshort, GLshort, GLshort);
-  static glVertexAttrib4s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4s_str: &str = "glVertexAttrib4s\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4s() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4s() {
-    unimplemented!()
-  }
-
-  type glDrawElementsBaseVertex_t = unsafe extern "system" fn(
-    PrimitiveType,
-    GLsizei,
-    DrawElementsType,
-    *const c_void,
-    GLint,
-  );
-  static glDrawElementsBaseVertex_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glDrawElementsBaseVertex_str: &str = "glDrawElementsBaseVertex\0";
-  #[doc(hidden)]
-  pub fn load_glDrawElementsBaseVertex() {
-    unimplemented!()
-  }
-  pub fn glDrawElementsBaseVertex() {
-    unimplemented!()
-  }
-
-  type glDeleteProgram_t = unsafe extern "system" fn(GLuint);
-  static glDeleteProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteProgram_str: &str = "glDeleteProgram\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteProgram() {
-    unimplemented!()
-  }
-  pub fn glDeleteProgram() {
-    unimplemented!()
-  }
-
-  type glUniform4uiv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
-  static glUniform4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform4uiv_str: &str = "glUniform4uiv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform4uiv() {
-    unimplemented!()
-  }
-  pub fn glUniform4uiv() {
-    unimplemented!()
-  }
-
-  type glProvokingVertex_t = unsafe extern "system" fn(VertexProvokingMode);
-  static glProvokingVertex_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glProvokingVertex_str: &str = "glProvokingVertex\0";
-  #[doc(hidden)]
-  pub fn load_glProvokingVertex() {
-    unimplemented!()
-  }
-  pub fn glProvokingVertex() {
-    unimplemented!()
-  }
-
-  type glGetActiveUniformName_t = unsafe extern "system" fn(
-    GLuint,
-    GLuint,
-    GLsizei,
-    *mut GLsizei,
-    *mut GLchar,
-  );
-  static glGetActiveUniformName_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetActiveUniformName_str: &str = "glGetActiveUniformName\0";
-  #[doc(hidden)]
-  pub fn load_glGetActiveUniformName() {
-    unimplemented!()
-  }
-  pub fn glGetActiveUniformName() {
-    unimplemented!()
-  }
-
-  type glGetQueryObjecti64v_t =
-    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLint64);
-  static glGetQueryObjecti64v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetQueryObjecti64v_str: &str = "glGetQueryObjecti64v\0";
-  #[doc(hidden)]
-  pub fn load_glGetQueryObjecti64v() {
-    unimplemented!()
-  }
-  pub fn glGetQueryObjecti64v() {
-    unimplemented!()
-  }
-
-  type glQueryCounter_t = unsafe extern "system" fn(GLuint, QueryCounterTarget);
-  static glQueryCounter_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glQueryCounter_str: &str = "glQueryCounter\0";
-  #[doc(hidden)]
-  pub fn load_glQueryCounter() {
-    unimplemented!()
-  }
-  pub fn glQueryCounter() {
-    unimplemented!()
-  }
-
-  type glGetFragDataIndex_t =
-    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
-  static glGetFragDataIndex_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetFragDataIndex_str: &str = "glGetFragDataIndex\0";
-  #[doc(hidden)]
-  pub fn load_glGetFragDataIndex() {
-    unimplemented!()
-  }
-  pub fn glGetFragDataIndex() {
-    unimplemented!()
-  }
-
-  type glDeleteSync_t = unsafe extern "system" fn(GLsync);
-  static glDeleteSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteSync_str: &str = "glDeleteSync\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteSync() {
-    unimplemented!()
-  }
-  pub fn glDeleteSync() {
-    unimplemented!()
-  }
-
-  type glGetDoublev_t = unsafe extern "system" fn(GetPName, *mut GLdouble);
-  static glGetDoublev_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetDoublev_str: &str = "glGetDoublev\0";
-  #[doc(hidden)]
-  pub fn load_glGetDoublev() {
-    unimplemented!()
-  }
-  pub fn glGetDoublev() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI1i_t = unsafe extern "system" fn(GLuint, GLint);
-  static glVertexAttribI1i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI1i_str: &str = "glVertexAttribI1i\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI1i() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI1i() {
-    unimplemented!()
-  }
-
-  type glGenerateMipmap_t = unsafe extern "system" fn(TextureTarget);
-  static glGenerateMipmap_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenerateMipmap_str: &str = "glGenerateMipmap\0";
-  #[doc(hidden)]
-  pub fn load_glGenerateMipmap() {
-    unimplemented!()
-  }
-  pub fn glGenerateMipmap() {
-    unimplemented!()
-  }
-
-  type glGetActiveUniformsiv_t = unsafe extern "system" fn(
-    GLuint,
-    GLsizei,
-    *const GLuint,
-    UniformPName,
-    *mut GLint,
-  );
-  static glGetActiveUniformsiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetActiveUniformsiv_str: &str = "glGetActiveUniformsiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetActiveUniformsiv() {
-    unimplemented!()
-  }
-  pub fn glGetActiveUniformsiv() {
-    unimplemented!()
-  }
-
-  type glUniform2fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
-  static glUniform2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform2fv_str: &str = "glUniform2fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform2fv() {
-    unimplemented!()
-  }
-  pub fn glUniform2fv() {
-    unimplemented!()
-  }
-
-  type glGetStringi_t =
-    unsafe extern "system" fn(StringName, GLuint) -> GLubyte;
-  static glGetStringi_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetStringi_str: &str = "glGetStringi\0";
-  #[doc(hidden)]
-  pub fn load_glGetStringi() {
-    unimplemented!()
-  }
-  pub fn glGetStringi() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI1ui_t = unsafe extern "system" fn(GLuint, GLuint);
-  static glVertexAttribI1ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI1ui_str: &str = "glVertexAttribI1ui\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI1ui() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI1ui() {
-    unimplemented!()
-  }
-
-  type glPrimitiveRestartIndex_t = unsafe extern "system" fn(GLuint);
-  static glPrimitiveRestartIndex_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glPrimitiveRestartIndex_str: &str = "glPrimitiveRestartIndex\0";
-  #[doc(hidden)]
-  pub fn load_glPrimitiveRestartIndex() {
-    unimplemented!()
-  }
-  pub fn glPrimitiveRestartIndex() {
-    unimplemented!()
-  }
-
-  type glCompressedTexImage2D_t = unsafe extern "system" fn(
-    TextureTarget,
-    GLint,
-    InternalFormat,
-    GLsizei,
-    GLsizei,
-    GLint,
-    GLsizei,
-    *const c_void,
-  );
-  static glCompressedTexImage2D_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glCompressedTexImage2D_str: &str = "glCompressedTexImage2D\0";
-  #[doc(hidden)]
-  pub fn load_glCompressedTexImage2D() {
-    unimplemented!()
-  }
-  pub fn glCompressedTexImage2D() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP4ui_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    GLuint,
-  );
-  static glVertexAttribP4ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP4ui_str: &str = "glVertexAttribP4ui\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribP4ui() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribP4ui() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4iv_t = unsafe extern "system" fn(GLuint, *const GLint);
-  static glVertexAttrib4iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4iv_str: &str = "glVertexAttrib4iv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4iv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4iv() {
-    unimplemented!()
-  }
-
-  type glUseProgram_t = unsafe extern "system" fn(GLuint);
-  static glUseProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUseProgram_str: &str = "glUseProgram\0";
-  #[doc(hidden)]
-  pub fn load_glUseProgram() {
-    unimplemented!()
-  }
-  pub fn glUseProgram() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib3dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
-  static glVertexAttrib3dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib3dv_str: &str = "glVertexAttrib3dv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib3dv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib3dv() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI3uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
-  static glVertexAttribI3uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI3uiv_str: &str = "glVertexAttribI3uiv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI3uiv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI3uiv() {
-    unimplemented!()
-  }
-
-  type glGetFramebufferAttachmentParameteriv_t = unsafe extern "system" fn(
-    FramebufferTarget,
-    FramebufferAttachment,
-    FramebufferAttachmentParameterName,
-    *mut GLint,
-  );
-  static glGetFramebufferAttachmentParameteriv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetFramebufferAttachmentParameteriv_str: &str =
-    "glGetFramebufferAttachmentParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glGetFramebufferAttachmentParameteriv() {
-    unimplemented!()
-  }
-  pub fn glGetFramebufferAttachmentParameteriv() {
-    unimplemented!()
-  }
-
-  type glSamplerParameterfv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterF, *const GLfloat);
-  static glSamplerParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glSamplerParameterfv_str: &str = "glSamplerParameterfv\0";
-  #[doc(hidden)]
-  pub fn load_glSamplerParameterfv() {
-    unimplemented!()
-  }
-  pub fn glSamplerParameterfv() {
-    unimplemented!()
-  }
-
-  type glDeleteRenderbuffers_t =
-    unsafe extern "system" fn(GLsizei, *const GLuint);
-  static glDeleteRenderbuffers_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glDeleteRenderbuffers_str: &str = "glDeleteRenderbuffers\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteRenderbuffers() {
-    unimplemented!()
-  }
-  pub fn glDeleteRenderbuffers() {
-    unimplemented!()
-  }
-
-  type glGetVertexAttribPointerv_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerPropertyARB,
-    *mut *mut c_void,
-  );
-  static glGetVertexAttribPointerv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetVertexAttribPointerv_str: &str = "glGetVertexAttribPointerv\0";
-  #[doc(hidden)]
-  pub fn load_glGetVertexAttribPointerv() {
-    unimplemented!()
-  }
-  pub fn glGetVertexAttribPointerv() {
-    unimplemented!()
-  }
-
-  type glGetProgramInfoLog_t =
-    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar);
-  static glGetProgramInfoLog_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetProgramInfoLog_str: &str = "glGetProgramInfoLog\0";
-  #[doc(hidden)]
-  pub fn load_glGetProgramInfoLog() {
-    unimplemented!()
-  }
-  pub fn glGetProgramInfoLog() {
-    unimplemented!()
-  }
-
-  type glVertexAttribI4sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
-  static glVertexAttribI4sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI4sv_str: &str = "glVertexAttribI4sv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI4sv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI4sv() {
-    unimplemented!()
-  }
-
-  type glIsSync_t = unsafe extern "system" fn(GLsync) -> GLboolean;
-  static glIsSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsSync_str: &str = "glIsSync\0";
-  #[doc(hidden)]
-  pub fn load_glIsSync() {
-    unimplemented!()
-  }
-  pub fn glIsSync() {
-    unimplemented!()
-  }
-
-  type glFlush_t = unsafe extern "system" fn();
-  static glFlush_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glFlush_str: &str = "glFlush\0";
-  #[doc(hidden)]
-  pub fn load_glFlush() {
-    unimplemented!()
-  }
-  pub fn glFlush() {
-    unimplemented!()
-  }
-
-  type glClearDepth_t = unsafe extern "system" fn(GLdouble);
-  static glClearDepth_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClearDepth_str: &str = "glClearDepth\0";
-  #[doc(hidden)]
-  pub fn load_glClearDepth() {
-    unimplemented!()
-  }
-  pub fn glClearDepth() {
-    unimplemented!()
-  }
-
-  type glDeleteBuffers_t = unsafe extern "system" fn(GLsizei, *const GLuint);
-  static glDeleteBuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glDeleteBuffers_str: &str = "glDeleteBuffers\0";
-  #[doc(hidden)]
-  pub fn load_glDeleteBuffers() {
-    unimplemented!()
-  }
-  pub fn glDeleteBuffers() {
-    unimplemented!()
-  }
-
-  type glSamplerParameterIiv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterI, *const GLint);
-  static glSamplerParameterIiv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glSamplerParameterIiv_str: &str = "glSamplerParameterIiv\0";
-  #[doc(hidden)]
-  pub fn load_glSamplerParameterIiv() {
-    unimplemented!()
-  }
-  pub fn glSamplerParameterIiv() {
-    unimplemented!()
-  }
-
-  type glUnmapBuffer_t =
-    unsafe extern "system" fn(BufferTargetARB) -> GLboolean;
-  static glUnmapBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUnmapBuffer_str: &str = "glUnmapBuffer\0";
-  #[doc(hidden)]
-  pub fn load_glUnmapBuffer() {
-    unimplemented!()
-  }
-  pub fn glUnmapBuffer() {
-    unimplemented!()
-  }
-
-  type glUniform4fv_t =
-    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
-  static glUniform4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glUniform4fv_str: &str = "glUniform4fv\0";
-  #[doc(hidden)]
-  pub fn load_glUniform4fv() {
-    unimplemented!()
-  }
-  pub fn glUniform4fv() {
-    unimplemented!()
-  }
-
-  type glShaderSource_t = unsafe extern "system" fn(
-    GLuint,
-    GLsizei,
-    *const *const GLchar,
-    *const GLint,
-  );
-  static glShaderSource_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glShaderSource_str: &str = "glShaderSource\0";
-  #[doc(hidden)]
-  pub fn load_glShaderSource() {
-    unimplemented!()
-  }
-  pub fn glShaderSource() {
-    unimplemented!()
-  }
-
-  type glGenFramebuffers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
-  static glGenFramebuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGenFramebuffers_str: &str = "glGenFramebuffers\0";
-  #[doc(hidden)]
-  pub fn load_glGenFramebuffers() {
-    unimplemented!()
-  }
-  pub fn glGenFramebuffers() {
-    unimplemented!()
+  pub fn glCopyBufferSubData_is_loaded() -> bool {
+    glCopyBufferSubData_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCopyBufferSubData(
+    readTarget: CopyBufferSubDataTarget,
+    writeTarget: CopyBufferSubDataTarget,
+    readOffset: GLintptr,
+    writeOffset: GLintptr,
+    size: GLsizeiptr,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCopyBufferSubData_str[..glCopyBufferSubData_str.len() - 1]
+      );
+    }
+    let p = glCopyBufferSubData_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCopyBufferSubData_str[..glCopyBufferSubData_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCopyBufferSubData_t>(p)(
+      readTarget,
+      writeTarget,
+      readOffset,
+      writeOffset,
+      size,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glCopyBufferSubData_str[..glCopyBufferSubData_str.len() - 1],
+          readTarget,
+          writeTarget,
+          readOffset,
+          writeOffset,
+          size,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glCopyTexImage1D_t = unsafe extern "system" fn(
@@ -5155,403 +3734,3379 @@ pub mod global_loader {
   );
   static glCopyTexImage1D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glCopyTexImage1D_str: &str = "glCopyTexImage1D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glCopyTexImage1D() {
-    unimplemented!()
+  pub unsafe fn load_glCopyTexImage1D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCopyTexImage1D_p.store(
+      call_loader(loader, glCopyTexImage1D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glCopyTexImage1D() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCopyTexImage1D_is_loaded() -> bool {
+    glCopyTexImage1D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCopyTexImage1D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: InternalFormat,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    border: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCopyTexImage1D_str[..glCopyTexImage1D_str.len() - 1]
+      );
+    }
+    let p = glCopyTexImage1D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCopyTexImage1D_str[..glCopyTexImage1D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCopyTexImage1D_t>(p)(
+      target,
+      level,
+      internalformat,
+      x,
+      y,
+      width,
+      border,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glCopyTexImage1D_str[..glCopyTexImage1D_str.len() - 1],
+          target,
+          level,
+          internalformat,
+          x,
+          y,
+          width,
+          border,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glValidateProgram_t = unsafe extern "system" fn(GLuint);
-  static glValidateProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glValidateProgram_str: &str = "glValidateProgram\0";
-  #[doc(hidden)]
-  pub fn load_glValidateProgram() {
-    unimplemented!()
-  }
-  pub fn glValidateProgram() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib4Nsv_t = unsafe extern "system" fn(GLuint, *const GLshort);
-  static glVertexAttrib4Nsv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib4Nsv_str: &str = "glVertexAttrib4Nsv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib4Nsv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib4Nsv() {
-    unimplemented!()
-  }
-
-  type glGetSamplerParameteriv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterI, *mut GLint);
-  static glGetSamplerParameteriv_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glGetSamplerParameteriv_str: &str = "glGetSamplerParameteriv\0";
-  #[doc(hidden)]
-  pub fn load_glGetSamplerParameteriv() {
-    unimplemented!()
-  }
-  pub fn glGetSamplerParameteriv() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib1s_t = unsafe extern "system" fn(GLuint, GLshort);
-  static glVertexAttrib1s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib1s_str: &str = "glVertexAttrib1s\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib1s() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib1s() {
-    unimplemented!()
-  }
-
-  type glVertexAttrib2dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
-  static glVertexAttrib2dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib2dv_str: &str = "glVertexAttrib2dv\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttrib2dv() {
-    unimplemented!()
-  }
-  pub fn glVertexAttrib2dv() {
-    unimplemented!()
-  }
-
-  type glGetUniformLocation_t =
-    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
-  static glGetUniformLocation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetUniformLocation_str: &str = "glGetUniformLocation\0";
-  #[doc(hidden)]
-  pub fn load_glGetUniformLocation() {
-    unimplemented!()
-  }
-  pub fn glGetUniformLocation() {
-    unimplemented!()
-  }
-
-  type glBlitFramebuffer_t = unsafe extern "system" fn(
+  type glCopyTexImage2D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    InternalFormat,
     GLint,
     GLint,
+    GLsizei,
+    GLsizei,
     GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    GLint,
-    ClearBufferMask,
-    BlitFramebufferFilter,
   );
-  static glBlitFramebuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBlitFramebuffer_str: &str = "glBlitFramebuffer\0";
+  static glCopyTexImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCopyTexImage2D_str: &str = "glCopyTexImage2D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBlitFramebuffer() {
-    unimplemented!()
+  pub unsafe fn load_glCopyTexImage2D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCopyTexImage2D_p.store(
+      call_loader(loader, glCopyTexImage2D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glBlitFramebuffer() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCopyTexImage2D_is_loaded() -> bool {
+    glCopyTexImage2D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCopyTexImage2D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: InternalFormat,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCopyTexImage2D_str[..glCopyTexImage2D_str.len() - 1]
+      );
+    }
+    let p = glCopyTexImage2D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCopyTexImage2D_str[..glCopyTexImage2D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCopyTexImage2D_t>(p)(
+      target,
+      level,
+      internalformat,
+      x,
+      y,
+      width,
+      height,
+      border,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}", &glCopyTexImage2D_str[..glCopyTexImage2D_str.len()-1], target, level, internalformat, x, y, width, height, border,  err_name = error_name_for(err));
+      }
+    }
+    out
   }
 
-  type glVertexAttribI2i_t = unsafe extern "system" fn(GLuint, GLint, GLint);
-  static glVertexAttribI2i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribI2i_str: &str = "glVertexAttribI2i\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribI2i() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribI2i() {
-    unimplemented!()
-  }
-
-  type glUniformBlockBinding_t =
-    unsafe extern "system" fn(GLuint, GLuint, GLuint);
-  static glUniformBlockBinding_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glUniformBlockBinding_str: &str = "glUniformBlockBinding\0";
-  #[doc(hidden)]
-  pub fn load_glUniformBlockBinding() {
-    unimplemented!()
-  }
-  pub fn glUniformBlockBinding() {
-    unimplemented!()
-  }
-
-  type glBindFramebuffer_t =
-    unsafe extern "system" fn(FramebufferTarget, GLuint);
-  static glBindFramebuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glBindFramebuffer_str: &str = "glBindFramebuffer\0";
-  #[doc(hidden)]
-  pub fn load_glBindFramebuffer() {
-    unimplemented!()
-  }
-  pub fn glBindFramebuffer() {
-    unimplemented!()
-  }
-
-  type glVertexAttribDivisor_t = unsafe extern "system" fn(GLuint, GLuint);
-  static glVertexAttribDivisor_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glVertexAttribDivisor_str: &str = "glVertexAttribDivisor\0";
-  #[doc(hidden)]
-  pub fn load_glVertexAttribDivisor() {
-    unimplemented!()
-  }
-  pub fn glVertexAttribDivisor() {
-    unimplemented!()
-  }
-
-  type glGetVertexAttribdv_t =
-    unsafe extern "system" fn(GLuint, VertexAttribPropertyARB, *mut GLdouble);
-  static glGetVertexAttribdv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetVertexAttribdv_str: &str = "glGetVertexAttribdv\0";
-  #[doc(hidden)]
-  pub fn load_glGetVertexAttribdv() {
-    unimplemented!()
-  }
-  pub fn glGetVertexAttribdv() {
-    unimplemented!()
-  }
-
-  type glIsProgram_t = unsafe extern "system" fn(GLuint) -> GLboolean;
-  static glIsProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glIsProgram_str: &str = "glIsProgram\0";
-  #[doc(hidden)]
-  pub fn load_glIsProgram() {
-    unimplemented!()
-  }
-  pub fn glIsProgram() {
-    unimplemented!()
-  }
-
-  type glGetQueryObjectuiv_t =
-    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLuint);
-  static glGetQueryObjectuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetQueryObjectuiv_str: &str = "glGetQueryObjectuiv\0";
-  #[doc(hidden)]
-  pub fn load_glGetQueryObjectuiv() {
-    unimplemented!()
-  }
-  pub fn glGetQueryObjectuiv() {
-    unimplemented!()
-  }
-
-  type glGetBooleanv_t = unsafe extern "system" fn(GetPName, *mut GLboolean);
-  static glGetBooleanv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetBooleanv_str: &str = "glGetBooleanv\0";
-  #[doc(hidden)]
-  pub fn load_glGetBooleanv() {
-    unimplemented!()
-  }
-  pub fn glGetBooleanv() {
-    unimplemented!()
-  }
-
-  type glStencilMaskSeparate_t =
-    unsafe extern "system" fn(StencilFaceDirection, GLuint);
-  static glStencilMaskSeparate_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glStencilMaskSeparate_str: &str = "glStencilMaskSeparate\0";
-  #[doc(hidden)]
-  pub fn load_glStencilMaskSeparate() {
-    unimplemented!()
-  }
-  pub fn glStencilMaskSeparate() {
-    unimplemented!()
-  }
-
-  type glVertexAttribP1ui_t = unsafe extern "system" fn(
-    GLuint,
-    VertexAttribPointerType,
-    GLboolean,
-    GLuint,
+  type glCopyTexSubImage1D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLsizei,
   );
-  static glVertexAttribP1ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttribP1ui_str: &str = "glVertexAttribP1ui\0";
+  static glCopyTexSubImage1D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCopyTexSubImage1D_str: &str = "glCopyTexSubImage1D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glVertexAttribP1ui() {
-    unimplemented!()
+  pub unsafe fn load_glCopyTexSubImage1D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCopyTexSubImage1D_p.store(
+      call_loader(loader, glCopyTexSubImage1D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glVertexAttribP1ui() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCopyTexSubImage1D_is_loaded() -> bool {
+    glCopyTexSubImage1D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCopyTexSubImage1D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCopyTexSubImage1D_str[..glCopyTexSubImage1D_str.len() - 1]
+      );
+    }
+    let p = glCopyTexSubImage1D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCopyTexSubImage1D_str[..glCopyTexSubImage1D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCopyTexSubImage1D_t>(p)(
+      target, level, xoffset, x, y, width,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glCopyTexSubImage1D_str[..glCopyTexSubImage1D_str.len() - 1],
+          target,
+          level,
+          xoffset,
+          x,
+          y,
+          width,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glVertexAttrib3d_t =
-    unsafe extern "system" fn(GLuint, GLdouble, GLdouble, GLdouble);
-  static glVertexAttrib3d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glVertexAttrib3d_str: &str = "glVertexAttrib3d\0";
+  type glCopyTexSubImage2D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+  );
+  static glCopyTexSubImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCopyTexSubImage2D_str: &str = "glCopyTexSubImage2D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glVertexAttrib3d() {
-    unimplemented!()
+  pub unsafe fn load_glCopyTexSubImage2D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCopyTexSubImage2D_p.store(
+      call_loader(loader, glCopyTexSubImage2D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glVertexAttrib3d() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCopyTexSubImage2D_is_loaded() -> bool {
+    glCopyTexSubImage2D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCopyTexSubImage2D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCopyTexSubImage2D_str[..glCopyTexSubImage2D_str.len() - 1]
+      );
+    }
+    let p = glCopyTexSubImage2D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCopyTexSubImage2D_str[..glCopyTexSubImage2D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCopyTexSubImage2D_t>(p)(
+      target, level, xoffset, yoffset, x, y, width, height,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}", &glCopyTexSubImage2D_str[..glCopyTexSubImage2D_str.len()-1], target, level, xoffset, yoffset, x, y, width, height,  err_name = error_name_for(err));
+      }
+    }
+    out
   }
 
-  type glLogicOp_t = unsafe extern "system" fn(LogicOp);
-  static glLogicOp_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glLogicOp_str: &str = "glLogicOp\0";
+  type glCopyTexSubImage3D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+  );
+  static glCopyTexSubImage3D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCopyTexSubImage3D_str: &str = "glCopyTexSubImage3D\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glLogicOp() {
-    unimplemented!()
+  pub unsafe fn load_glCopyTexSubImage3D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCopyTexSubImage3D_p.store(
+      call_loader(loader, glCopyTexSubImage3D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glLogicOp() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCopyTexSubImage3D_is_loaded() -> bool {
+    glCopyTexSubImage3D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCopyTexSubImage3D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCopyTexSubImage3D_str[..glCopyTexSubImage3D_str.len() - 1]
+      );
+    }
+    let p = glCopyTexSubImage3D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCopyTexSubImage3D_str[..glCopyTexSubImage3D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCopyTexSubImage3D_t>(p)(
+      target, level, xoffset, yoffset, zoffset, x, y, width, height,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}", &glCopyTexSubImage3D_str[..glCopyTexSubImage3D_str.len()-1], target, level, xoffset, yoffset, zoffset, x, y, width, height,  err_name = error_name_for(err));
+      }
+    }
+    out
   }
 
-  type glMapBuffer_t =
-    unsafe extern "system" fn(BufferTargetARB, BufferAccessARB);
-  static glMapBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glMapBuffer_str: &str = "glMapBuffer\0";
+  type glCreateProgram_t = unsafe extern "system" fn() -> GLuint;
+  static glCreateProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCreateProgram_str: &str = "glCreateProgram\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glMapBuffer() {
-    unimplemented!()
+  pub unsafe fn load_glCreateProgram(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCreateProgram_p.store(
+      call_loader(loader, glCreateProgram_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glMapBuffer() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCreateProgram_is_loaded() -> bool {
+    glCreateProgram_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCreateProgram() -> GLuint {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCreateProgram_str[..glCreateProgram_str.len() - 1]
+      );
+    }
+    let p = glCreateProgram_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCreateProgram_str[..glCreateProgram_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCreateProgram_t>(p)();
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}() error: {err_name}",
+          &glCreateProgram_str[..glCreateProgram_str.len() - 1],
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glEndTransformFeedback_t = unsafe extern "system" fn();
-  static glEndTransformFeedback_p: AtomicPtr<c_void> =
+  type glCreateShader_t = unsafe extern "system" fn(ShaderType) -> GLuint;
+  static glCreateShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCreateShader_str: &str = "glCreateShader\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glCreateShader(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCreateShader_p.store(
+      call_loader(loader, glCreateShader_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCreateShader_is_loaded() -> bool {
+    glCreateShader_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCreateShader(type_: ShaderType) -> GLuint {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glCreateShader_str[..glCreateShader_str.len() - 1]
+      );
+    }
+    let p = glCreateShader_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glCreateShader_str[..glCreateShader_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glCreateShader_t>(p)(type_);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glCreateShader_str[..glCreateShader_str.len() - 1],
+          type_,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glCullFace_t = unsafe extern "system" fn(CullFaceMode);
+  static glCullFace_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glCullFace_str: &str = "glCullFace\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glCullFace(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glCullFace_p
+      .store(call_loader(loader, glCullFace_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glCullFace_is_loaded() -> bool {
+    glCullFace_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glCullFace(mode: CullFaceMode) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glCullFace_str[..glCullFace_str.len() - 1]);
+    }
+    let p = glCullFace_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glCullFace_str[..glCullFace_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glCullFace_t>(p)(mode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glCullFace_str[..glCullFace_str.len() - 1],
+          mode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteBuffers_t = unsafe extern "system" fn(GLsizei, *const GLuint);
+  static glDeleteBuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteBuffers_str: &str = "glDeleteBuffers\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteBuffers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteBuffers_p.store(
+      call_loader(loader, glDeleteBuffers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteBuffers_is_loaded() -> bool {
+    glDeleteBuffers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteBuffers(n: GLsizei, buffers: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteBuffers_str[..glDeleteBuffers_str.len() - 1]
+      );
+    }
+    let p = glDeleteBuffers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteBuffers_str[..glDeleteBuffers_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDeleteBuffers_t>(p)(n, buffers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDeleteBuffers_str[..glDeleteBuffers_str.len() - 1],
+          n,
+          buffers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteFramebuffers_t =
+    unsafe extern "system" fn(GLsizei, *const GLuint);
+  static glDeleteFramebuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteFramebuffers_str: &str = "glDeleteFramebuffers\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteFramebuffers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteFramebuffers_p.store(
+      call_loader(loader, glDeleteFramebuffers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteFramebuffers_is_loaded() -> bool {
+    glDeleteFramebuffers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteFramebuffers(n: GLsizei, framebuffers: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteFramebuffers_str[..glDeleteFramebuffers_str.len() - 1]
+      );
+    }
+    let p = glDeleteFramebuffers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteFramebuffers_str[..glDeleteFramebuffers_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glDeleteFramebuffers_t>(p)(n, framebuffers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDeleteFramebuffers_str[..glDeleteFramebuffers_str.len() - 1],
+          n,
+          framebuffers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteProgram_t = unsafe extern "system" fn(GLuint);
+  static glDeleteProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteProgram_str: &str = "glDeleteProgram\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteProgram(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteProgram_p.store(
+      call_loader(loader, glDeleteProgram_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteProgram_is_loaded() -> bool {
+    glDeleteProgram_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteProgram(program: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteProgram_str[..glDeleteProgram_str.len() - 1]
+      );
+    }
+    let p = glDeleteProgram_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteProgram_str[..glDeleteProgram_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDeleteProgram_t>(p)(program);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glDeleteProgram_str[..glDeleteProgram_str.len() - 1],
+          program,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteQueries_t = unsafe extern "system" fn(GLsizei, *const GLuint);
+  static glDeleteQueries_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteQueries_str: &str = "glDeleteQueries\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteQueries(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteQueries_p.store(
+      call_loader(loader, glDeleteQueries_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteQueries_is_loaded() -> bool {
+    glDeleteQueries_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteQueries(n: GLsizei, ids: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteQueries_str[..glDeleteQueries_str.len() - 1]
+      );
+    }
+    let p = glDeleteQueries_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteQueries_str[..glDeleteQueries_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDeleteQueries_t>(p)(n, ids);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDeleteQueries_str[..glDeleteQueries_str.len() - 1],
+          n,
+          ids,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteRenderbuffers_t =
+    unsafe extern "system" fn(GLsizei, *const GLuint);
+  static glDeleteRenderbuffers_p: AtomicPtr<c_void> =
     AtomicPtr::new(null_mut());
-  const glEndTransformFeedback_str: &str = "glEndTransformFeedback\0";
+  const glDeleteRenderbuffers_str: &str = "glDeleteRenderbuffers\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glEndTransformFeedback() {
-    unimplemented!()
+  pub unsafe fn load_glDeleteRenderbuffers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteRenderbuffers_p.store(
+      call_loader(loader, glDeleteRenderbuffers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glEndTransformFeedback() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteRenderbuffers_is_loaded() -> bool {
+    glDeleteRenderbuffers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteRenderbuffers(
+    n: GLsizei,
+    renderbuffers: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteRenderbuffers_str[..glDeleteRenderbuffers_str.len() - 1]
+      );
+    }
+    let p = glDeleteRenderbuffers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteRenderbuffers_str[..glDeleteRenderbuffers_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glDeleteRenderbuffers_t>(p)(n, renderbuffers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDeleteRenderbuffers_str[..glDeleteRenderbuffers_str.len() - 1],
+          n,
+          renderbuffers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glGetProgramiv_t =
-    unsafe extern "system" fn(GLuint, ProgramPropertyARB, *mut GLint);
-  static glGetProgramiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetProgramiv_str: &str = "glGetProgramiv\0";
+  type glDeleteSamplers_t = unsafe extern "system" fn(GLsizei, *const GLuint);
+  static glDeleteSamplers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteSamplers_str: &str = "glDeleteSamplers\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGetProgramiv() {
-    unimplemented!()
+  pub unsafe fn load_glDeleteSamplers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteSamplers_p.store(
+      call_loader(loader, glDeleteSamplers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glGetProgramiv() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteSamplers_is_loaded() -> bool {
+    glDeleteSamplers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteSamplers(count: GLsizei, samplers: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteSamplers_str[..glDeleteSamplers_str.len() - 1]
+      );
+    }
+    let p = glDeleteSamplers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteSamplers_str[..glDeleteSamplers_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDeleteSamplers_t>(p)(count, samplers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDeleteSamplers_str[..glDeleteSamplers_str.len() - 1],
+          count,
+          samplers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteShader_t = unsafe extern "system" fn(GLuint);
+  static glDeleteShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteShader_str: &str = "glDeleteShader\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteShader(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteShader_p.store(
+      call_loader(loader, glDeleteShader_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteShader_is_loaded() -> bool {
+    glDeleteShader_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteShader(shader: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteShader_str[..glDeleteShader_str.len() - 1]
+      );
+    }
+    let p = glDeleteShader_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteShader_str[..glDeleteShader_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDeleteShader_t>(p)(shader);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glDeleteShader_str[..glDeleteShader_str.len() - 1],
+          shader,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteSync_t = unsafe extern "system" fn(GLsync);
+  static glDeleteSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteSync_str: &str = "glDeleteSync\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteSync(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteSync_p
+      .store(call_loader(loader, glDeleteSync_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteSync_is_loaded() -> bool {
+    glDeleteSync_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteSync(sync: GLsync) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteSync_str[..glDeleteSync_str.len() - 1]
+      );
+    }
+    let p = glDeleteSync_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDeleteSync_str[..glDeleteSync_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDeleteSync_t>(p)(sync);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glDeleteSync_str[..glDeleteSync_str.len() - 1],
+          sync,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteTextures_t = unsafe extern "system" fn(GLsizei, *const GLuint);
+  static glDeleteTextures_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteTextures_str: &str = "glDeleteTextures\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteTextures(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteTextures_p.store(
+      call_loader(loader, glDeleteTextures_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteTextures_is_loaded() -> bool {
+    glDeleteTextures_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteTextures(n: GLsizei, textures: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteTextures_str[..glDeleteTextures_str.len() - 1]
+      );
+    }
+    let p = glDeleteTextures_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteTextures_str[..glDeleteTextures_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDeleteTextures_t>(p)(n, textures);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDeleteTextures_str[..glDeleteTextures_str.len() - 1],
+          n,
+          textures,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDeleteVertexArrays_t =
+    unsafe extern "system" fn(GLsizei, *const GLuint);
+  static glDeleteVertexArrays_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDeleteVertexArrays_str: &str = "glDeleteVertexArrays\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDeleteVertexArrays(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDeleteVertexArrays_p.store(
+      call_loader(loader, glDeleteVertexArrays_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDeleteVertexArrays_is_loaded() -> bool {
+    glDeleteVertexArrays_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDeleteVertexArrays(n: GLsizei, arrays: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDeleteVertexArrays_str[..glDeleteVertexArrays_str.len() - 1]
+      );
+    }
+    let p = glDeleteVertexArrays_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDeleteVertexArrays_str[..glDeleteVertexArrays_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDeleteVertexArrays_t>(p)(n, arrays);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDeleteVertexArrays_str[..glDeleteVertexArrays_str.len() - 1],
+          n,
+          arrays,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDepthFunc_t = unsafe extern "system" fn(DepthFunction);
+  static glDepthFunc_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDepthFunc_str: &str = "glDepthFunc\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDepthFunc(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDepthFunc_p
+      .store(call_loader(loader, glDepthFunc_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDepthFunc_is_loaded() -> bool {
+    glDepthFunc_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDepthFunc(func: DepthFunction) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDepthFunc_str[..glDepthFunc_str.len() - 1]
+      );
+    }
+    let p = glDepthFunc_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDepthFunc_str[..glDepthFunc_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDepthFunc_t>(p)(func);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glDepthFunc_str[..glDepthFunc_str.len() - 1],
+          func,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDepthMask_t = unsafe extern "system" fn(GLboolean);
+  static glDepthMask_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDepthMask_str: &str = "glDepthMask\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDepthMask(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDepthMask_p
+      .store(call_loader(loader, glDepthMask_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDepthMask_is_loaded() -> bool {
+    glDepthMask_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDepthMask(flag: GLboolean) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDepthMask_str[..glDepthMask_str.len() - 1]
+      );
+    }
+    let p = glDepthMask_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDepthMask_str[..glDepthMask_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDepthMask_t>(p)(flag);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glDepthMask_str[..glDepthMask_str.len() - 1],
+          flag,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDepthRange_t = unsafe extern "system" fn(GLdouble, GLdouble);
+  static glDepthRange_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDepthRange_str: &str = "glDepthRange\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDepthRange(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDepthRange_p
+      .store(call_loader(loader, glDepthRange_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDepthRange_is_loaded() -> bool {
+    glDepthRange_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDepthRange(n: GLdouble, f: GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDepthRange_str[..glDepthRange_str.len() - 1]
+      );
+    }
+    let p = glDepthRange_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDepthRange_str[..glDepthRange_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDepthRange_t>(p)(n, f);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDepthRange_str[..glDepthRange_str.len() - 1],
+          n,
+          f,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDetachShader_t = unsafe extern "system" fn(GLuint, GLuint);
+  static glDetachShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDetachShader_str: &str = "glDetachShader\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDetachShader(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDetachShader_p.store(
+      call_loader(loader, glDetachShader_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDetachShader_is_loaded() -> bool {
+    glDetachShader_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDetachShader(program: GLuint, shader: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDetachShader_str[..glDetachShader_str.len() - 1]
+      );
+    }
+    let p = glDetachShader_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDetachShader_str[..glDetachShader_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDetachShader_t>(p)(program, shader);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDetachShader_str[..glDetachShader_str.len() - 1],
+          program,
+          shader,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDisableVertexAttribArray_t = unsafe extern "system" fn(GLuint);
+  static glDisableVertexAttribArray_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glDisableVertexAttribArray_str: &str = "glDisableVertexAttribArray\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDisableVertexAttribArray(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDisableVertexAttribArray_p.store(
+      call_loader(loader, glDisableVertexAttribArray_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDisableVertexAttribArray_is_loaded() -> bool {
+    glDisableVertexAttribArray_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDisableVertexAttribArray(index: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDisableVertexAttribArray_str
+          [..glDisableVertexAttribArray_str.len() - 1]
+      );
+    }
+    let p = glDisableVertexAttribArray_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDisableVertexAttribArray_str
+          [..glDisableVertexAttribArray_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDisableVertexAttribArray_t>(p)(index);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glDisableVertexAttribArray_str
+            [..glDisableVertexAttribArray_str.len() - 1],
+          index,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDisable_t = unsafe extern "system" fn(EnableCap);
+  static glDisable_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDisable_str: &str = "glDisable\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDisable(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDisable_p
+      .store(call_loader(loader, glDisable_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDisable_is_loaded() -> bool {
+    glDisable_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDisable(cap: EnableCap) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glDisable_str[..glDisable_str.len() - 1]);
+    }
+    let p = glDisable_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDisable_str[..glDisable_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDisable_t>(p)(cap);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glDisable_str[..glDisable_str.len() - 1],
+          cap,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDisablei_t = unsafe extern "system" fn(EnableCap, GLuint);
+  static glDisablei_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDisablei_str: &str = "glDisablei\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDisablei(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDisablei_p
+      .store(call_loader(loader, glDisablei_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDisablei_is_loaded() -> bool {
+    glDisablei_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDisablei(target: EnableCap, index: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glDisablei_str[..glDisablei_str.len() - 1]);
+    }
+    let p = glDisablei_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDisablei_str[..glDisablei_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDisablei_t>(p)(target, index);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glDisablei_str[..glDisablei_str.len() - 1],
+          target,
+          index,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDrawArraysInstanced_t =
+    unsafe extern "system" fn(PrimitiveType, GLint, GLsizei, GLsizei);
+  static glDrawArraysInstanced_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glDrawArraysInstanced_str: &str = "glDrawArraysInstanced\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDrawArraysInstanced(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawArraysInstanced_p.store(
+      call_loader(loader, glDrawArraysInstanced_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawArraysInstanced_is_loaded() -> bool {
+    glDrawArraysInstanced_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawArraysInstanced(
+    mode: PrimitiveType,
+    first: GLint,
+    count: GLsizei,
+    instancecount: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawArraysInstanced_str[..glDrawArraysInstanced_str.len() - 1]
+      );
+    }
+    let p = glDrawArraysInstanced_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDrawArraysInstanced_str[..glDrawArraysInstanced_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDrawArraysInstanced_t>(p)(
+      mode,
+      first,
+      count,
+      instancecount,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glDrawArraysInstanced_str[..glDrawArraysInstanced_str.len() - 1],
+          mode,
+          first,
+          count,
+          instancecount,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glDrawArrays_t =
     unsafe extern "system" fn(PrimitiveType, GLint, GLsizei);
   static glDrawArrays_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glDrawArrays_str: &str = "glDrawArrays\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glDrawArrays() {
-    unimplemented!()
+  pub unsafe fn load_glDrawArrays(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawArrays_p
+      .store(call_loader(loader, glDrawArrays_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glDrawArrays() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawArrays_is_loaded() -> bool {
+    glDrawArrays_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawArrays(
+    mode: PrimitiveType,
+    first: GLint,
+    count: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawArrays_str[..glDrawArrays_str.len() - 1]
+      );
+    }
+    let p = glDrawArrays_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDrawArrays_str[..glDrawArrays_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDrawArrays_t>(p)(mode, first, count);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glDrawArrays_str[..glDrawArrays_str.len() - 1],
+          mode,
+          first,
+          count,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glPointParameterfv_t =
-    unsafe extern "system" fn(PointParameterNameARB, *const GLfloat);
-  static glPointParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glPointParameterfv_str: &str = "glPointParameterfv\0";
+  type glDrawBuffer_t = unsafe extern "system" fn(DrawBufferMode);
+  static glDrawBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDrawBuffer_str: &str = "glDrawBuffer\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glPointParameterfv() {
-    unimplemented!()
+  pub unsafe fn load_glDrawBuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawBuffer_p
+      .store(call_loader(loader, glDrawBuffer_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glPointParameterfv() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawBuffer_is_loaded() -> bool {
+    glDrawBuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawBuffer(buf: DrawBufferMode) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawBuffer_str[..glDrawBuffer_str.len() - 1]
+      );
+    }
+    let p = glDrawBuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDrawBuffer_str[..glDrawBuffer_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDrawBuffer_t>(p)(buf);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glDrawBuffer_str[..glDrawBuffer_str.len() - 1],
+          buf,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glSamplerParameteri_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterI, GLint);
-  static glSamplerParameteri_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glSamplerParameteri_str: &str = "glSamplerParameteri\0";
+  type glDrawBuffers_t = unsafe extern "system" fn(GLsizei, *const GLenum);
+  static glDrawBuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDrawBuffers_str: &str = "glDrawBuffers\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glSamplerParameteri() {
-    unimplemented!()
+  pub unsafe fn load_glDrawBuffers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawBuffers_p.store(
+      call_loader(loader, glDrawBuffers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glSamplerParameteri() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawBuffers_is_loaded() -> bool {
+    glDrawBuffers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawBuffers(n: GLsizei, bufs: *const GLenum) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawBuffers_str[..glDrawBuffers_str.len() - 1]
+      );
+    }
+    let p = glDrawBuffers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glDrawBuffers_str[..glDrawBuffers_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glDrawBuffers_t>(p)(n, bufs);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glDrawBuffers_str[..glDrawBuffers_str.len() - 1],
+          n,
+          bufs,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glSamplerParameteriv_t =
-    unsafe extern "system" fn(GLuint, SamplerParameterI, *const GLint);
-  static glSamplerParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glSamplerParameteriv_str: &str = "glSamplerParameteriv\0";
+  type glDrawElementsBaseVertex_t = unsafe extern "system" fn(
+    PrimitiveType,
+    GLsizei,
+    DrawElementsType,
+    *const c_void,
+    GLint,
+  );
+  static glDrawElementsBaseVertex_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glDrawElementsBaseVertex_str: &str = "glDrawElementsBaseVertex\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glSamplerParameteriv() {
-    unimplemented!()
+  pub unsafe fn load_glDrawElementsBaseVertex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawElementsBaseVertex_p.store(
+      call_loader(loader, glDrawElementsBaseVertex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glSamplerParameteriv() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawElementsBaseVertex_is_loaded() -> bool {
+    glDrawElementsBaseVertex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawElementsBaseVertex(
+    mode: PrimitiveType,
+    count: GLsizei,
+    type_: DrawElementsType,
+    indices: *const c_void,
+    basevertex: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawElementsBaseVertex_str[..glDrawElementsBaseVertex_str.len() - 1]
+      );
+    }
+    let p = glDrawElementsBaseVertex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDrawElementsBaseVertex_str[..glDrawElementsBaseVertex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDrawElementsBaseVertex_t>(p)(
+      mode, count, type_, indices, basevertex,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glDrawElementsBaseVertex_str
+            [..glDrawElementsBaseVertex_str.len() - 1],
+          mode,
+          count,
+          type_,
+          indices,
+          basevertex,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glGetBooleani_v_t =
-    unsafe extern "system" fn(BufferTargetARB, GLuint, *mut GLboolean);
-  static glGetBooleani_v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glGetBooleani_v_str: &str = "glGetBooleani_v\0";
+  type glDrawElementsInstancedBaseVertex_t = unsafe extern "system" fn(
+    PrimitiveType,
+    GLsizei,
+    DrawElementsType,
+    *const c_void,
+    GLsizei,
+    GLint,
+  );
+  static glDrawElementsInstancedBaseVertex_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glDrawElementsInstancedBaseVertex_str: &str =
+    "glDrawElementsInstancedBaseVertex\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGetBooleani_v() {
-    unimplemented!()
+  pub unsafe fn load_glDrawElementsInstancedBaseVertex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawElementsInstancedBaseVertex_p.store(
+      call_loader(loader, glDrawElementsInstancedBaseVertex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glGetBooleani_v() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawElementsInstancedBaseVertex_is_loaded() -> bool {
+    glDrawElementsInstancedBaseVertex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawElementsInstancedBaseVertex(
+    mode: PrimitiveType,
+    count: GLsizei,
+    type_: DrawElementsType,
+    indices: *const c_void,
+    instancecount: GLsizei,
+    basevertex: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawElementsInstancedBaseVertex_str
+          [..glDrawElementsInstancedBaseVertex_str.len() - 1]
+      );
+    }
+    let p = glDrawElementsInstancedBaseVertex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDrawElementsInstancedBaseVertex_str
+          [..glDrawElementsInstancedBaseVertex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDrawElementsInstancedBaseVertex_t>(p)(
+      mode,
+      count,
+      type_,
+      indices,
+      instancecount,
+      basevertex,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glDrawElementsInstancedBaseVertex_str
+            [..glDrawElementsInstancedBaseVertex_str.len() - 1],
+          mode,
+          count,
+          type_,
+          indices,
+          instancecount,
+          basevertex,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glStencilMask_t = unsafe extern "system" fn(GLuint);
-  static glStencilMask_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glStencilMask_str: &str = "glStencilMask\0";
+  type glDrawElementsInstanced_t = unsafe extern "system" fn(
+    PrimitiveType,
+    GLsizei,
+    DrawElementsType,
+    *const c_void,
+    GLsizei,
+  );
+  static glDrawElementsInstanced_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glDrawElementsInstanced_str: &str = "glDrawElementsInstanced\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glStencilMask() {
-    unimplemented!()
+  pub unsafe fn load_glDrawElementsInstanced(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawElementsInstanced_p.store(
+      call_loader(loader, glDrawElementsInstanced_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glStencilMask() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawElementsInstanced_is_loaded() -> bool {
+    glDrawElementsInstanced_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawElementsInstanced(
+    mode: PrimitiveType,
+    count: GLsizei,
+    type_: DrawElementsType,
+    indices: *const c_void,
+    instancecount: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawElementsInstanced_str[..glDrawElementsInstanced_str.len() - 1]
+      );
+    }
+    let p = glDrawElementsInstanced_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDrawElementsInstanced_str[..glDrawElementsInstanced_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDrawElementsInstanced_t>(p)(
+      mode,
+      count,
+      type_,
+      indices,
+      instancecount,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glDrawElementsInstanced_str[..glDrawElementsInstanced_str.len() - 1],
+          mode,
+          count,
+          type_,
+          indices,
+          instancecount,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glClearBufferfi_t =
-    unsafe extern "system" fn(Buffer, GLint, GLfloat, GLint);
-  static glClearBufferfi_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClearBufferfi_str: &str = "glClearBufferfi\0";
+  type glDrawElements_t = unsafe extern "system" fn(
+    PrimitiveType,
+    GLsizei,
+    DrawElementsType,
+    *const c_void,
+  );
+  static glDrawElements_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDrawElements_str: &str = "glDrawElements\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glClearBufferfi() {
-    unimplemented!()
+  pub unsafe fn load_glDrawElements(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawElements_p.store(
+      call_loader(loader, glDrawElements_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glClearBufferfi() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawElements_is_loaded() -> bool {
+    glDrawElements_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawElements(
+    mode: PrimitiveType,
+    count: GLsizei,
+    type_: DrawElementsType,
+    indices: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawElements_str[..glDrawElements_str.len() - 1]
+      );
+    }
+    let p = glDrawElements_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDrawElements_str[..glDrawElements_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDrawElements_t>(p)(
+      mode, count, type_, indices,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glDrawElements_str[..glDrawElements_str.len() - 1],
+          mode,
+          count,
+          type_,
+          indices,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glClearBufferiv_t =
-    unsafe extern "system" fn(Buffer, GLint, *const GLint);
-  static glClearBufferiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-  const glClearBufferiv_str: &str = "glClearBufferiv\0";
+  type glDrawRangeElementsBaseVertex_t = unsafe extern "system" fn(
+    PrimitiveType,
+    GLuint,
+    GLuint,
+    GLsizei,
+    DrawElementsType,
+    *const c_void,
+    GLint,
+  );
+  static glDrawRangeElementsBaseVertex_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glDrawRangeElementsBaseVertex_str: &str =
+    "glDrawRangeElementsBaseVertex\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glClearBufferiv() {
-    unimplemented!()
+  pub unsafe fn load_glDrawRangeElementsBaseVertex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawRangeElementsBaseVertex_p.store(
+      call_loader(loader, glDrawRangeElementsBaseVertex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glClearBufferiv() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawRangeElementsBaseVertex_is_loaded() -> bool {
+    glDrawRangeElementsBaseVertex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawRangeElementsBaseVertex(
+    mode: PrimitiveType,
+    start: GLuint,
+    end: GLuint,
+    count: GLsizei,
+    type_: DrawElementsType,
+    indices: *const c_void,
+    basevertex: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawRangeElementsBaseVertex_str
+          [..glDrawRangeElementsBaseVertex_str.len() - 1]
+      );
+    }
+    let p = glDrawRangeElementsBaseVertex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDrawRangeElementsBaseVertex_str
+          [..glDrawRangeElementsBaseVertex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDrawRangeElementsBaseVertex_t>(p)(
+      mode, start, end, count, type_, indices, basevertex,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glDrawRangeElementsBaseVertex_str
+            [..glDrawRangeElementsBaseVertex_str.len() - 1],
+          mode,
+          start,
+          end,
+          count,
+          type_,
+          indices,
+          basevertex,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glDrawRangeElements_t = unsafe extern "system" fn(
+    PrimitiveType,
+    GLuint,
+    GLuint,
+    GLsizei,
+    DrawElementsType,
+    *const c_void,
+  );
+  static glDrawRangeElements_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glDrawRangeElements_str: &str = "glDrawRangeElements\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glDrawRangeElements(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glDrawRangeElements_p.store(
+      call_loader(loader, glDrawRangeElements_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glDrawRangeElements_is_loaded() -> bool {
+    glDrawRangeElements_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glDrawRangeElements(
+    mode: PrimitiveType,
+    start: GLuint,
+    end: GLuint,
+    count: GLsizei,
+    type_: DrawElementsType,
+    indices: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glDrawRangeElements_str[..glDrawRangeElements_str.len() - 1]
+      );
+    }
+    let p = glDrawRangeElements_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glDrawRangeElements_str[..glDrawRangeElements_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glDrawRangeElements_t>(p)(
+      mode, start, end, count, type_, indices,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glDrawRangeElements_str[..glDrawRangeElements_str.len() - 1],
+          mode,
+          start,
+          end,
+          count,
+          type_,
+          indices,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glEnableVertexAttribArray_t = unsafe extern "system" fn(GLuint);
+  static glEnableVertexAttribArray_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glEnableVertexAttribArray_str: &str = "glEnableVertexAttribArray\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glEnableVertexAttribArray(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glEnableVertexAttribArray_p.store(
+      call_loader(loader, glEnableVertexAttribArray_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glEnableVertexAttribArray_is_loaded() -> bool {
+    glEnableVertexAttribArray_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glEnableVertexAttribArray(index: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glEnableVertexAttribArray_str
+          [..glEnableVertexAttribArray_str.len() - 1]
+      );
+    }
+    let p = glEnableVertexAttribArray_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glEnableVertexAttribArray_str
+          [..glEnableVertexAttribArray_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glEnableVertexAttribArray_t>(p)(index);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glEnableVertexAttribArray_str
+            [..glEnableVertexAttribArray_str.len() - 1],
+          index,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glEnable_t = unsafe extern "system" fn(EnableCap);
   static glEnable_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
   const glEnable_str: &str = "glEnable\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glEnable() {
-    unimplemented!()
+  pub unsafe fn load_glEnable(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glEnable_p
+      .store(call_loader(loader, glEnable_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glEnable() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glEnable_is_loaded() -> bool {
+    glEnable_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glEnable(cap: EnableCap) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glEnable_str[..glEnable_str.len() - 1]);
+    }
+    let p = glEnable_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glEnable_str[..glEnable_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glEnable_t>(p)(cap);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glEnable_str[..glEnable_str.len() - 1],
+          cap,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
-  type glBeginTransformFeedback_t = unsafe extern "system" fn(PrimitiveType);
-  static glBeginTransformFeedback_p: AtomicPtr<c_void> =
-    AtomicPtr::new(null_mut());
-  const glBeginTransformFeedback_str: &str = "glBeginTransformFeedback\0";
+  type glEnablei_t = unsafe extern "system" fn(EnableCap, GLuint);
+  static glEnablei_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glEnablei_str: &str = "glEnablei\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glBeginTransformFeedback() {
-    unimplemented!()
+  pub unsafe fn load_glEnablei(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glEnablei_p
+      .store(call_loader(loader, glEnablei_str.as_bytes()), Ordering::SeqCst)
   }
-  pub fn glBeginTransformFeedback() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glEnablei_is_loaded() -> bool {
+    glEnablei_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glEnablei(target: EnableCap, index: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glEnablei_str[..glEnablei_str.len() - 1]);
+    }
+    let p = glEnablei_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glEnablei_str[..glEnablei_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glEnablei_t>(p)(target, index);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glEnablei_str[..glEnablei_str.len() - 1],
+          target,
+          index,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glEndConditionalRender_t = unsafe extern "system" fn();
+  static glEndConditionalRender_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glEndConditionalRender_str: &str = "glEndConditionalRender\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glEndConditionalRender(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glEndConditionalRender_p.store(
+      call_loader(loader, glEndConditionalRender_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glEndConditionalRender_is_loaded() -> bool {
+    glEndConditionalRender_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glEndConditionalRender() {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glEndConditionalRender_str[..glEndConditionalRender_str.len() - 1]
+      );
+    }
+    let p = glEndConditionalRender_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glEndConditionalRender_str[..glEndConditionalRender_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glEndConditionalRender_t>(p)();
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}() error: {err_name}",
+          &glEndConditionalRender_str[..glEndConditionalRender_str.len() - 1],
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glEndQuery_t = unsafe extern "system" fn(QueryTarget);
+  static glEndQuery_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glEndQuery_str: &str = "glEndQuery\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glEndQuery(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glEndQuery_p
+      .store(call_loader(loader, glEndQuery_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glEndQuery_is_loaded() -> bool {
+    glEndQuery_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glEndQuery(target: QueryTarget) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glEndQuery_str[..glEndQuery_str.len() - 1]);
+    }
+    let p = glEndQuery_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glEndQuery_str[..glEndQuery_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glEndQuery_t>(p)(target);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glEndQuery_str[..glEndQuery_str.len() - 1],
+          target,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glEndTransformFeedback_t = unsafe extern "system" fn();
+  static glEndTransformFeedback_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glEndTransformFeedback_str: &str = "glEndTransformFeedback\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glEndTransformFeedback(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glEndTransformFeedback_p.store(
+      call_loader(loader, glEndTransformFeedback_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glEndTransformFeedback_is_loaded() -> bool {
+    glEndTransformFeedback_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glEndTransformFeedback() {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glEndTransformFeedback_str[..glEndTransformFeedback_str.len() - 1]
+      );
+    }
+    let p = glEndTransformFeedback_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glEndTransformFeedback_str[..glEndTransformFeedback_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glEndTransformFeedback_t>(p)();
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}() error: {err_name}",
+          &glEndTransformFeedback_str[..glEndTransformFeedback_str.len() - 1],
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFenceSync_t =
+    unsafe extern "system" fn(SyncCondition, GLbitfield) -> GLsync;
+  static glFenceSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glFenceSync_str: &str = "glFenceSync\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFenceSync(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFenceSync_p
+      .store(call_loader(loader, glFenceSync_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFenceSync_is_loaded() -> bool {
+    glFenceSync_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFenceSync(
+    condition: SyncCondition,
+    flags: GLbitfield,
+  ) -> GLsync {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFenceSync_str[..glFenceSync_str.len() - 1]
+      );
+    }
+    let p = glFenceSync_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glFenceSync_str[..glFenceSync_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glFenceSync_t>(p)(condition, flags);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glFenceSync_str[..glFenceSync_str.len() - 1],
+          condition,
+          flags,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFinish_t = unsafe extern "system" fn();
+  static glFinish_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glFinish_str: &str = "glFinish\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFinish(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFinish_p
+      .store(call_loader(loader, glFinish_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFinish_is_loaded() -> bool {
+    glFinish_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFinish() {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glFinish_str[..glFinish_str.len() - 1]);
+    }
+    let p = glFinish_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glFinish_str[..glFinish_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glFinish_t>(p)();
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}() error: {err_name}",
+          &glFinish_str[..glFinish_str.len() - 1],
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFlushMappedBufferRange_t =
+    unsafe extern "system" fn(BufferTargetARB, GLintptr, GLsizeiptr);
+  static glFlushMappedBufferRange_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glFlushMappedBufferRange_str: &str = "glFlushMappedBufferRange\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFlushMappedBufferRange(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFlushMappedBufferRange_p.store(
+      call_loader(loader, glFlushMappedBufferRange_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFlushMappedBufferRange_is_loaded() -> bool {
+    glFlushMappedBufferRange_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFlushMappedBufferRange(
+    target: BufferTargetARB,
+    offset: GLintptr,
+    length: GLsizeiptr,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFlushMappedBufferRange_str[..glFlushMappedBufferRange_str.len() - 1]
+      );
+    }
+    let p = glFlushMappedBufferRange_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glFlushMappedBufferRange_str[..glFlushMappedBufferRange_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glFlushMappedBufferRange_t>(p)(
+      target, offset, length,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glFlushMappedBufferRange_str
+            [..glFlushMappedBufferRange_str.len() - 1],
+          target,
+          offset,
+          length,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFlush_t = unsafe extern "system" fn();
+  static glFlush_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glFlush_str: &str = "glFlush\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFlush(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFlush_p
+      .store(call_loader(loader, glFlush_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFlush_is_loaded() -> bool {
+    glFlush_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFlush() {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glFlush_str[..glFlush_str.len() - 1]);
+    }
+    let p = glFlush_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glFlush_str[..glFlush_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glFlush_t>(p)();
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}() error: {err_name}",
+          &glFlush_str[..glFlush_str.len() - 1],
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFramebufferRenderbuffer_t = unsafe extern "system" fn(
+    FramebufferTarget,
+    FramebufferAttachment,
+    RenderbufferTarget,
+    GLuint,
+  );
+  static glFramebufferRenderbuffer_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glFramebufferRenderbuffer_str: &str = "glFramebufferRenderbuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFramebufferRenderbuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFramebufferRenderbuffer_p.store(
+      call_loader(loader, glFramebufferRenderbuffer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFramebufferRenderbuffer_is_loaded() -> bool {
+    glFramebufferRenderbuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFramebufferRenderbuffer(
+    target: FramebufferTarget,
+    attachment: FramebufferAttachment,
+    renderbuffertarget: RenderbufferTarget,
+    renderbuffer: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFramebufferRenderbuffer_str
+          [..glFramebufferRenderbuffer_str.len() - 1]
+      );
+    }
+    let p = glFramebufferRenderbuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glFramebufferRenderbuffer_str
+          [..glFramebufferRenderbuffer_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glFramebufferRenderbuffer_t>(p)(
+      target,
+      attachment,
+      renderbuffertarget,
+      renderbuffer,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glFramebufferRenderbuffer_str
+            [..glFramebufferRenderbuffer_str.len() - 1],
+          target,
+          attachment,
+          renderbuffertarget,
+          renderbuffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFramebufferTexture1D_t = unsafe extern "system" fn(
+    FramebufferTarget,
+    FramebufferAttachment,
+    TextureTarget,
+    GLuint,
+    GLint,
+  );
+  static glFramebufferTexture1D_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glFramebufferTexture1D_str: &str = "glFramebufferTexture1D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFramebufferTexture1D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFramebufferTexture1D_p.store(
+      call_loader(loader, glFramebufferTexture1D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFramebufferTexture1D_is_loaded() -> bool {
+    glFramebufferTexture1D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFramebufferTexture1D(
+    target: FramebufferTarget,
+    attachment: FramebufferAttachment,
+    textarget: TextureTarget,
+    texture: GLuint,
+    level: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFramebufferTexture1D_str[..glFramebufferTexture1D_str.len() - 1]
+      );
+    }
+    let p = glFramebufferTexture1D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glFramebufferTexture1D_str[..glFramebufferTexture1D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glFramebufferTexture1D_t>(p)(
+      target, attachment, textarget, texture, level,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glFramebufferTexture1D_str[..glFramebufferTexture1D_str.len() - 1],
+          target,
+          attachment,
+          textarget,
+          texture,
+          level,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFramebufferTexture2D_t = unsafe extern "system" fn(
+    FramebufferTarget,
+    FramebufferAttachment,
+    TextureTarget,
+    GLuint,
+    GLint,
+  );
+  static glFramebufferTexture2D_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glFramebufferTexture2D_str: &str = "glFramebufferTexture2D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFramebufferTexture2D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFramebufferTexture2D_p.store(
+      call_loader(loader, glFramebufferTexture2D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFramebufferTexture2D_is_loaded() -> bool {
+    glFramebufferTexture2D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFramebufferTexture2D(
+    target: FramebufferTarget,
+    attachment: FramebufferAttachment,
+    textarget: TextureTarget,
+    texture: GLuint,
+    level: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFramebufferTexture2D_str[..glFramebufferTexture2D_str.len() - 1]
+      );
+    }
+    let p = glFramebufferTexture2D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glFramebufferTexture2D_str[..glFramebufferTexture2D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glFramebufferTexture2D_t>(p)(
+      target, attachment, textarget, texture, level,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glFramebufferTexture2D_str[..glFramebufferTexture2D_str.len() - 1],
+          target,
+          attachment,
+          textarget,
+          texture,
+          level,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFramebufferTexture3D_t = unsafe extern "system" fn(
+    FramebufferTarget,
+    FramebufferAttachment,
+    TextureTarget,
+    GLuint,
+    GLint,
+    GLint,
+  );
+  static glFramebufferTexture3D_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glFramebufferTexture3D_str: &str = "glFramebufferTexture3D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFramebufferTexture3D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFramebufferTexture3D_p.store(
+      call_loader(loader, glFramebufferTexture3D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFramebufferTexture3D_is_loaded() -> bool {
+    glFramebufferTexture3D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFramebufferTexture3D(
+    target: FramebufferTarget,
+    attachment: FramebufferAttachment,
+    textarget: TextureTarget,
+    texture: GLuint,
+    level: GLint,
+    zoffset: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFramebufferTexture3D_str[..glFramebufferTexture3D_str.len() - 1]
+      );
+    }
+    let p = glFramebufferTexture3D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glFramebufferTexture3D_str[..glFramebufferTexture3D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glFramebufferTexture3D_t>(p)(
+      target, attachment, textarget, texture, level, zoffset,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glFramebufferTexture3D_str[..glFramebufferTexture3D_str.len() - 1],
+          target,
+          attachment,
+          textarget,
+          texture,
+          level,
+          zoffset,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFramebufferTextureLayer_t = unsafe extern "system" fn(
+    FramebufferTarget,
+    FramebufferAttachment,
+    GLuint,
+    GLint,
+    GLint,
+  );
+  static glFramebufferTextureLayer_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glFramebufferTextureLayer_str: &str = "glFramebufferTextureLayer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFramebufferTextureLayer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFramebufferTextureLayer_p.store(
+      call_loader(loader, glFramebufferTextureLayer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFramebufferTextureLayer_is_loaded() -> bool {
+    glFramebufferTextureLayer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFramebufferTextureLayer(
+    target: FramebufferTarget,
+    attachment: FramebufferAttachment,
+    texture: GLuint,
+    level: GLint,
+    layer: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFramebufferTextureLayer_str
+          [..glFramebufferTextureLayer_str.len() - 1]
+      );
+    }
+    let p = glFramebufferTextureLayer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glFramebufferTextureLayer_str
+          [..glFramebufferTextureLayer_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glFramebufferTextureLayer_t>(p)(
+      target, attachment, texture, level, layer,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glFramebufferTextureLayer_str
+            [..glFramebufferTextureLayer_str.len() - 1],
+          target,
+          attachment,
+          texture,
+          level,
+          layer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFramebufferTexture_t = unsafe extern "system" fn(
+    FramebufferTarget,
+    FramebufferAttachment,
+    GLuint,
+    GLint,
+  );
+  static glFramebufferTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glFramebufferTexture_str: &str = "glFramebufferTexture\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFramebufferTexture(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFramebufferTexture_p.store(
+      call_loader(loader, glFramebufferTexture_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFramebufferTexture_is_loaded() -> bool {
+    glFramebufferTexture_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFramebufferTexture(
+    target: FramebufferTarget,
+    attachment: FramebufferAttachment,
+    texture: GLuint,
+    level: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFramebufferTexture_str[..glFramebufferTexture_str.len() - 1]
+      );
+    }
+    let p = glFramebufferTexture_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glFramebufferTexture_str[..glFramebufferTexture_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glFramebufferTexture_t>(p)(
+      target, attachment, texture, level,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glFramebufferTexture_str[..glFramebufferTexture_str.len() - 1],
+          target,
+          attachment,
+          texture,
+          level,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glFrontFace_t = unsafe extern "system" fn(FrontFaceDirection);
+  static glFrontFace_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glFrontFace_str: &str = "glFrontFace\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glFrontFace(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glFrontFace_p
+      .store(call_loader(loader, glFrontFace_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glFrontFace_is_loaded() -> bool {
+    glFrontFace_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glFrontFace(mode: FrontFaceDirection) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glFrontFace_str[..glFrontFace_str.len() - 1]
+      );
+    }
+    let p = glFrontFace_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glFrontFace_str[..glFrontFace_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glFrontFace_t>(p)(mode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glFrontFace_str[..glFrontFace_str.len() - 1],
+          mode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenBuffers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
+  static glGenBuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenBuffers_str: &str = "glGenBuffers\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenBuffers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenBuffers_p
+      .store(call_loader(loader, glGenBuffers_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenBuffers_is_loaded() -> bool {
+    glGenBuffers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenBuffers(n: GLsizei, buffers: *mut GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenBuffers_str[..glGenBuffers_str.len() - 1]
+      );
+    }
+    let p = glGenBuffers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGenBuffers_str[..glGenBuffers_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGenBuffers_t>(p)(n, buffers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGenBuffers_str[..glGenBuffers_str.len() - 1],
+          n,
+          buffers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenFramebuffers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
+  static glGenFramebuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenFramebuffers_str: &str = "glGenFramebuffers\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenFramebuffers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenFramebuffers_p.store(
+      call_loader(loader, glGenFramebuffers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenFramebuffers_is_loaded() -> bool {
+    glGenFramebuffers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenFramebuffers(n: GLsizei, framebuffers: *mut GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenFramebuffers_str[..glGenFramebuffers_str.len() - 1]
+      );
+    }
+    let p = glGenFramebuffers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGenFramebuffers_str[..glGenFramebuffers_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGenFramebuffers_t>(p)(n, framebuffers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGenFramebuffers_str[..glGenFramebuffers_str.len() - 1],
+          n,
+          framebuffers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenQueries_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
+  static glGenQueries_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenQueries_str: &str = "glGenQueries\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenQueries(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenQueries_p
+      .store(call_loader(loader, glGenQueries_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenQueries_is_loaded() -> bool {
+    glGenQueries_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenQueries(n: GLsizei, ids: *mut GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenQueries_str[..glGenQueries_str.len() - 1]
+      );
+    }
+    let p = glGenQueries_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGenQueries_str[..glGenQueries_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGenQueries_t>(p)(n, ids);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGenQueries_str[..glGenQueries_str.len() - 1],
+          n,
+          ids,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenRenderbuffers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
+  static glGenRenderbuffers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenRenderbuffers_str: &str = "glGenRenderbuffers\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenRenderbuffers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenRenderbuffers_p.store(
+      call_loader(loader, glGenRenderbuffers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenRenderbuffers_is_loaded() -> bool {
+    glGenRenderbuffers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenRenderbuffers(n: GLsizei, renderbuffers: *mut GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenRenderbuffers_str[..glGenRenderbuffers_str.len() - 1]
+      );
+    }
+    let p = glGenRenderbuffers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGenRenderbuffers_str[..glGenRenderbuffers_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGenRenderbuffers_t>(p)(n, renderbuffers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGenRenderbuffers_str[..glGenRenderbuffers_str.len() - 1],
+          n,
+          renderbuffers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenSamplers_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
+  static glGenSamplers_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenSamplers_str: &str = "glGenSamplers\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenSamplers(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenSamplers_p.store(
+      call_loader(loader, glGenSamplers_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenSamplers_is_loaded() -> bool {
+    glGenSamplers_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenSamplers(count: GLsizei, samplers: *mut GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenSamplers_str[..glGenSamplers_str.len() - 1]
+      );
+    }
+    let p = glGenSamplers_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGenSamplers_str[..glGenSamplers_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGenSamplers_t>(p)(count, samplers);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGenSamplers_str[..glGenSamplers_str.len() - 1],
+          count,
+          samplers,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenTextures_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
+  static glGenTextures_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenTextures_str: &str = "glGenTextures\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenTextures(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenTextures_p.store(
+      call_loader(loader, glGenTextures_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenTextures_is_loaded() -> bool {
+    glGenTextures_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenTextures(n: GLsizei, textures: *mut GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenTextures_str[..glGenTextures_str.len() - 1]
+      );
+    }
+    let p = glGenTextures_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGenTextures_str[..glGenTextures_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGenTextures_t>(p)(n, textures);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGenTextures_str[..glGenTextures_str.len() - 1],
+          n,
+          textures,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenVertexArrays_t = unsafe extern "system" fn(GLsizei, *mut GLuint);
+  static glGenVertexArrays_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenVertexArrays_str: &str = "glGenVertexArrays\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenVertexArrays(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenVertexArrays_p.store(
+      call_loader(loader, glGenVertexArrays_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenVertexArrays_is_loaded() -> bool {
+    glGenVertexArrays_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenVertexArrays(n: GLsizei, arrays: *mut GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenVertexArrays_str[..glGenVertexArrays_str.len() - 1]
+      );
+    }
+    let p = glGenVertexArrays_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGenVertexArrays_str[..glGenVertexArrays_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGenVertexArrays_t>(p)(n, arrays);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGenVertexArrays_str[..glGenVertexArrays_str.len() - 1],
+          n,
+          arrays,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGenerateMipmap_t = unsafe extern "system" fn(TextureTarget);
+  static glGenerateMipmap_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGenerateMipmap_str: &str = "glGenerateMipmap\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGenerateMipmap(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGenerateMipmap_p.store(
+      call_loader(loader, glGenerateMipmap_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGenerateMipmap_is_loaded() -> bool {
+    glGenerateMipmap_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGenerateMipmap(target: TextureTarget) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGenerateMipmap_str[..glGenerateMipmap_str.len() - 1]
+      );
+    }
+    let p = glGenerateMipmap_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGenerateMipmap_str[..glGenerateMipmap_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGenerateMipmap_t>(p)(target);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glGenerateMipmap_str[..glGenerateMipmap_str.len() - 1],
+          target,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetActiveAttrib_t = unsafe extern "system" fn(
+    GLuint,
+    GLuint,
+    GLsizei,
+    *mut GLsizei,
+    *mut GLint,
+    *mut GLenum,
+    *mut GLchar,
+  );
+  static glGetActiveAttrib_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetActiveAttrib_str: &str = "glGetActiveAttrib\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetActiveAttrib(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetActiveAttrib_p.store(
+      call_loader(loader, glGetActiveAttrib_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetActiveAttrib_is_loaded() -> bool {
+    glGetActiveAttrib_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetActiveAttrib(
+    program: GLuint,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    size: *mut GLint,
+    type_: *mut GLenum,
+    name: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetActiveAttrib_str[..glGetActiveAttrib_str.len() - 1]
+      );
+    }
+    let p = glGetActiveAttrib_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetActiveAttrib_str[..glGetActiveAttrib_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetActiveAttrib_t>(p)(
+      program, index, bufSize, length, size, type_, name,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetActiveAttrib_str[..glGetActiveAttrib_str.len() - 1],
+          program,
+          index,
+          bufSize,
+          length,
+          size,
+          type_,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
   }
 
   type glGetActiveUniformBlockName_t = unsafe extern "system" fn(
@@ -5564,14 +7119,13389 @@ pub mod global_loader {
   static glGetActiveUniformBlockName_p: AtomicPtr<c_void> =
     AtomicPtr::new(null_mut());
   const glGetActiveUniformBlockName_str: &str = "glGetActiveUniformBlockName\0";
+  #[inline]
   #[doc(hidden)]
-  pub fn load_glGetActiveUniformBlockName() {
-    unimplemented!()
+  pub unsafe fn load_glGetActiveUniformBlockName(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetActiveUniformBlockName_p.store(
+      call_loader(loader, glGetActiveUniformBlockName_str.as_bytes()),
+      Ordering::SeqCst,
+    )
   }
-  pub fn glGetActiveUniformBlockName() {
-    unimplemented!()
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetActiveUniformBlockName_is_loaded() -> bool {
+    glGetActiveUniformBlockName_p.load(Ordering::Relaxed).is_null().not()
   }
-  // TODO!
+  #[inline]
+  pub unsafe fn glGetActiveUniformBlockName(
+    program: GLuint,
+    uniformBlockIndex: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    uniformBlockName: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetActiveUniformBlockName_str
+          [..glGetActiveUniformBlockName_str.len() - 1]
+      );
+    }
+    let p = glGetActiveUniformBlockName_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetActiveUniformBlockName_str
+          [..glGetActiveUniformBlockName_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetActiveUniformBlockName_t>(p)(
+      program,
+      uniformBlockIndex,
+      bufSize,
+      length,
+      uniformBlockName,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetActiveUniformBlockName_str
+            [..glGetActiveUniformBlockName_str.len() - 1],
+          program,
+          uniformBlockIndex,
+          bufSize,
+          length,
+          uniformBlockName,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetActiveUniformBlockiv_t =
+    unsafe extern "system" fn(GLuint, GLuint, UniformBlockPName, *mut GLint);
+  static glGetActiveUniformBlockiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetActiveUniformBlockiv_str: &str = "glGetActiveUniformBlockiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetActiveUniformBlockiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetActiveUniformBlockiv_p.store(
+      call_loader(loader, glGetActiveUniformBlockiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetActiveUniformBlockiv_is_loaded() -> bool {
+    glGetActiveUniformBlockiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetActiveUniformBlockiv(
+    program: GLuint,
+    uniformBlockIndex: GLuint,
+    pname: UniformBlockPName,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetActiveUniformBlockiv_str
+          [..glGetActiveUniformBlockiv_str.len() - 1]
+      );
+    }
+    let p = glGetActiveUniformBlockiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetActiveUniformBlockiv_str
+          [..glGetActiveUniformBlockiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetActiveUniformBlockiv_t>(p)(
+      program,
+      uniformBlockIndex,
+      pname,
+      params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetActiveUniformBlockiv_str
+            [..glGetActiveUniformBlockiv_str.len() - 1],
+          program,
+          uniformBlockIndex,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetActiveUniformName_t = unsafe extern "system" fn(
+    GLuint,
+    GLuint,
+    GLsizei,
+    *mut GLsizei,
+    *mut GLchar,
+  );
+  static glGetActiveUniformName_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetActiveUniformName_str: &str = "glGetActiveUniformName\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetActiveUniformName(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetActiveUniformName_p.store(
+      call_loader(loader, glGetActiveUniformName_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetActiveUniformName_is_loaded() -> bool {
+    glGetActiveUniformName_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetActiveUniformName(
+    program: GLuint,
+    uniformIndex: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    uniformName: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetActiveUniformName_str[..glGetActiveUniformName_str.len() - 1]
+      );
+    }
+    let p = glGetActiveUniformName_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetActiveUniformName_str[..glGetActiveUniformName_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetActiveUniformName_t>(p)(
+      program,
+      uniformIndex,
+      bufSize,
+      length,
+      uniformName,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetActiveUniformName_str[..glGetActiveUniformName_str.len() - 1],
+          program,
+          uniformIndex,
+          bufSize,
+          length,
+          uniformName,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetActiveUniform_t = unsafe extern "system" fn(
+    GLuint,
+    GLuint,
+    GLsizei,
+    *mut GLsizei,
+    *mut GLint,
+    *mut GLenum,
+    *mut GLchar,
+  );
+  static glGetActiveUniform_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetActiveUniform_str: &str = "glGetActiveUniform\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetActiveUniform(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetActiveUniform_p.store(
+      call_loader(loader, glGetActiveUniform_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetActiveUniform_is_loaded() -> bool {
+    glGetActiveUniform_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetActiveUniform(
+    program: GLuint,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    size: *mut GLint,
+    type_: *mut GLenum,
+    name: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetActiveUniform_str[..glGetActiveUniform_str.len() - 1]
+      );
+    }
+    let p = glGetActiveUniform_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetActiveUniform_str[..glGetActiveUniform_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetActiveUniform_t>(p)(
+      program, index, bufSize, length, size, type_, name,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetActiveUniform_str[..glGetActiveUniform_str.len() - 1],
+          program,
+          index,
+          bufSize,
+          length,
+          size,
+          type_,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetActiveUniformsiv_t = unsafe extern "system" fn(
+    GLuint,
+    GLsizei,
+    *const GLuint,
+    UniformPName,
+    *mut GLint,
+  );
+  static glGetActiveUniformsiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetActiveUniformsiv_str: &str = "glGetActiveUniformsiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetActiveUniformsiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetActiveUniformsiv_p.store(
+      call_loader(loader, glGetActiveUniformsiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetActiveUniformsiv_is_loaded() -> bool {
+    glGetActiveUniformsiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetActiveUniformsiv(
+    program: GLuint,
+    uniformCount: GLsizei,
+    uniformIndices: *const GLuint,
+    pname: UniformPName,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetActiveUniformsiv_str[..glGetActiveUniformsiv_str.len() - 1]
+      );
+    }
+    let p = glGetActiveUniformsiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetActiveUniformsiv_str[..glGetActiveUniformsiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetActiveUniformsiv_t>(p)(
+      program,
+      uniformCount,
+      uniformIndices,
+      pname,
+      params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetActiveUniformsiv_str[..glGetActiveUniformsiv_str.len() - 1],
+          program,
+          uniformCount,
+          uniformIndices,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetAttachedShaders_t =
+    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLuint);
+  static glGetAttachedShaders_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetAttachedShaders_str: &str = "glGetAttachedShaders\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetAttachedShaders(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetAttachedShaders_p.store(
+      call_loader(loader, glGetAttachedShaders_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetAttachedShaders_is_loaded() -> bool {
+    glGetAttachedShaders_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetAttachedShaders(
+    program: GLuint,
+    maxCount: GLsizei,
+    count: *mut GLsizei,
+    shaders: *mut GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetAttachedShaders_str[..glGetAttachedShaders_str.len() - 1]
+      );
+    }
+    let p = glGetAttachedShaders_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetAttachedShaders_str[..glGetAttachedShaders_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetAttachedShaders_t>(p)(
+      program, maxCount, count, shaders,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetAttachedShaders_str[..glGetAttachedShaders_str.len() - 1],
+          program,
+          maxCount,
+          count,
+          shaders,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetAttribLocation_t =
+    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
+  static glGetAttribLocation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetAttribLocation_str: &str = "glGetAttribLocation\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetAttribLocation(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetAttribLocation_p.store(
+      call_loader(loader, glGetAttribLocation_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetAttribLocation_is_loaded() -> bool {
+    glGetAttribLocation_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetAttribLocation(
+    program: GLuint,
+    name: *const GLchar,
+  ) -> GLint {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetAttribLocation_str[..glGetAttribLocation_str.len() - 1]
+      );
+    }
+    let p = glGetAttribLocation_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetAttribLocation_str[..glGetAttribLocation_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetAttribLocation_t>(p)(program, name);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGetAttribLocation_str[..glGetAttribLocation_str.len() - 1],
+          program,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetBooleani_v_t =
+    unsafe extern "system" fn(BufferTargetARB, GLuint, *mut GLboolean);
+  static glGetBooleani_v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetBooleani_v_str: &str = "glGetBooleani_v\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetBooleani_v(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetBooleani_v_p.store(
+      call_loader(loader, glGetBooleani_v_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetBooleani_v_is_loaded() -> bool {
+    glGetBooleani_v_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetBooleani_v(
+    target: BufferTargetARB,
+    index: GLuint,
+    data: *mut GLboolean,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetBooleani_v_str[..glGetBooleani_v_str.len() - 1]
+      );
+    }
+    let p = glGetBooleani_v_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetBooleani_v_str[..glGetBooleani_v_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetBooleani_v_t>(p)(target, index, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glGetBooleani_v_str[..glGetBooleani_v_str.len() - 1],
+          target,
+          index,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetBooleanv_t = unsafe extern "system" fn(GetPName, *mut GLboolean);
+  static glGetBooleanv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetBooleanv_str: &str = "glGetBooleanv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetBooleanv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetBooleanv_p.store(
+      call_loader(loader, glGetBooleanv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetBooleanv_is_loaded() -> bool {
+    glGetBooleanv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetBooleanv(pname: GetPName, data: *mut GLboolean) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetBooleanv_str[..glGetBooleanv_str.len() - 1]
+      );
+    }
+    let p = glGetBooleanv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetBooleanv_str[..glGetBooleanv_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetBooleanv_t>(p)(pname, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glGetBooleanv_str[..glGetBooleanv_str.len() - 1],
+          pname,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetBufferParameteri64v_t =
+    unsafe extern "system" fn(BufferTargetARB, BufferPNameARB, *mut GLint64);
+  static glGetBufferParameteri64v_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetBufferParameteri64v_str: &str = "glGetBufferParameteri64v\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetBufferParameteri64v(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetBufferParameteri64v_p.store(
+      call_loader(loader, glGetBufferParameteri64v_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetBufferParameteri64v_is_loaded() -> bool {
+    glGetBufferParameteri64v_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetBufferParameteri64v(
+    target: BufferTargetARB,
+    pname: BufferPNameARB,
+    params: *mut GLint64,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetBufferParameteri64v_str[..glGetBufferParameteri64v_str.len() - 1]
+      );
+    }
+    let p = glGetBufferParameteri64v_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetBufferParameteri64v_str[..glGetBufferParameteri64v_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetBufferParameteri64v_t>(p)(
+      target, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetBufferParameteri64v_str
+            [..glGetBufferParameteri64v_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetBufferParameteriv_t =
+    unsafe extern "system" fn(BufferTargetARB, BufferPNameARB, *mut GLint);
+  static glGetBufferParameteriv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetBufferParameteriv_str: &str = "glGetBufferParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetBufferParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetBufferParameteriv_p.store(
+      call_loader(loader, glGetBufferParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetBufferParameteriv_is_loaded() -> bool {
+    glGetBufferParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetBufferParameteriv(
+    target: BufferTargetARB,
+    pname: BufferPNameARB,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetBufferParameteriv_str[..glGetBufferParameteriv_str.len() - 1]
+      );
+    }
+    let p = glGetBufferParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetBufferParameteriv_str[..glGetBufferParameteriv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetBufferParameteriv_t>(p)(
+      target, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetBufferParameteriv_str[..glGetBufferParameteriv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetBufferPointerv_t = unsafe extern "system" fn(
+    BufferTargetARB,
+    BufferPointerNameARB,
+    *mut *mut c_void,
+  );
+  static glGetBufferPointerv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetBufferPointerv_str: &str = "glGetBufferPointerv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetBufferPointerv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetBufferPointerv_p.store(
+      call_loader(loader, glGetBufferPointerv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetBufferPointerv_is_loaded() -> bool {
+    glGetBufferPointerv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetBufferPointerv(
+    target: BufferTargetARB,
+    pname: BufferPointerNameARB,
+    params: *mut *mut c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetBufferPointerv_str[..glGetBufferPointerv_str.len() - 1]
+      );
+    }
+    let p = glGetBufferPointerv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetBufferPointerv_str[..glGetBufferPointerv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetBufferPointerv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetBufferPointerv_str[..glGetBufferPointerv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetBufferSubData_t = unsafe extern "system" fn(
+    BufferTargetARB,
+    GLintptr,
+    GLsizeiptr,
+    *mut c_void,
+  );
+  static glGetBufferSubData_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetBufferSubData_str: &str = "glGetBufferSubData\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetBufferSubData(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetBufferSubData_p.store(
+      call_loader(loader, glGetBufferSubData_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetBufferSubData_is_loaded() -> bool {
+    glGetBufferSubData_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetBufferSubData(
+    target: BufferTargetARB,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    data: *mut c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetBufferSubData_str[..glGetBufferSubData_str.len() - 1]
+      );
+    }
+    let p = glGetBufferSubData_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetBufferSubData_str[..glGetBufferSubData_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetBufferSubData_t>(p)(
+      target, offset, size, data,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetBufferSubData_str[..glGetBufferSubData_str.len() - 1],
+          target,
+          offset,
+          size,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetCompressedTexImage_t =
+    unsafe extern "system" fn(TextureTarget, GLint, *mut c_void);
+  static glGetCompressedTexImage_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetCompressedTexImage_str: &str = "glGetCompressedTexImage\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetCompressedTexImage(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetCompressedTexImage_p.store(
+      call_loader(loader, glGetCompressedTexImage_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetCompressedTexImage_is_loaded() -> bool {
+    glGetCompressedTexImage_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetCompressedTexImage(
+    target: TextureTarget,
+    level: GLint,
+    img: *mut c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetCompressedTexImage_str[..glGetCompressedTexImage_str.len() - 1]
+      );
+    }
+    let p = glGetCompressedTexImage_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetCompressedTexImage_str[..glGetCompressedTexImage_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetCompressedTexImage_t>(p)(
+      target, level, img,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glGetCompressedTexImage_str[..glGetCompressedTexImage_str.len() - 1],
+          target,
+          level,
+          img,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetDoublev_t = unsafe extern "system" fn(GetPName, *mut GLdouble);
+  static glGetDoublev_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetDoublev_str: &str = "glGetDoublev\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetDoublev(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetDoublev_p
+      .store(call_loader(loader, glGetDoublev_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetDoublev_is_loaded() -> bool {
+    glGetDoublev_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetDoublev(pname: GetPName, data: *mut GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetDoublev_str[..glGetDoublev_str.len() - 1]
+      );
+    }
+    let p = glGetDoublev_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetDoublev_str[..glGetDoublev_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetDoublev_t>(p)(pname, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glGetDoublev_str[..glGetDoublev_str.len() - 1],
+          pname,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetError_t = unsafe extern "system" fn() -> GLenum;
+  static glGetError_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetError_str: &str = "glGetError\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetError(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetError_p
+      .store(call_loader(loader, glGetError_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetError_is_loaded() -> bool {
+    glGetError_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetError() -> GLenum {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glGetError_str[..glGetError_str.len() - 1]);
+    }
+    let p = glGetError_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetError_str[..glGetError_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetError_t>(p)();
+    out
+  }
+
+  type glGetFloatv_t = unsafe extern "system" fn(GetPName, *mut GLfloat);
+  static glGetFloatv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetFloatv_str: &str = "glGetFloatv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetFloatv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetFloatv_p
+      .store(call_loader(loader, glGetFloatv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetFloatv_is_loaded() -> bool {
+    glGetFloatv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetFloatv(pname: GetPName, data: *mut GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetFloatv_str[..glGetFloatv_str.len() - 1]
+      );
+    }
+    let p = glGetFloatv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetFloatv_str[..glGetFloatv_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetFloatv_t>(p)(pname, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glGetFloatv_str[..glGetFloatv_str.len() - 1],
+          pname,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetFragDataIndex_t =
+    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
+  static glGetFragDataIndex_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetFragDataIndex_str: &str = "glGetFragDataIndex\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetFragDataIndex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetFragDataIndex_p.store(
+      call_loader(loader, glGetFragDataIndex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetFragDataIndex_is_loaded() -> bool {
+    glGetFragDataIndex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetFragDataIndex(
+    program: GLuint,
+    name: *const GLchar,
+  ) -> GLint {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetFragDataIndex_str[..glGetFragDataIndex_str.len() - 1]
+      );
+    }
+    let p = glGetFragDataIndex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetFragDataIndex_str[..glGetFragDataIndex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetFragDataIndex_t>(p)(program, name);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGetFragDataIndex_str[..glGetFragDataIndex_str.len() - 1],
+          program,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetFragDataLocation_t =
+    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
+  static glGetFragDataLocation_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetFragDataLocation_str: &str = "glGetFragDataLocation\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetFragDataLocation(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetFragDataLocation_p.store(
+      call_loader(loader, glGetFragDataLocation_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetFragDataLocation_is_loaded() -> bool {
+    glGetFragDataLocation_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetFragDataLocation(
+    program: GLuint,
+    name: *const GLchar,
+  ) -> GLint {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetFragDataLocation_str[..glGetFragDataLocation_str.len() - 1]
+      );
+    }
+    let p = glGetFragDataLocation_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetFragDataLocation_str[..glGetFragDataLocation_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetFragDataLocation_t>(p)(program, name);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGetFragDataLocation_str[..glGetFragDataLocation_str.len() - 1],
+          program,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetFramebufferAttachmentParameteriv_t = unsafe extern "system" fn(
+    FramebufferTarget,
+    FramebufferAttachment,
+    FramebufferAttachmentParameterName,
+    *mut GLint,
+  );
+  static glGetFramebufferAttachmentParameteriv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetFramebufferAttachmentParameteriv_str: &str =
+    "glGetFramebufferAttachmentParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetFramebufferAttachmentParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetFramebufferAttachmentParameteriv_p.store(
+      call_loader(loader, glGetFramebufferAttachmentParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetFramebufferAttachmentParameteriv_is_loaded() -> bool {
+    glGetFramebufferAttachmentParameteriv_p
+      .load(Ordering::Relaxed)
+      .is_null()
+      .not()
+  }
+  #[inline]
+  pub unsafe fn glGetFramebufferAttachmentParameteriv(
+    target: FramebufferTarget,
+    attachment: FramebufferAttachment,
+    pname: FramebufferAttachmentParameterName,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetFramebufferAttachmentParameteriv_str
+          [..glGetFramebufferAttachmentParameteriv_str.len() - 1]
+      );
+    }
+    let p = glGetFramebufferAttachmentParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetFramebufferAttachmentParameteriv_str
+          [..glGetFramebufferAttachmentParameteriv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetFramebufferAttachmentParameteriv_t>(
+      p,
+    )(target, attachment, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetFramebufferAttachmentParameteriv_str
+            [..glGetFramebufferAttachmentParameteriv_str.len() - 1],
+          target,
+          attachment,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetInteger64i_v_t =
+    unsafe extern "system" fn(GLenum, GLuint, *mut GLint64);
+  static glGetInteger64i_v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetInteger64i_v_str: &str = "glGetInteger64i_v\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetInteger64i_v(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetInteger64i_v_p.store(
+      call_loader(loader, glGetInteger64i_v_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetInteger64i_v_is_loaded() -> bool {
+    glGetInteger64i_v_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetInteger64i_v(
+    target: GLenum,
+    index: GLuint,
+    data: *mut GLint64,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetInteger64i_v_str[..glGetInteger64i_v_str.len() - 1]
+      );
+    }
+    let p = glGetInteger64i_v_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetInteger64i_v_str[..glGetInteger64i_v_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetInteger64i_v_t>(p)(target, index, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glGetInteger64i_v_str[..glGetInteger64i_v_str.len() - 1],
+          target,
+          index,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetInteger64v_t = unsafe extern "system" fn(GetPName, *mut GLint64);
+  static glGetInteger64v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetInteger64v_str: &str = "glGetInteger64v\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetInteger64v(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetInteger64v_p.store(
+      call_loader(loader, glGetInteger64v_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetInteger64v_is_loaded() -> bool {
+    glGetInteger64v_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetInteger64v(pname: GetPName, data: *mut GLint64) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetInteger64v_str[..glGetInteger64v_str.len() - 1]
+      );
+    }
+    let p = glGetInteger64v_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetInteger64v_str[..glGetInteger64v_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetInteger64v_t>(p)(pname, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glGetInteger64v_str[..glGetInteger64v_str.len() - 1],
+          pname,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetIntegeri_v_t =
+    unsafe extern "system" fn(GLenum, GLuint, *mut GLint);
+  static glGetIntegeri_v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetIntegeri_v_str: &str = "glGetIntegeri_v\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetIntegeri_v(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetIntegeri_v_p.store(
+      call_loader(loader, glGetIntegeri_v_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetIntegeri_v_is_loaded() -> bool {
+    glGetIntegeri_v_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetIntegeri_v(
+    target: GLenum,
+    index: GLuint,
+    data: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetIntegeri_v_str[..glGetIntegeri_v_str.len() - 1]
+      );
+    }
+    let p = glGetIntegeri_v_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetIntegeri_v_str[..glGetIntegeri_v_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetIntegeri_v_t>(p)(target, index, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glGetIntegeri_v_str[..glGetIntegeri_v_str.len() - 1],
+          target,
+          index,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetIntegerv_t = unsafe extern "system" fn(GetPName, *mut GLint);
+  static glGetIntegerv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetIntegerv_str: &str = "glGetIntegerv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetIntegerv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetIntegerv_p.store(
+      call_loader(loader, glGetIntegerv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetIntegerv_is_loaded() -> bool {
+    glGetIntegerv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetIntegerv(pname: GetPName, data: *mut GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetIntegerv_str[..glGetIntegerv_str.len() - 1]
+      );
+    }
+    let p = glGetIntegerv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetIntegerv_str[..glGetIntegerv_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetIntegerv_t>(p)(pname, data);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glGetIntegerv_str[..glGetIntegerv_str.len() - 1],
+          pname,
+          data,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetMultisamplefv_t =
+    unsafe extern "system" fn(GetMultisamplePNameNV, GLuint, *mut GLfloat);
+  static glGetMultisamplefv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetMultisamplefv_str: &str = "glGetMultisamplefv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetMultisamplefv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetMultisamplefv_p.store(
+      call_loader(loader, glGetMultisamplefv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetMultisamplefv_is_loaded() -> bool {
+    glGetMultisamplefv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetMultisamplefv(
+    pname: GetMultisamplePNameNV,
+    index: GLuint,
+    val: *mut GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetMultisamplefv_str[..glGetMultisamplefv_str.len() - 1]
+      );
+    }
+    let p = glGetMultisamplefv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetMultisamplefv_str[..glGetMultisamplefv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetMultisamplefv_t>(p)(pname, index, val);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glGetMultisamplefv_str[..glGetMultisamplefv_str.len() - 1],
+          pname,
+          index,
+          val,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetProgramInfoLog_t =
+    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar);
+  static glGetProgramInfoLog_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetProgramInfoLog_str: &str = "glGetProgramInfoLog\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetProgramInfoLog(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetProgramInfoLog_p.store(
+      call_loader(loader, glGetProgramInfoLog_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetProgramInfoLog_is_loaded() -> bool {
+    glGetProgramInfoLog_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetProgramInfoLog(
+    program: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    infoLog: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetProgramInfoLog_str[..glGetProgramInfoLog_str.len() - 1]
+      );
+    }
+    let p = glGetProgramInfoLog_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetProgramInfoLog_str[..glGetProgramInfoLog_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetProgramInfoLog_t>(p)(
+      program, bufSize, length, infoLog,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetProgramInfoLog_str[..glGetProgramInfoLog_str.len() - 1],
+          program,
+          bufSize,
+          length,
+          infoLog,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetProgramiv_t =
+    unsafe extern "system" fn(GLuint, ProgramPropertyARB, *mut GLint);
+  static glGetProgramiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetProgramiv_str: &str = "glGetProgramiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetProgramiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetProgramiv_p.store(
+      call_loader(loader, glGetProgramiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetProgramiv_is_loaded() -> bool {
+    glGetProgramiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetProgramiv(
+    program: GLuint,
+    pname: ProgramPropertyARB,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetProgramiv_str[..glGetProgramiv_str.len() - 1]
+      );
+    }
+    let p = glGetProgramiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetProgramiv_str[..glGetProgramiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetProgramiv_t>(p)(program, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetProgramiv_str[..glGetProgramiv_str.len() - 1],
+          program,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetQueryObjecti64v_t =
+    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLint64);
+  static glGetQueryObjecti64v_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetQueryObjecti64v_str: &str = "glGetQueryObjecti64v\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetQueryObjecti64v(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetQueryObjecti64v_p.store(
+      call_loader(loader, glGetQueryObjecti64v_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetQueryObjecti64v_is_loaded() -> bool {
+    glGetQueryObjecti64v_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetQueryObjecti64v(
+    id: GLuint,
+    pname: QueryObjectParameterName,
+    params: *mut GLint64,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetQueryObjecti64v_str[..glGetQueryObjecti64v_str.len() - 1]
+      );
+    }
+    let p = glGetQueryObjecti64v_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetQueryObjecti64v_str[..glGetQueryObjecti64v_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetQueryObjecti64v_t>(p)(id, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetQueryObjecti64v_str[..glGetQueryObjecti64v_str.len() - 1],
+          id,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetQueryObjectiv_t =
+    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLint);
+  static glGetQueryObjectiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetQueryObjectiv_str: &str = "glGetQueryObjectiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetQueryObjectiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetQueryObjectiv_p.store(
+      call_loader(loader, glGetQueryObjectiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetQueryObjectiv_is_loaded() -> bool {
+    glGetQueryObjectiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetQueryObjectiv(
+    id: GLuint,
+    pname: QueryObjectParameterName,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetQueryObjectiv_str[..glGetQueryObjectiv_str.len() - 1]
+      );
+    }
+    let p = glGetQueryObjectiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetQueryObjectiv_str[..glGetQueryObjectiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetQueryObjectiv_t>(p)(id, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetQueryObjectiv_str[..glGetQueryObjectiv_str.len() - 1],
+          id,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetQueryObjectui64v_t =
+    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLuint64);
+  static glGetQueryObjectui64v_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetQueryObjectui64v_str: &str = "glGetQueryObjectui64v\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetQueryObjectui64v(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetQueryObjectui64v_p.store(
+      call_loader(loader, glGetQueryObjectui64v_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetQueryObjectui64v_is_loaded() -> bool {
+    glGetQueryObjectui64v_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetQueryObjectui64v(
+    id: GLuint,
+    pname: QueryObjectParameterName,
+    params: *mut GLuint64,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetQueryObjectui64v_str[..glGetQueryObjectui64v_str.len() - 1]
+      );
+    }
+    let p = glGetQueryObjectui64v_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetQueryObjectui64v_str[..glGetQueryObjectui64v_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetQueryObjectui64v_t>(p)(id, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetQueryObjectui64v_str[..glGetQueryObjectui64v_str.len() - 1],
+          id,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetQueryObjectuiv_t =
+    unsafe extern "system" fn(GLuint, QueryObjectParameterName, *mut GLuint);
+  static glGetQueryObjectuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetQueryObjectuiv_str: &str = "glGetQueryObjectuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetQueryObjectuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetQueryObjectuiv_p.store(
+      call_loader(loader, glGetQueryObjectuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetQueryObjectuiv_is_loaded() -> bool {
+    glGetQueryObjectuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetQueryObjectuiv(
+    id: GLuint,
+    pname: QueryObjectParameterName,
+    params: *mut GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetQueryObjectuiv_str[..glGetQueryObjectuiv_str.len() - 1]
+      );
+    }
+    let p = glGetQueryObjectuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetQueryObjectuiv_str[..glGetQueryObjectuiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetQueryObjectuiv_t>(p)(id, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetQueryObjectuiv_str[..glGetQueryObjectuiv_str.len() - 1],
+          id,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetQueryiv_t =
+    unsafe extern "system" fn(QueryTarget, QueryParameterName, *mut GLint);
+  static glGetQueryiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetQueryiv_str: &str = "glGetQueryiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetQueryiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetQueryiv_p
+      .store(call_loader(loader, glGetQueryiv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetQueryiv_is_loaded() -> bool {
+    glGetQueryiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetQueryiv(
+    target: QueryTarget,
+    pname: QueryParameterName,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetQueryiv_str[..glGetQueryiv_str.len() - 1]
+      );
+    }
+    let p = glGetQueryiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetQueryiv_str[..glGetQueryiv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glGetQueryiv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetQueryiv_str[..glGetQueryiv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetRenderbufferParameteriv_t = unsafe extern "system" fn(
+    RenderbufferTarget,
+    RenderbufferParameterName,
+    *mut GLint,
+  );
+  static glGetRenderbufferParameteriv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetRenderbufferParameteriv_str: &str =
+    "glGetRenderbufferParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetRenderbufferParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetRenderbufferParameteriv_p.store(
+      call_loader(loader, glGetRenderbufferParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetRenderbufferParameteriv_is_loaded() -> bool {
+    glGetRenderbufferParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetRenderbufferParameteriv(
+    target: RenderbufferTarget,
+    pname: RenderbufferParameterName,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetRenderbufferParameteriv_str
+          [..glGetRenderbufferParameteriv_str.len() - 1]
+      );
+    }
+    let p = glGetRenderbufferParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetRenderbufferParameteriv_str
+          [..glGetRenderbufferParameteriv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetRenderbufferParameteriv_t>(p)(
+      target, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetRenderbufferParameteriv_str
+            [..glGetRenderbufferParameteriv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetSamplerParameterIiv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterI, *mut GLint);
+  static glGetSamplerParameterIiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetSamplerParameterIiv_str: &str = "glGetSamplerParameterIiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetSamplerParameterIiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetSamplerParameterIiv_p.store(
+      call_loader(loader, glGetSamplerParameterIiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetSamplerParameterIiv_is_loaded() -> bool {
+    glGetSamplerParameterIiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetSamplerParameterIiv(
+    sampler: GLuint,
+    pname: SamplerParameterI,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetSamplerParameterIiv_str[..glGetSamplerParameterIiv_str.len() - 1]
+      );
+    }
+    let p = glGetSamplerParameterIiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetSamplerParameterIiv_str[..glGetSamplerParameterIiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetSamplerParameterIiv_t>(p)(
+      sampler, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetSamplerParameterIiv_str
+            [..glGetSamplerParameterIiv_str.len() - 1],
+          sampler,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetSamplerParameterIuiv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterI, *mut GLuint);
+  static glGetSamplerParameterIuiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetSamplerParameterIuiv_str: &str = "glGetSamplerParameterIuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetSamplerParameterIuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetSamplerParameterIuiv_p.store(
+      call_loader(loader, glGetSamplerParameterIuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetSamplerParameterIuiv_is_loaded() -> bool {
+    glGetSamplerParameterIuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetSamplerParameterIuiv(
+    sampler: GLuint,
+    pname: SamplerParameterI,
+    params: *mut GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetSamplerParameterIuiv_str
+          [..glGetSamplerParameterIuiv_str.len() - 1]
+      );
+    }
+    let p = glGetSamplerParameterIuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetSamplerParameterIuiv_str
+          [..glGetSamplerParameterIuiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetSamplerParameterIuiv_t>(p)(
+      sampler, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetSamplerParameterIuiv_str
+            [..glGetSamplerParameterIuiv_str.len() - 1],
+          sampler,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetSamplerParameterfv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterF, *mut GLfloat);
+  static glGetSamplerParameterfv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetSamplerParameterfv_str: &str = "glGetSamplerParameterfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetSamplerParameterfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetSamplerParameterfv_p.store(
+      call_loader(loader, glGetSamplerParameterfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetSamplerParameterfv_is_loaded() -> bool {
+    glGetSamplerParameterfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetSamplerParameterfv(
+    sampler: GLuint,
+    pname: SamplerParameterF,
+    params: *mut GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetSamplerParameterfv_str[..glGetSamplerParameterfv_str.len() - 1]
+      );
+    }
+    let p = glGetSamplerParameterfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetSamplerParameterfv_str[..glGetSamplerParameterfv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetSamplerParameterfv_t>(p)(
+      sampler, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetSamplerParameterfv_str[..glGetSamplerParameterfv_str.len() - 1],
+          sampler,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetSamplerParameteriv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterI, *mut GLint);
+  static glGetSamplerParameteriv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetSamplerParameteriv_str: &str = "glGetSamplerParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetSamplerParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetSamplerParameteriv_p.store(
+      call_loader(loader, glGetSamplerParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetSamplerParameteriv_is_loaded() -> bool {
+    glGetSamplerParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetSamplerParameteriv(
+    sampler: GLuint,
+    pname: SamplerParameterI,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetSamplerParameteriv_str[..glGetSamplerParameteriv_str.len() - 1]
+      );
+    }
+    let p = glGetSamplerParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetSamplerParameteriv_str[..glGetSamplerParameteriv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetSamplerParameteriv_t>(p)(
+      sampler, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetSamplerParameteriv_str[..glGetSamplerParameteriv_str.len() - 1],
+          sampler,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetShaderInfoLog_t =
+    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar);
+  static glGetShaderInfoLog_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetShaderInfoLog_str: &str = "glGetShaderInfoLog\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetShaderInfoLog(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetShaderInfoLog_p.store(
+      call_loader(loader, glGetShaderInfoLog_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetShaderInfoLog_is_loaded() -> bool {
+    glGetShaderInfoLog_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetShaderInfoLog(
+    shader: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    infoLog: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetShaderInfoLog_str[..glGetShaderInfoLog_str.len() - 1]
+      );
+    }
+    let p = glGetShaderInfoLog_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetShaderInfoLog_str[..glGetShaderInfoLog_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetShaderInfoLog_t>(p)(
+      shader, bufSize, length, infoLog,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetShaderInfoLog_str[..glGetShaderInfoLog_str.len() - 1],
+          shader,
+          bufSize,
+          length,
+          infoLog,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetShaderSource_t =
+    unsafe extern "system" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar);
+  static glGetShaderSource_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetShaderSource_str: &str = "glGetShaderSource\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetShaderSource(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetShaderSource_p.store(
+      call_loader(loader, glGetShaderSource_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetShaderSource_is_loaded() -> bool {
+    glGetShaderSource_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetShaderSource(
+    shader: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    source: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetShaderSource_str[..glGetShaderSource_str.len() - 1]
+      );
+    }
+    let p = glGetShaderSource_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetShaderSource_str[..glGetShaderSource_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetShaderSource_t>(p)(
+      shader, bufSize, length, source,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetShaderSource_str[..glGetShaderSource_str.len() - 1],
+          shader,
+          bufSize,
+          length,
+          source,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetShaderiv_t =
+    unsafe extern "system" fn(GLuint, ShaderParameterName, *mut GLint);
+  static glGetShaderiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetShaderiv_str: &str = "glGetShaderiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetShaderiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetShaderiv_p.store(
+      call_loader(loader, glGetShaderiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetShaderiv_is_loaded() -> bool {
+    glGetShaderiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetShaderiv(
+    shader: GLuint,
+    pname: ShaderParameterName,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetShaderiv_str[..glGetShaderiv_str.len() - 1]
+      );
+    }
+    let p = glGetShaderiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetShaderiv_str[..glGetShaderiv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glGetShaderiv_t>(p)(shader, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetShaderiv_str[..glGetShaderiv_str.len() - 1],
+          shader,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetString_t = unsafe extern "system" fn(StringName) -> GLubyte;
+  static glGetString_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetString_str: &str = "glGetString\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetString(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetString_p
+      .store(call_loader(loader, glGetString_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetString_is_loaded() -> bool {
+    glGetString_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetString(name: StringName) -> GLubyte {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetString_str[..glGetString_str.len() - 1]
+      );
+    }
+    let p = glGetString_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetString_str[..glGetString_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetString_t>(p)(name);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glGetString_str[..glGetString_str.len() - 1],
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetStringi_t =
+    unsafe extern "system" fn(StringName, GLuint) -> GLubyte;
+  static glGetStringi_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetStringi_str: &str = "glGetStringi\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetStringi(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetStringi_p
+      .store(call_loader(loader, glGetStringi_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetStringi_is_loaded() -> bool {
+    glGetStringi_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetStringi(name: StringName, index: GLuint) -> GLubyte {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetStringi_str[..glGetStringi_str.len() - 1]
+      );
+    }
+    let p = glGetStringi_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetStringi_str[..glGetStringi_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetStringi_t>(p)(name, index);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glGetStringi_str[..glGetStringi_str.len() - 1],
+          name,
+          index,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetSynciv_t = unsafe extern "system" fn(
+    GLsync,
+    SyncParameterName,
+    GLsizei,
+    *mut GLsizei,
+    *mut GLint,
+  );
+  static glGetSynciv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetSynciv_str: &str = "glGetSynciv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetSynciv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetSynciv_p
+      .store(call_loader(loader, glGetSynciv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetSynciv_is_loaded() -> bool {
+    glGetSynciv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetSynciv(
+    sync: GLsync,
+    pname: SyncParameterName,
+    count: GLsizei,
+    length: *mut GLsizei,
+    values: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetSynciv_str[..glGetSynciv_str.len() - 1]
+      );
+    }
+    let p = glGetSynciv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetSynciv_str[..glGetSynciv_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetSynciv_t>(p)(
+      sync, pname, count, length, values,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetSynciv_str[..glGetSynciv_str.len() - 1],
+          sync,
+          pname,
+          count,
+          length,
+          values,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTexImage_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    PixelFormat,
+    PixelType,
+    *mut c_void,
+  );
+  static glGetTexImage_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetTexImage_str: &str = "glGetTexImage\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTexImage(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTexImage_p.store(
+      call_loader(loader, glGetTexImage_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTexImage_is_loaded() -> bool {
+    glGetTexImage_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTexImage(
+    target: TextureTarget,
+    level: GLint,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *mut c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTexImage_str[..glGetTexImage_str.len() - 1]
+      );
+    }
+    let p = glGetTexImage_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glGetTexImage_str[..glGetTexImage_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glGetTexImage_t>(p)(
+      target, level, format, type_, pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetTexImage_str[..glGetTexImage_str.len() - 1],
+          target,
+          level,
+          format,
+          type_,
+          pixels,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTexLevelParameterfv_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GetTextureParameter,
+    *mut GLfloat,
+  );
+  static glGetTexLevelParameterfv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetTexLevelParameterfv_str: &str = "glGetTexLevelParameterfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTexLevelParameterfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTexLevelParameterfv_p.store(
+      call_loader(loader, glGetTexLevelParameterfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTexLevelParameterfv_is_loaded() -> bool {
+    glGetTexLevelParameterfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTexLevelParameterfv(
+    target: TextureTarget,
+    level: GLint,
+    pname: GetTextureParameter,
+    params: *mut GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTexLevelParameterfv_str[..glGetTexLevelParameterfv_str.len() - 1]
+      );
+    }
+    let p = glGetTexLevelParameterfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetTexLevelParameterfv_str[..glGetTexLevelParameterfv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetTexLevelParameterfv_t>(p)(
+      target, level, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetTexLevelParameterfv_str
+            [..glGetTexLevelParameterfv_str.len() - 1],
+          target,
+          level,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTexLevelParameteriv_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GetTextureParameter,
+    *mut GLint,
+  );
+  static glGetTexLevelParameteriv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetTexLevelParameteriv_str: &str = "glGetTexLevelParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTexLevelParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTexLevelParameteriv_p.store(
+      call_loader(loader, glGetTexLevelParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTexLevelParameteriv_is_loaded() -> bool {
+    glGetTexLevelParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTexLevelParameteriv(
+    target: TextureTarget,
+    level: GLint,
+    pname: GetTextureParameter,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTexLevelParameteriv_str[..glGetTexLevelParameteriv_str.len() - 1]
+      );
+    }
+    let p = glGetTexLevelParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetTexLevelParameteriv_str[..glGetTexLevelParameteriv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetTexLevelParameteriv_t>(p)(
+      target, level, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetTexLevelParameteriv_str
+            [..glGetTexLevelParameteriv_str.len() - 1],
+          target,
+          level,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTexParameterIiv_t =
+    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLint);
+  static glGetTexParameterIiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetTexParameterIiv_str: &str = "glGetTexParameterIiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTexParameterIiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTexParameterIiv_p.store(
+      call_loader(loader, glGetTexParameterIiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTexParameterIiv_is_loaded() -> bool {
+    glGetTexParameterIiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTexParameterIiv(
+    target: TextureTarget,
+    pname: GetTextureParameter,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTexParameterIiv_str[..glGetTexParameterIiv_str.len() - 1]
+      );
+    }
+    let p = glGetTexParameterIiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetTexParameterIiv_str[..glGetTexParameterIiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetTexParameterIiv_t>(p)(
+      target, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetTexParameterIiv_str[..glGetTexParameterIiv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTexParameterIuiv_t =
+    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLuint);
+  static glGetTexParameterIuiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetTexParameterIuiv_str: &str = "glGetTexParameterIuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTexParameterIuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTexParameterIuiv_p.store(
+      call_loader(loader, glGetTexParameterIuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTexParameterIuiv_is_loaded() -> bool {
+    glGetTexParameterIuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTexParameterIuiv(
+    target: TextureTarget,
+    pname: GetTextureParameter,
+    params: *mut GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTexParameterIuiv_str[..glGetTexParameterIuiv_str.len() - 1]
+      );
+    }
+    let p = glGetTexParameterIuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetTexParameterIuiv_str[..glGetTexParameterIuiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetTexParameterIuiv_t>(p)(
+      target, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetTexParameterIuiv_str[..glGetTexParameterIuiv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTexParameterfv_t =
+    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLfloat);
+  static glGetTexParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetTexParameterfv_str: &str = "glGetTexParameterfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTexParameterfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTexParameterfv_p.store(
+      call_loader(loader, glGetTexParameterfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTexParameterfv_is_loaded() -> bool {
+    glGetTexParameterfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTexParameterfv(
+    target: TextureTarget,
+    pname: GetTextureParameter,
+    params: *mut GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTexParameterfv_str[..glGetTexParameterfv_str.len() - 1]
+      );
+    }
+    let p = glGetTexParameterfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetTexParameterfv_str[..glGetTexParameterfv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetTexParameterfv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetTexParameterfv_str[..glGetTexParameterfv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTexParameteriv_t =
+    unsafe extern "system" fn(TextureTarget, GetTextureParameter, *mut GLint);
+  static glGetTexParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetTexParameteriv_str: &str = "glGetTexParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTexParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTexParameteriv_p.store(
+      call_loader(loader, glGetTexParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTexParameteriv_is_loaded() -> bool {
+    glGetTexParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTexParameteriv(
+    target: TextureTarget,
+    pname: GetTextureParameter,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTexParameteriv_str[..glGetTexParameteriv_str.len() - 1]
+      );
+    }
+    let p = glGetTexParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetTexParameteriv_str[..glGetTexParameteriv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetTexParameteriv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetTexParameteriv_str[..glGetTexParameteriv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetTransformFeedbackVarying_t = unsafe extern "system" fn(
+    GLuint,
+    GLuint,
+    GLsizei,
+    *mut GLsizei,
+    *mut GLsizei,
+    *mut GLenum,
+    *mut GLchar,
+  );
+  static glGetTransformFeedbackVarying_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetTransformFeedbackVarying_str: &str =
+    "glGetTransformFeedbackVarying\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetTransformFeedbackVarying(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetTransformFeedbackVarying_p.store(
+      call_loader(loader, glGetTransformFeedbackVarying_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetTransformFeedbackVarying_is_loaded() -> bool {
+    glGetTransformFeedbackVarying_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetTransformFeedbackVarying(
+    program: GLuint,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    size: *mut GLsizei,
+    type_: *mut GLenum,
+    name: *mut GLchar,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetTransformFeedbackVarying_str
+          [..glGetTransformFeedbackVarying_str.len() - 1]
+      );
+    }
+    let p = glGetTransformFeedbackVarying_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetTransformFeedbackVarying_str
+          [..glGetTransformFeedbackVarying_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetTransformFeedbackVarying_t>(p)(
+      program, index, bufSize, length, size, type_, name,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetTransformFeedbackVarying_str
+            [..glGetTransformFeedbackVarying_str.len() - 1],
+          program,
+          index,
+          bufSize,
+          length,
+          size,
+          type_,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetUniformBlockIndex_t =
+    unsafe extern "system" fn(GLuint, *const GLchar) -> GLuint;
+  static glGetUniformBlockIndex_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetUniformBlockIndex_str: &str = "glGetUniformBlockIndex\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetUniformBlockIndex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetUniformBlockIndex_p.store(
+      call_loader(loader, glGetUniformBlockIndex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetUniformBlockIndex_is_loaded() -> bool {
+    glGetUniformBlockIndex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetUniformBlockIndex(
+    program: GLuint,
+    uniformBlockName: *const GLchar,
+  ) -> GLuint {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetUniformBlockIndex_str[..glGetUniformBlockIndex_str.len() - 1]
+      );
+    }
+    let p = glGetUniformBlockIndex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetUniformBlockIndex_str[..glGetUniformBlockIndex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetUniformBlockIndex_t>(p)(
+      program,
+      uniformBlockName,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGetUniformBlockIndex_str[..glGetUniformBlockIndex_str.len() - 1],
+          program,
+          uniformBlockName,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetUniformIndices_t = unsafe extern "system" fn(
+    GLuint,
+    GLsizei,
+    *const *const GLchar,
+    *mut GLuint,
+  );
+  static glGetUniformIndices_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetUniformIndices_str: &str = "glGetUniformIndices\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetUniformIndices(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetUniformIndices_p.store(
+      call_loader(loader, glGetUniformIndices_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetUniformIndices_is_loaded() -> bool {
+    glGetUniformIndices_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetUniformIndices(
+    program: GLuint,
+    uniformCount: GLsizei,
+    uniformNames: *const *const GLchar,
+    uniformIndices: *mut GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetUniformIndices_str[..glGetUniformIndices_str.len() - 1]
+      );
+    }
+    let p = glGetUniformIndices_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetUniformIndices_str[..glGetUniformIndices_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetUniformIndices_t>(p)(
+      program,
+      uniformCount,
+      uniformNames,
+      uniformIndices,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glGetUniformIndices_str[..glGetUniformIndices_str.len() - 1],
+          program,
+          uniformCount,
+          uniformNames,
+          uniformIndices,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetUniformLocation_t =
+    unsafe extern "system" fn(GLuint, *const GLchar) -> GLint;
+  static glGetUniformLocation_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetUniformLocation_str: &str = "glGetUniformLocation\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetUniformLocation(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetUniformLocation_p.store(
+      call_loader(loader, glGetUniformLocation_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetUniformLocation_is_loaded() -> bool {
+    glGetUniformLocation_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetUniformLocation(
+    program: GLuint,
+    name: *const GLchar,
+  ) -> GLint {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetUniformLocation_str[..glGetUniformLocation_str.len() - 1]
+      );
+    }
+    let p = glGetUniformLocation_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetUniformLocation_str[..glGetUniformLocation_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetUniformLocation_t>(p)(program, name);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glGetUniformLocation_str[..glGetUniformLocation_str.len() - 1],
+          program,
+          name,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetUniformfv_t =
+    unsafe extern "system" fn(GLuint, GLint, *mut GLfloat);
+  static glGetUniformfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetUniformfv_str: &str = "glGetUniformfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetUniformfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetUniformfv_p.store(
+      call_loader(loader, glGetUniformfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetUniformfv_is_loaded() -> bool {
+    glGetUniformfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetUniformfv(
+    program: GLuint,
+    location: GLint,
+    params: *mut GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetUniformfv_str[..glGetUniformfv_str.len() - 1]
+      );
+    }
+    let p = glGetUniformfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetUniformfv_str[..glGetUniformfv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetUniformfv_t>(p)(program, location, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glGetUniformfv_str[..glGetUniformfv_str.len() - 1],
+          program,
+          location,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetUniformiv_t = unsafe extern "system" fn(GLuint, GLint, *mut GLint);
+  static glGetUniformiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetUniformiv_str: &str = "glGetUniformiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetUniformiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetUniformiv_p.store(
+      call_loader(loader, glGetUniformiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetUniformiv_is_loaded() -> bool {
+    glGetUniformiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetUniformiv(
+    program: GLuint,
+    location: GLint,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetUniformiv_str[..glGetUniformiv_str.len() - 1]
+      );
+    }
+    let p = glGetUniformiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetUniformiv_str[..glGetUniformiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetUniformiv_t>(p)(program, location, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glGetUniformiv_str[..glGetUniformiv_str.len() - 1],
+          program,
+          location,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetUniformuiv_t =
+    unsafe extern "system" fn(GLuint, GLint, *mut GLuint);
+  static glGetUniformuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetUniformuiv_str: &str = "glGetUniformuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetUniformuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetUniformuiv_p.store(
+      call_loader(loader, glGetUniformuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetUniformuiv_is_loaded() -> bool {
+    glGetUniformuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetUniformuiv(
+    program: GLuint,
+    location: GLint,
+    params: *mut GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetUniformuiv_str[..glGetUniformuiv_str.len() - 1]
+      );
+    }
+    let p = glGetUniformuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetUniformuiv_str[..glGetUniformuiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetUniformuiv_t>(p)(program, location, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glGetUniformuiv_str[..glGetUniformuiv_str.len() - 1],
+          program,
+          location,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetVertexAttribIiv_t =
+    unsafe extern "system" fn(GLuint, VertexAttribEnum, *mut GLint);
+  static glGetVertexAttribIiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetVertexAttribIiv_str: &str = "glGetVertexAttribIiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetVertexAttribIiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetVertexAttribIiv_p.store(
+      call_loader(loader, glGetVertexAttribIiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetVertexAttribIiv_is_loaded() -> bool {
+    glGetVertexAttribIiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetVertexAttribIiv(
+    index: GLuint,
+    pname: VertexAttribEnum,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetVertexAttribIiv_str[..glGetVertexAttribIiv_str.len() - 1]
+      );
+    }
+    let p = glGetVertexAttribIiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetVertexAttribIiv_str[..glGetVertexAttribIiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetVertexAttribIiv_t>(p)(index, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetVertexAttribIiv_str[..glGetVertexAttribIiv_str.len() - 1],
+          index,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetVertexAttribIuiv_t =
+    unsafe extern "system" fn(GLuint, VertexAttribEnum, *mut GLuint);
+  static glGetVertexAttribIuiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetVertexAttribIuiv_str: &str = "glGetVertexAttribIuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetVertexAttribIuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetVertexAttribIuiv_p.store(
+      call_loader(loader, glGetVertexAttribIuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetVertexAttribIuiv_is_loaded() -> bool {
+    glGetVertexAttribIuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetVertexAttribIuiv(
+    index: GLuint,
+    pname: VertexAttribEnum,
+    params: *mut GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetVertexAttribIuiv_str[..glGetVertexAttribIuiv_str.len() - 1]
+      );
+    }
+    let p = glGetVertexAttribIuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetVertexAttribIuiv_str[..glGetVertexAttribIuiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetVertexAttribIuiv_t>(p)(
+      index, pname, params,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetVertexAttribIuiv_str[..glGetVertexAttribIuiv_str.len() - 1],
+          index,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetVertexAttribPointerv_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerPropertyARB,
+    *mut *mut c_void,
+  );
+  static glGetVertexAttribPointerv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glGetVertexAttribPointerv_str: &str = "glGetVertexAttribPointerv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetVertexAttribPointerv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetVertexAttribPointerv_p.store(
+      call_loader(loader, glGetVertexAttribPointerv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetVertexAttribPointerv_is_loaded() -> bool {
+    glGetVertexAttribPointerv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetVertexAttribPointerv(
+    index: GLuint,
+    pname: VertexAttribPointerPropertyARB,
+    pointer: *mut *mut c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetVertexAttribPointerv_str
+          [..glGetVertexAttribPointerv_str.len() - 1]
+      );
+    }
+    let p = glGetVertexAttribPointerv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetVertexAttribPointerv_str
+          [..glGetVertexAttribPointerv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glGetVertexAttribPointerv_t>(p)(
+      index, pname, pointer,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetVertexAttribPointerv_str
+            [..glGetVertexAttribPointerv_str.len() - 1],
+          index,
+          pname,
+          pointer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetVertexAttribdv_t =
+    unsafe extern "system" fn(GLuint, VertexAttribPropertyARB, *mut GLdouble);
+  static glGetVertexAttribdv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetVertexAttribdv_str: &str = "glGetVertexAttribdv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetVertexAttribdv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetVertexAttribdv_p.store(
+      call_loader(loader, glGetVertexAttribdv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetVertexAttribdv_is_loaded() -> bool {
+    glGetVertexAttribdv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetVertexAttribdv(
+    index: GLuint,
+    pname: VertexAttribPropertyARB,
+    params: *mut GLdouble,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetVertexAttribdv_str[..glGetVertexAttribdv_str.len() - 1]
+      );
+    }
+    let p = glGetVertexAttribdv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetVertexAttribdv_str[..glGetVertexAttribdv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetVertexAttribdv_t>(p)(index, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetVertexAttribdv_str[..glGetVertexAttribdv_str.len() - 1],
+          index,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetVertexAttribfv_t =
+    unsafe extern "system" fn(GLuint, VertexAttribPropertyARB, *mut GLfloat);
+  static glGetVertexAttribfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetVertexAttribfv_str: &str = "glGetVertexAttribfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetVertexAttribfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetVertexAttribfv_p.store(
+      call_loader(loader, glGetVertexAttribfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetVertexAttribfv_is_loaded() -> bool {
+    glGetVertexAttribfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetVertexAttribfv(
+    index: GLuint,
+    pname: VertexAttribPropertyARB,
+    params: *mut GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetVertexAttribfv_str[..glGetVertexAttribfv_str.len() - 1]
+      );
+    }
+    let p = glGetVertexAttribfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetVertexAttribfv_str[..glGetVertexAttribfv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetVertexAttribfv_t>(p)(index, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetVertexAttribfv_str[..glGetVertexAttribfv_str.len() - 1],
+          index,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glGetVertexAttribiv_t =
+    unsafe extern "system" fn(GLuint, VertexAttribPropertyARB, *mut GLint);
+  static glGetVertexAttribiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glGetVertexAttribiv_str: &str = "glGetVertexAttribiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glGetVertexAttribiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glGetVertexAttribiv_p.store(
+      call_loader(loader, glGetVertexAttribiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glGetVertexAttribiv_is_loaded() -> bool {
+    glGetVertexAttribiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glGetVertexAttribiv(
+    index: GLuint,
+    pname: VertexAttribPropertyARB,
+    params: *mut GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glGetVertexAttribiv_str[..glGetVertexAttribiv_str.len() - 1]
+      );
+    }
+    let p = glGetVertexAttribiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glGetVertexAttribiv_str[..glGetVertexAttribiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glGetVertexAttribiv_t>(p)(index, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glGetVertexAttribiv_str[..glGetVertexAttribiv_str.len() - 1],
+          index,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glHint_t = unsafe extern "system" fn(HintTarget, HintMode);
+  static glHint_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glHint_str: &str = "glHint\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glHint(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glHint_p.store(call_loader(loader, glHint_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glHint_is_loaded() -> bool {
+    glHint_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glHint(target: HintTarget, mode: HintMode) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glHint_str[..glHint_str.len() - 1]);
+    }
+    let p = glHint_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glHint_str[..glHint_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glHint_t>(p)(target, mode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}) error: {err_name}",
+          &glHint_str[..glHint_str.len() - 1],
+          target,
+          mode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsBuffer_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsBuffer_str: &str = "glIsBuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsBuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsBuffer_p
+      .store(call_loader(loader, glIsBuffer_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsBuffer_is_loaded() -> bool {
+    glIsBuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsBuffer(buffer: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glIsBuffer_str[..glIsBuffer_str.len() - 1]);
+    }
+    let p = glIsBuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsBuffer_str[..glIsBuffer_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsBuffer_t>(p)(buffer);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsBuffer_str[..glIsBuffer_str.len() - 1],
+          buffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsEnabled_t = unsafe extern "system" fn(EnableCap) -> GLboolean;
+  static glIsEnabled_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsEnabled_str: &str = "glIsEnabled\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsEnabled(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsEnabled_p
+      .store(call_loader(loader, glIsEnabled_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsEnabled_is_loaded() -> bool {
+    glIsEnabled_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsEnabled(cap: EnableCap) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsEnabled_str[..glIsEnabled_str.len() - 1]
+      );
+    }
+    let p = glIsEnabled_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsEnabled_str[..glIsEnabled_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsEnabled_t>(p)(cap);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glIsEnabled_str[..glIsEnabled_str.len() - 1],
+          cap,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsEnabledi_t =
+    unsafe extern "system" fn(EnableCap, GLuint) -> GLboolean;
+  static glIsEnabledi_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsEnabledi_str: &str = "glIsEnabledi\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsEnabledi(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsEnabledi_p
+      .store(call_loader(loader, glIsEnabledi_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsEnabledi_is_loaded() -> bool {
+    glIsEnabledi_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsEnabledi(target: EnableCap, index: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsEnabledi_str[..glIsEnabledi_str.len() - 1]
+      );
+    }
+    let p = glIsEnabledi_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsEnabledi_str[..glIsEnabledi_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsEnabledi_t>(p)(target, index);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glIsEnabledi_str[..glIsEnabledi_str.len() - 1],
+          target,
+          index,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsFramebuffer_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsFramebuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsFramebuffer_str: &str = "glIsFramebuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsFramebuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsFramebuffer_p.store(
+      call_loader(loader, glIsFramebuffer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsFramebuffer_is_loaded() -> bool {
+    glIsFramebuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsFramebuffer(framebuffer: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsFramebuffer_str[..glIsFramebuffer_str.len() - 1]
+      );
+    }
+    let p = glIsFramebuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glIsFramebuffer_str[..glIsFramebuffer_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glIsFramebuffer_t>(p)(framebuffer);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsFramebuffer_str[..glIsFramebuffer_str.len() - 1],
+          framebuffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsProgram_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsProgram_str: &str = "glIsProgram\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsProgram(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsProgram_p
+      .store(call_loader(loader, glIsProgram_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsProgram_is_loaded() -> bool {
+    glIsProgram_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsProgram(program: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsProgram_str[..glIsProgram_str.len() - 1]
+      );
+    }
+    let p = glIsProgram_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsProgram_str[..glIsProgram_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsProgram_t>(p)(program);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsProgram_str[..glIsProgram_str.len() - 1],
+          program,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsQuery_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsQuery_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsQuery_str: &str = "glIsQuery\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsQuery(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsQuery_p
+      .store(call_loader(loader, glIsQuery_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsQuery_is_loaded() -> bool {
+    glIsQuery_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsQuery(id: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glIsQuery_str[..glIsQuery_str.len() - 1]);
+    }
+    let p = glIsQuery_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsQuery_str[..glIsQuery_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsQuery_t>(p)(id);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsQuery_str[..glIsQuery_str.len() - 1],
+          id,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsRenderbuffer_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsRenderbuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsRenderbuffer_str: &str = "glIsRenderbuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsRenderbuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsRenderbuffer_p.store(
+      call_loader(loader, glIsRenderbuffer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsRenderbuffer_is_loaded() -> bool {
+    glIsRenderbuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsRenderbuffer(renderbuffer: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsRenderbuffer_str[..glIsRenderbuffer_str.len() - 1]
+      );
+    }
+    let p = glIsRenderbuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glIsRenderbuffer_str[..glIsRenderbuffer_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glIsRenderbuffer_t>(p)(renderbuffer);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsRenderbuffer_str[..glIsRenderbuffer_str.len() - 1],
+          renderbuffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsSampler_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsSampler_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsSampler_str: &str = "glIsSampler\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsSampler(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsSampler_p
+      .store(call_loader(loader, glIsSampler_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsSampler_is_loaded() -> bool {
+    glIsSampler_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsSampler(sampler: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsSampler_str[..glIsSampler_str.len() - 1]
+      );
+    }
+    let p = glIsSampler_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsSampler_str[..glIsSampler_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsSampler_t>(p)(sampler);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsSampler_str[..glIsSampler_str.len() - 1],
+          sampler,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsShader_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsShader_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsShader_str: &str = "glIsShader\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsShader(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsShader_p
+      .store(call_loader(loader, glIsShader_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsShader_is_loaded() -> bool {
+    glIsShader_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsShader(shader: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glIsShader_str[..glIsShader_str.len() - 1]);
+    }
+    let p = glIsShader_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsShader_str[..glIsShader_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsShader_t>(p)(shader);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsShader_str[..glIsShader_str.len() - 1],
+          shader,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsSync_t = unsafe extern "system" fn(GLsync) -> GLboolean;
+  static glIsSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsSync_str: &str = "glIsSync\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsSync(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsSync_p
+      .store(call_loader(loader, glIsSync_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsSync_is_loaded() -> bool {
+    glIsSync_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsSync(sync: GLsync) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glIsSync_str[..glIsSync_str.len() - 1]);
+    }
+    let p = glIsSync_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsSync_str[..glIsSync_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsSync_t>(p)(sync);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsSync_str[..glIsSync_str.len() - 1],
+          sync,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsTexture_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsTexture_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsTexture_str: &str = "glIsTexture\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsTexture(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsTexture_p
+      .store(call_loader(loader, glIsTexture_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsTexture_is_loaded() -> bool {
+    glIsTexture_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsTexture(texture: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsTexture_str[..glIsTexture_str.len() - 1]
+      );
+    }
+    let p = glIsTexture_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glIsTexture_str[..glIsTexture_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glIsTexture_t>(p)(texture);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsTexture_str[..glIsTexture_str.len() - 1],
+          texture,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glIsVertexArray_t = unsafe extern "system" fn(GLuint) -> GLboolean;
+  static glIsVertexArray_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glIsVertexArray_str: &str = "glIsVertexArray\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glIsVertexArray(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glIsVertexArray_p.store(
+      call_loader(loader, glIsVertexArray_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glIsVertexArray_is_loaded() -> bool {
+    glIsVertexArray_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glIsVertexArray(array: GLuint) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glIsVertexArray_str[..glIsVertexArray_str.len() - 1]
+      );
+    }
+    let p = glIsVertexArray_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glIsVertexArray_str[..glIsVertexArray_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glIsVertexArray_t>(p)(array);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glIsVertexArray_str[..glIsVertexArray_str.len() - 1],
+          array,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glLineWidth_t = unsafe extern "system" fn(GLfloat);
+  static glLineWidth_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glLineWidth_str: &str = "glLineWidth\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glLineWidth(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glLineWidth_p
+      .store(call_loader(loader, glLineWidth_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glLineWidth_is_loaded() -> bool {
+    glLineWidth_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glLineWidth(width: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glLineWidth_str[..glLineWidth_str.len() - 1]
+      );
+    }
+    let p = glLineWidth_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glLineWidth_str[..glLineWidth_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glLineWidth_t>(p)(width);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glLineWidth_str[..glLineWidth_str.len() - 1],
+          width,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glLinkProgram_t = unsafe extern "system" fn(GLuint);
+  static glLinkProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glLinkProgram_str: &str = "glLinkProgram\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glLinkProgram(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glLinkProgram_p.store(
+      call_loader(loader, glLinkProgram_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glLinkProgram_is_loaded() -> bool {
+    glLinkProgram_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glLinkProgram(program: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glLinkProgram_str[..glLinkProgram_str.len() - 1]
+      );
+    }
+    let p = glLinkProgram_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glLinkProgram_str[..glLinkProgram_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glLinkProgram_t>(p)(program);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glLinkProgram_str[..glLinkProgram_str.len() - 1],
+          program,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glLogicOp_t = unsafe extern "system" fn(LogicOp);
+  static glLogicOp_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glLogicOp_str: &str = "glLogicOp\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glLogicOp(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glLogicOp_p
+      .store(call_loader(loader, glLogicOp_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glLogicOp_is_loaded() -> bool {
+    glLogicOp_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glLogicOp(opcode: LogicOp) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glLogicOp_str[..glLogicOp_str.len() - 1]);
+    }
+    let p = glLogicOp_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glLogicOp_str[..glLogicOp_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glLogicOp_t>(p)(opcode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glLogicOp_str[..glLogicOp_str.len() - 1],
+          opcode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glMapBufferRange_t = unsafe extern "system" fn(
+    BufferTargetARB,
+    GLintptr,
+    GLsizeiptr,
+    MapBufferAccessMask,
+  );
+  static glMapBufferRange_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glMapBufferRange_str: &str = "glMapBufferRange\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glMapBufferRange(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glMapBufferRange_p.store(
+      call_loader(loader, glMapBufferRange_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glMapBufferRange_is_loaded() -> bool {
+    glMapBufferRange_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glMapBufferRange(
+    target: BufferTargetARB,
+    offset: GLintptr,
+    length: GLsizeiptr,
+    access: MapBufferAccessMask,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glMapBufferRange_str[..glMapBufferRange_str.len() - 1]
+      );
+    }
+    let p = glMapBufferRange_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glMapBufferRange_str[..glMapBufferRange_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glMapBufferRange_t>(p)(
+      target, offset, length, access,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glMapBufferRange_str[..glMapBufferRange_str.len() - 1],
+          target,
+          offset,
+          length,
+          access,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glMapBuffer_t =
+    unsafe extern "system" fn(BufferTargetARB, BufferAccessARB);
+  static glMapBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glMapBuffer_str: &str = "glMapBuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glMapBuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glMapBuffer_p
+      .store(call_loader(loader, glMapBuffer_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glMapBuffer_is_loaded() -> bool {
+    glMapBuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glMapBuffer(target: BufferTargetARB, access: BufferAccessARB) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glMapBuffer_str[..glMapBuffer_str.len() - 1]
+      );
+    }
+    let p = glMapBuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glMapBuffer_str[..glMapBuffer_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glMapBuffer_t>(p)(target, access);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}) error: {err_name}",
+          &glMapBuffer_str[..glMapBuffer_str.len() - 1],
+          target,
+          access,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glMultiDrawArrays_t = unsafe extern "system" fn(
+    PrimitiveType,
+    *const GLint,
+    *const GLsizei,
+    GLsizei,
+  );
+  static glMultiDrawArrays_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glMultiDrawArrays_str: &str = "glMultiDrawArrays\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glMultiDrawArrays(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glMultiDrawArrays_p.store(
+      call_loader(loader, glMultiDrawArrays_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glMultiDrawArrays_is_loaded() -> bool {
+    glMultiDrawArrays_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glMultiDrawArrays(
+    mode: PrimitiveType,
+    first: *const GLint,
+    count: *const GLsizei,
+    drawcount: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glMultiDrawArrays_str[..glMultiDrawArrays_str.len() - 1]
+      );
+    }
+    let p = glMultiDrawArrays_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glMultiDrawArrays_str[..glMultiDrawArrays_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glMultiDrawArrays_t>(p)(
+      mode, first, count, drawcount,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glMultiDrawArrays_str[..glMultiDrawArrays_str.len() - 1],
+          mode,
+          first,
+          count,
+          drawcount,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glMultiDrawElementsBaseVertex_t = unsafe extern "system" fn(
+    PrimitiveType,
+    *const GLsizei,
+    DrawElementsType,
+    *const *const c_void,
+    GLsizei,
+    *const GLint,
+  );
+  static glMultiDrawElementsBaseVertex_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glMultiDrawElementsBaseVertex_str: &str =
+    "glMultiDrawElementsBaseVertex\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glMultiDrawElementsBaseVertex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glMultiDrawElementsBaseVertex_p.store(
+      call_loader(loader, glMultiDrawElementsBaseVertex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glMultiDrawElementsBaseVertex_is_loaded() -> bool {
+    glMultiDrawElementsBaseVertex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glMultiDrawElementsBaseVertex(
+    mode: PrimitiveType,
+    count: *const GLsizei,
+    type_: DrawElementsType,
+    indices: *const *const c_void,
+    drawcount: GLsizei,
+    basevertex: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glMultiDrawElementsBaseVertex_str
+          [..glMultiDrawElementsBaseVertex_str.len() - 1]
+      );
+    }
+    let p = glMultiDrawElementsBaseVertex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glMultiDrawElementsBaseVertex_str
+          [..glMultiDrawElementsBaseVertex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glMultiDrawElementsBaseVertex_t>(p)(
+      mode, count, type_, indices, drawcount, basevertex,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glMultiDrawElementsBaseVertex_str
+            [..glMultiDrawElementsBaseVertex_str.len() - 1],
+          mode,
+          count,
+          type_,
+          indices,
+          drawcount,
+          basevertex,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glMultiDrawElements_t = unsafe extern "system" fn(
+    PrimitiveType,
+    *const GLsizei,
+    DrawElementsType,
+    *const *const c_void,
+    GLsizei,
+  );
+  static glMultiDrawElements_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glMultiDrawElements_str: &str = "glMultiDrawElements\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glMultiDrawElements(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glMultiDrawElements_p.store(
+      call_loader(loader, glMultiDrawElements_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glMultiDrawElements_is_loaded() -> bool {
+    glMultiDrawElements_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glMultiDrawElements(
+    mode: PrimitiveType,
+    count: *const GLsizei,
+    type_: DrawElementsType,
+    indices: *const *const c_void,
+    drawcount: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glMultiDrawElements_str[..glMultiDrawElements_str.len() - 1]
+      );
+    }
+    let p = glMultiDrawElements_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glMultiDrawElements_str[..glMultiDrawElements_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glMultiDrawElements_t>(p)(
+      mode, count, type_, indices, drawcount,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glMultiDrawElements_str[..glMultiDrawElements_str.len() - 1],
+          mode,
+          count,
+          type_,
+          indices,
+          drawcount,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPixelStoref_t =
+    unsafe extern "system" fn(PixelStoreParameter, GLfloat);
+  static glPixelStoref_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPixelStoref_str: &str = "glPixelStoref\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPixelStoref(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPixelStoref_p.store(
+      call_loader(loader, glPixelStoref_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPixelStoref_is_loaded() -> bool {
+    glPixelStoref_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPixelStoref(pname: PixelStoreParameter, param: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPixelStoref_str[..glPixelStoref_str.len() - 1]
+      );
+    }
+    let p = glPixelStoref_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glPixelStoref_str[..glPixelStoref_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glPixelStoref_t>(p)(pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glPixelStoref_str[..glPixelStoref_str.len() - 1],
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPixelStorei_t = unsafe extern "system" fn(PixelStoreParameter, GLint);
+  static glPixelStorei_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPixelStorei_str: &str = "glPixelStorei\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPixelStorei(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPixelStorei_p.store(
+      call_loader(loader, glPixelStorei_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPixelStorei_is_loaded() -> bool {
+    glPixelStorei_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPixelStorei(pname: PixelStoreParameter, param: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPixelStorei_str[..glPixelStorei_str.len() - 1]
+      );
+    }
+    let p = glPixelStorei_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glPixelStorei_str[..glPixelStorei_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glPixelStorei_t>(p)(pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glPixelStorei_str[..glPixelStorei_str.len() - 1],
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPointParameterf_t =
+    unsafe extern "system" fn(PointParameterNameARB, GLfloat);
+  static glPointParameterf_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPointParameterf_str: &str = "glPointParameterf\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPointParameterf(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPointParameterf_p.store(
+      call_loader(loader, glPointParameterf_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPointParameterf_is_loaded() -> bool {
+    glPointParameterf_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPointParameterf(
+    pname: PointParameterNameARB,
+    param: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPointParameterf_str[..glPointParameterf_str.len() - 1]
+      );
+    }
+    let p = glPointParameterf_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glPointParameterf_str[..glPointParameterf_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glPointParameterf_t>(p)(pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glPointParameterf_str[..glPointParameterf_str.len() - 1],
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPointParameterfv_t =
+    unsafe extern "system" fn(PointParameterNameARB, *const GLfloat);
+  static glPointParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPointParameterfv_str: &str = "glPointParameterfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPointParameterfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPointParameterfv_p.store(
+      call_loader(loader, glPointParameterfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPointParameterfv_is_loaded() -> bool {
+    glPointParameterfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPointParameterfv(
+    pname: PointParameterNameARB,
+    params: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPointParameterfv_str[..glPointParameterfv_str.len() - 1]
+      );
+    }
+    let p = glPointParameterfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glPointParameterfv_str[..glPointParameterfv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glPointParameterfv_t>(p)(pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glPointParameterfv_str[..glPointParameterfv_str.len() - 1],
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPointParameteri_t =
+    unsafe extern "system" fn(PointParameterNameARB, GLint);
+  static glPointParameteri_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPointParameteri_str: &str = "glPointParameteri\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPointParameteri(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPointParameteri_p.store(
+      call_loader(loader, glPointParameteri_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPointParameteri_is_loaded() -> bool {
+    glPointParameteri_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPointParameteri(pname: PointParameterNameARB, param: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPointParameteri_str[..glPointParameteri_str.len() - 1]
+      );
+    }
+    let p = glPointParameteri_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glPointParameteri_str[..glPointParameteri_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glPointParameteri_t>(p)(pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glPointParameteri_str[..glPointParameteri_str.len() - 1],
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPointParameteriv_t =
+    unsafe extern "system" fn(PointParameterNameARB, *const GLint);
+  static glPointParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPointParameteriv_str: &str = "glPointParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPointParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPointParameteriv_p.store(
+      call_loader(loader, glPointParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPointParameteriv_is_loaded() -> bool {
+    glPointParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPointParameteriv(
+    pname: PointParameterNameARB,
+    params: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPointParameteriv_str[..glPointParameteriv_str.len() - 1]
+      );
+    }
+    let p = glPointParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glPointParameteriv_str[..glPointParameteriv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glPointParameteriv_t>(p)(pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glPointParameteriv_str[..glPointParameteriv_str.len() - 1],
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPointSize_t = unsafe extern "system" fn(GLfloat);
+  static glPointSize_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPointSize_str: &str = "glPointSize\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPointSize(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPointSize_p
+      .store(call_loader(loader, glPointSize_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPointSize_is_loaded() -> bool {
+    glPointSize_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPointSize(size: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPointSize_str[..glPointSize_str.len() - 1]
+      );
+    }
+    let p = glPointSize_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glPointSize_str[..glPointSize_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glPointSize_t>(p)(size);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glPointSize_str[..glPointSize_str.len() - 1],
+          size,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPolygonMode_t = unsafe extern "system" fn(MaterialFace, PolygonMode);
+  static glPolygonMode_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPolygonMode_str: &str = "glPolygonMode\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPolygonMode(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPolygonMode_p.store(
+      call_loader(loader, glPolygonMode_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPolygonMode_is_loaded() -> bool {
+    glPolygonMode_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPolygonMode(face: MaterialFace, mode: PolygonMode) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPolygonMode_str[..glPolygonMode_str.len() - 1]
+      );
+    }
+    let p = glPolygonMode_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glPolygonMode_str[..glPolygonMode_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glPolygonMode_t>(p)(face, mode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}) error: {err_name}",
+          &glPolygonMode_str[..glPolygonMode_str.len() - 1],
+          face,
+          mode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPolygonOffset_t = unsafe extern "system" fn(GLfloat, GLfloat);
+  static glPolygonOffset_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glPolygonOffset_str: &str = "glPolygonOffset\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPolygonOffset(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPolygonOffset_p.store(
+      call_loader(loader, glPolygonOffset_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPolygonOffset_is_loaded() -> bool {
+    glPolygonOffset_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPolygonOffset(factor: GLfloat, units: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPolygonOffset_str[..glPolygonOffset_str.len() - 1]
+      );
+    }
+    let p = glPolygonOffset_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glPolygonOffset_str[..glPolygonOffset_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glPolygonOffset_t>(p)(factor, units);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glPolygonOffset_str[..glPolygonOffset_str.len() - 1],
+          factor,
+          units,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glPrimitiveRestartIndex_t = unsafe extern "system" fn(GLuint);
+  static glPrimitiveRestartIndex_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glPrimitiveRestartIndex_str: &str = "glPrimitiveRestartIndex\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glPrimitiveRestartIndex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glPrimitiveRestartIndex_p.store(
+      call_loader(loader, glPrimitiveRestartIndex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glPrimitiveRestartIndex_is_loaded() -> bool {
+    glPrimitiveRestartIndex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glPrimitiveRestartIndex(index: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glPrimitiveRestartIndex_str[..glPrimitiveRestartIndex_str.len() - 1]
+      );
+    }
+    let p = glPrimitiveRestartIndex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glPrimitiveRestartIndex_str[..glPrimitiveRestartIndex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glPrimitiveRestartIndex_t>(p)(index);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glPrimitiveRestartIndex_str[..glPrimitiveRestartIndex_str.len() - 1],
+          index,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glProvokingVertex_t = unsafe extern "system" fn(VertexProvokingMode);
+  static glProvokingVertex_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glProvokingVertex_str: &str = "glProvokingVertex\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glProvokingVertex(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glProvokingVertex_p.store(
+      call_loader(loader, glProvokingVertex_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glProvokingVertex_is_loaded() -> bool {
+    glProvokingVertex_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glProvokingVertex(mode: VertexProvokingMode) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glProvokingVertex_str[..glProvokingVertex_str.len() - 1]
+      );
+    }
+    let p = glProvokingVertex_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glProvokingVertex_str[..glProvokingVertex_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glProvokingVertex_t>(p)(mode);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glProvokingVertex_str[..glProvokingVertex_str.len() - 1],
+          mode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glQueryCounter_t = unsafe extern "system" fn(GLuint, QueryCounterTarget);
+  static glQueryCounter_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glQueryCounter_str: &str = "glQueryCounter\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glQueryCounter(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glQueryCounter_p.store(
+      call_loader(loader, glQueryCounter_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glQueryCounter_is_loaded() -> bool {
+    glQueryCounter_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glQueryCounter(id: GLuint, target: QueryCounterTarget) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glQueryCounter_str[..glQueryCounter_str.len() - 1]
+      );
+    }
+    let p = glQueryCounter_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glQueryCounter_str[..glQueryCounter_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glQueryCounter_t>(p)(id, target);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}) error: {err_name}",
+          &glQueryCounter_str[..glQueryCounter_str.len() - 1],
+          id,
+          target,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glReadBuffer_t = unsafe extern "system" fn(ReadBufferMode);
+  static glReadBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glReadBuffer_str: &str = "glReadBuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glReadBuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glReadBuffer_p
+      .store(call_loader(loader, glReadBuffer_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glReadBuffer_is_loaded() -> bool {
+    glReadBuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glReadBuffer(src: ReadBufferMode) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glReadBuffer_str[..glReadBuffer_str.len() - 1]
+      );
+    }
+    let p = glReadBuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glReadBuffer_str[..glReadBuffer_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glReadBuffer_t>(p)(src);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glReadBuffer_str[..glReadBuffer_str.len() - 1],
+          src,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glReadPixels_t = unsafe extern "system" fn(
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+    PixelFormat,
+    PixelType,
+    *mut c_void,
+  );
+  static glReadPixels_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glReadPixels_str: &str = "glReadPixels\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glReadPixels(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glReadPixels_p
+      .store(call_loader(loader, glReadPixels_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glReadPixels_is_loaded() -> bool {
+    glReadPixels_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glReadPixels(
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *mut c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glReadPixels_str[..glReadPixels_str.len() - 1]
+      );
+    }
+    let p = glReadPixels_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glReadPixels_str[..glReadPixels_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glReadPixels_t>(p)(
+      x, y, width, height, format, type_, pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glReadPixels_str[..glReadPixels_str.len() - 1],
+          x,
+          y,
+          width,
+          height,
+          format,
+          type_,
+          pixels,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glRenderbufferStorageMultisample_t = unsafe extern "system" fn(
+    RenderbufferTarget,
+    GLsizei,
+    InternalFormat,
+    GLsizei,
+    GLsizei,
+  );
+  static glRenderbufferStorageMultisample_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glRenderbufferStorageMultisample_str: &str =
+    "glRenderbufferStorageMultisample\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glRenderbufferStorageMultisample(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glRenderbufferStorageMultisample_p.store(
+      call_loader(loader, glRenderbufferStorageMultisample_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glRenderbufferStorageMultisample_is_loaded() -> bool {
+    glRenderbufferStorageMultisample_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glRenderbufferStorageMultisample(
+    target: RenderbufferTarget,
+    samples: GLsizei,
+    internalformat: InternalFormat,
+    width: GLsizei,
+    height: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glRenderbufferStorageMultisample_str
+          [..glRenderbufferStorageMultisample_str.len() - 1]
+      );
+    }
+    let p = glRenderbufferStorageMultisample_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glRenderbufferStorageMultisample_str
+          [..glRenderbufferStorageMultisample_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glRenderbufferStorageMultisample_t>(p)(
+      target,
+      samples,
+      internalformat,
+      width,
+      height,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glRenderbufferStorageMultisample_str
+            [..glRenderbufferStorageMultisample_str.len() - 1],
+          target,
+          samples,
+          internalformat,
+          width,
+          height,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glRenderbufferStorage_t = unsafe extern "system" fn(
+    RenderbufferTarget,
+    InternalFormat,
+    GLsizei,
+    GLsizei,
+  );
+  static glRenderbufferStorage_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glRenderbufferStorage_str: &str = "glRenderbufferStorage\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glRenderbufferStorage(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glRenderbufferStorage_p.store(
+      call_loader(loader, glRenderbufferStorage_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glRenderbufferStorage_is_loaded() -> bool {
+    glRenderbufferStorage_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glRenderbufferStorage(
+    target: RenderbufferTarget,
+    internalformat: InternalFormat,
+    width: GLsizei,
+    height: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glRenderbufferStorage_str[..glRenderbufferStorage_str.len() - 1]
+      );
+    }
+    let p = glRenderbufferStorage_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glRenderbufferStorage_str[..glRenderbufferStorage_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glRenderbufferStorage_t>(p)(
+      target,
+      internalformat,
+      width,
+      height,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glRenderbufferStorage_str[..glRenderbufferStorage_str.len() - 1],
+          target,
+          internalformat,
+          width,
+          height,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSampleCoverage_t = unsafe extern "system" fn(GLfloat, GLboolean);
+  static glSampleCoverage_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glSampleCoverage_str: &str = "glSampleCoverage\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSampleCoverage(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSampleCoverage_p.store(
+      call_loader(loader, glSampleCoverage_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSampleCoverage_is_loaded() -> bool {
+    glSampleCoverage_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSampleCoverage(value: GLfloat, invert: GLboolean) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSampleCoverage_str[..glSampleCoverage_str.len() - 1]
+      );
+    }
+    let p = glSampleCoverage_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glSampleCoverage_str[..glSampleCoverage_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glSampleCoverage_t>(p)(value, invert);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glSampleCoverage_str[..glSampleCoverage_str.len() - 1],
+          value,
+          invert,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSampleMaski_t = unsafe extern "system" fn(GLuint, GLbitfield);
+  static glSampleMaski_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glSampleMaski_str: &str = "glSampleMaski\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSampleMaski(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSampleMaski_p.store(
+      call_loader(loader, glSampleMaski_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSampleMaski_is_loaded() -> bool {
+    glSampleMaski_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSampleMaski(maskNumber: GLuint, mask: GLbitfield) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSampleMaski_str[..glSampleMaski_str.len() - 1]
+      );
+    }
+    let p = glSampleMaski_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glSampleMaski_str[..glSampleMaski_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glSampleMaski_t>(p)(maskNumber, mask);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glSampleMaski_str[..glSampleMaski_str.len() - 1],
+          maskNumber,
+          mask,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSamplerParameterIiv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterI, *const GLint);
+  static glSamplerParameterIiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glSamplerParameterIiv_str: &str = "glSamplerParameterIiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSamplerParameterIiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSamplerParameterIiv_p.store(
+      call_loader(loader, glSamplerParameterIiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSamplerParameterIiv_is_loaded() -> bool {
+    glSamplerParameterIiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSamplerParameterIiv(
+    sampler: GLuint,
+    pname: SamplerParameterI,
+    param: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSamplerParameterIiv_str[..glSamplerParameterIiv_str.len() - 1]
+      );
+    }
+    let p = glSamplerParameterIiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glSamplerParameterIiv_str[..glSamplerParameterIiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glSamplerParameterIiv_t>(p)(
+      sampler, pname, param,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glSamplerParameterIiv_str[..glSamplerParameterIiv_str.len() - 1],
+          sampler,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSamplerParameterIuiv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterI, *const GLuint);
+  static glSamplerParameterIuiv_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glSamplerParameterIuiv_str: &str = "glSamplerParameterIuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSamplerParameterIuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSamplerParameterIuiv_p.store(
+      call_loader(loader, glSamplerParameterIuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSamplerParameterIuiv_is_loaded() -> bool {
+    glSamplerParameterIuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSamplerParameterIuiv(
+    sampler: GLuint,
+    pname: SamplerParameterI,
+    param: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSamplerParameterIuiv_str[..glSamplerParameterIuiv_str.len() - 1]
+      );
+    }
+    let p = glSamplerParameterIuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glSamplerParameterIuiv_str[..glSamplerParameterIuiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glSamplerParameterIuiv_t>(p)(
+      sampler, pname, param,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glSamplerParameterIuiv_str[..glSamplerParameterIuiv_str.len() - 1],
+          sampler,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSamplerParameterf_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterF, GLfloat);
+  static glSamplerParameterf_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glSamplerParameterf_str: &str = "glSamplerParameterf\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSamplerParameterf(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSamplerParameterf_p.store(
+      call_loader(loader, glSamplerParameterf_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSamplerParameterf_is_loaded() -> bool {
+    glSamplerParameterf_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSamplerParameterf(
+    sampler: GLuint,
+    pname: SamplerParameterF,
+    param: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSamplerParameterf_str[..glSamplerParameterf_str.len() - 1]
+      );
+    }
+    let p = glSamplerParameterf_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glSamplerParameterf_str[..glSamplerParameterf_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glSamplerParameterf_t>(p)(sampler, pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glSamplerParameterf_str[..glSamplerParameterf_str.len() - 1],
+          sampler,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSamplerParameterfv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterF, *const GLfloat);
+  static glSamplerParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glSamplerParameterfv_str: &str = "glSamplerParameterfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSamplerParameterfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSamplerParameterfv_p.store(
+      call_loader(loader, glSamplerParameterfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSamplerParameterfv_is_loaded() -> bool {
+    glSamplerParameterfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSamplerParameterfv(
+    sampler: GLuint,
+    pname: SamplerParameterF,
+    param: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSamplerParameterfv_str[..glSamplerParameterfv_str.len() - 1]
+      );
+    }
+    let p = glSamplerParameterfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glSamplerParameterfv_str[..glSamplerParameterfv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glSamplerParameterfv_t>(p)(
+      sampler, pname, param,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glSamplerParameterfv_str[..glSamplerParameterfv_str.len() - 1],
+          sampler,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSamplerParameteri_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterI, GLint);
+  static glSamplerParameteri_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glSamplerParameteri_str: &str = "glSamplerParameteri\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSamplerParameteri(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSamplerParameteri_p.store(
+      call_loader(loader, glSamplerParameteri_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSamplerParameteri_is_loaded() -> bool {
+    glSamplerParameteri_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSamplerParameteri(
+    sampler: GLuint,
+    pname: SamplerParameterI,
+    param: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSamplerParameteri_str[..glSamplerParameteri_str.len() - 1]
+      );
+    }
+    let p = glSamplerParameteri_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glSamplerParameteri_str[..glSamplerParameteri_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glSamplerParameteri_t>(p)(sampler, pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glSamplerParameteri_str[..glSamplerParameteri_str.len() - 1],
+          sampler,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glSamplerParameteriv_t =
+    unsafe extern "system" fn(GLuint, SamplerParameterI, *const GLint);
+  static glSamplerParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glSamplerParameteriv_str: &str = "glSamplerParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glSamplerParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glSamplerParameteriv_p.store(
+      call_loader(loader, glSamplerParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glSamplerParameteriv_is_loaded() -> bool {
+    glSamplerParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glSamplerParameteriv(
+    sampler: GLuint,
+    pname: SamplerParameterI,
+    param: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glSamplerParameteriv_str[..glSamplerParameteriv_str.len() - 1]
+      );
+    }
+    let p = glSamplerParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glSamplerParameteriv_str[..glSamplerParameteriv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glSamplerParameteriv_t>(p)(
+      sampler, pname, param,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}) error: {err_name}",
+          &glSamplerParameteriv_str[..glSamplerParameteriv_str.len() - 1],
+          sampler,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glScissor_t = unsafe extern "system" fn(GLint, GLint, GLsizei, GLsizei);
+  static glScissor_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glScissor_str: &str = "glScissor\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glScissor(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glScissor_p
+      .store(call_loader(loader, glScissor_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glScissor_is_loaded() -> bool {
+    glScissor_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glScissor(x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glScissor_str[..glScissor_str.len() - 1]);
+    }
+    let p = glScissor_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glScissor_str[..glScissor_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glScissor_t>(p)(x, y, width, height);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glScissor_str[..glScissor_str.len() - 1],
+          x,
+          y,
+          width,
+          height,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glShaderSource_t = unsafe extern "system" fn(
+    GLuint,
+    GLsizei,
+    *const *const GLchar,
+    *const GLint,
+  );
+  static glShaderSource_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glShaderSource_str: &str = "glShaderSource\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glShaderSource(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glShaderSource_p.store(
+      call_loader(loader, glShaderSource_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glShaderSource_is_loaded() -> bool {
+    glShaderSource_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glShaderSource(
+    shader: GLuint,
+    count: GLsizei,
+    string: *const *const GLchar,
+    length: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glShaderSource_str[..glShaderSource_str.len() - 1]
+      );
+    }
+    let p = glShaderSource_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glShaderSource_str[..glShaderSource_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glShaderSource_t>(p)(
+      shader, count, string, length,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glShaderSource_str[..glShaderSource_str.len() - 1],
+          shader,
+          count,
+          string,
+          length,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glStencilFuncSeparate_t = unsafe extern "system" fn(
+    StencilFaceDirection,
+    StencilFunction,
+    GLint,
+    GLuint,
+  );
+  static glStencilFuncSeparate_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glStencilFuncSeparate_str: &str = "glStencilFuncSeparate\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glStencilFuncSeparate(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glStencilFuncSeparate_p.store(
+      call_loader(loader, glStencilFuncSeparate_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glStencilFuncSeparate_is_loaded() -> bool {
+    glStencilFuncSeparate_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glStencilFuncSeparate(
+    face: StencilFaceDirection,
+    func: StencilFunction,
+    ref_: GLint,
+    mask: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glStencilFuncSeparate_str[..glStencilFuncSeparate_str.len() - 1]
+      );
+    }
+    let p = glStencilFuncSeparate_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glStencilFuncSeparate_str[..glStencilFuncSeparate_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glStencilFuncSeparate_t>(p)(
+      face, func, ref_, mask,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glStencilFuncSeparate_str[..glStencilFuncSeparate_str.len() - 1],
+          face,
+          func,
+          ref_,
+          mask,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glStencilFunc_t =
+    unsafe extern "system" fn(StencilFunction, GLint, GLuint);
+  static glStencilFunc_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glStencilFunc_str: &str = "glStencilFunc\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glStencilFunc(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glStencilFunc_p.store(
+      call_loader(loader, glStencilFunc_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glStencilFunc_is_loaded() -> bool {
+    glStencilFunc_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glStencilFunc(
+    func: StencilFunction,
+    ref_: GLint,
+    mask: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glStencilFunc_str[..glStencilFunc_str.len() - 1]
+      );
+    }
+    let p = glStencilFunc_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glStencilFunc_str[..glStencilFunc_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glStencilFunc_t>(p)(func, ref_, mask);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glStencilFunc_str[..glStencilFunc_str.len() - 1],
+          func,
+          ref_,
+          mask,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glStencilMaskSeparate_t =
+    unsafe extern "system" fn(StencilFaceDirection, GLuint);
+  static glStencilMaskSeparate_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glStencilMaskSeparate_str: &str = "glStencilMaskSeparate\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glStencilMaskSeparate(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glStencilMaskSeparate_p.store(
+      call_loader(loader, glStencilMaskSeparate_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glStencilMaskSeparate_is_loaded() -> bool {
+    glStencilMaskSeparate_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glStencilMaskSeparate(
+    face: StencilFaceDirection,
+    mask: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glStencilMaskSeparate_str[..glStencilMaskSeparate_str.len() - 1]
+      );
+    }
+    let p = glStencilMaskSeparate_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glStencilMaskSeparate_str[..glStencilMaskSeparate_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glStencilMaskSeparate_t>(p)(face, mask);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}) error: {err_name}",
+          &glStencilMaskSeparate_str[..glStencilMaskSeparate_str.len() - 1],
+          face,
+          mask,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glStencilMask_t = unsafe extern "system" fn(GLuint);
+  static glStencilMask_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glStencilMask_str: &str = "glStencilMask\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glStencilMask(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glStencilMask_p.store(
+      call_loader(loader, glStencilMask_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glStencilMask_is_loaded() -> bool {
+    glStencilMask_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glStencilMask(mask: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glStencilMask_str[..glStencilMask_str.len() - 1]
+      );
+    }
+    let p = glStencilMask_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glStencilMask_str[..glStencilMask_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glStencilMask_t>(p)(mask);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glStencilMask_str[..glStencilMask_str.len() - 1],
+          mask,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glStencilOpSeparate_t = unsafe extern "system" fn(
+    StencilFaceDirection,
+    StencilOp,
+    StencilOp,
+    StencilOp,
+  );
+  static glStencilOpSeparate_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glStencilOpSeparate_str: &str = "glStencilOpSeparate\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glStencilOpSeparate(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glStencilOpSeparate_p.store(
+      call_loader(loader, glStencilOpSeparate_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glStencilOpSeparate_is_loaded() -> bool {
+    glStencilOpSeparate_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glStencilOpSeparate(
+    face: StencilFaceDirection,
+    sfail: StencilOp,
+    dpfail: StencilOp,
+    dppass: StencilOp,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glStencilOpSeparate_str[..glStencilOpSeparate_str.len() - 1]
+      );
+    }
+    let p = glStencilOpSeparate_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glStencilOpSeparate_str[..glStencilOpSeparate_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glStencilOpSeparate_t>(p)(
+      face, sfail, dpfail, dppass,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}, 0x{:X}) error: {err_name}",
+          &glStencilOpSeparate_str[..glStencilOpSeparate_str.len() - 1],
+          face,
+          sfail,
+          dpfail,
+          dppass,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glStencilOp_t =
+    unsafe extern "system" fn(StencilOp, StencilOp, StencilOp);
+  static glStencilOp_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glStencilOp_str: &str = "glStencilOp\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glStencilOp(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glStencilOp_p
+      .store(call_loader(loader, glStencilOp_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glStencilOp_is_loaded() -> bool {
+    glStencilOp_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glStencilOp(
+    fail: StencilOp,
+    zfail: StencilOp,
+    zpass: StencilOp,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glStencilOp_str[..glStencilOp_str.len() - 1]
+      );
+    }
+    let p = glStencilOp_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glStencilOp_str[..glStencilOp_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glStencilOp_t>(p)(fail, zfail, zpass);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, 0x{:X}) error: {err_name}",
+          &glStencilOp_str[..glStencilOp_str.len() - 1],
+          fail,
+          zfail,
+          zpass,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexBuffer_t =
+    unsafe extern "system" fn(TextureTarget, InternalFormat, GLuint);
+  static glTexBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexBuffer_str: &str = "glTexBuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexBuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexBuffer_p
+      .store(call_loader(loader, glTexBuffer_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexBuffer_is_loaded() -> bool {
+    glTexBuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexBuffer(
+    target: TextureTarget,
+    internalformat: InternalFormat,
+    buffer: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexBuffer_str[..glTexBuffer_str.len() - 1]
+      );
+    }
+    let p = glTexBuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glTexBuffer_str[..glTexBuffer_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glTexBuffer_t>(p)(
+      target,
+      internalformat,
+      buffer,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glTexBuffer_str[..glTexBuffer_str.len() - 1],
+          target,
+          internalformat,
+          buffer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexImage1D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLsizei,
+    GLint,
+    PixelFormat,
+    PixelType,
+    *const c_void,
+  );
+  static glTexImage1D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexImage1D_str: &str = "glTexImage1D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexImage1D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexImage1D_p
+      .store(call_loader(loader, glTexImage1D_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexImage1D_is_loaded() -> bool {
+    glTexImage1D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexImage1D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: GLint,
+    width: GLsizei,
+    border: GLint,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexImage1D_str[..glTexImage1D_str.len() - 1]
+      );
+    }
+    let p = glTexImage1D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glTexImage1D_str[..glTexImage1D_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glTexImage1D_t>(p)(
+      target,
+      level,
+      internalformat,
+      width,
+      border,
+      format,
+      type_,
+      pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}", &glTexImage1D_str[..glTexImage1D_str.len()-1], target, level, internalformat, width, border, format, type_, pixels,  err_name = error_name_for(err));
+      }
+    }
+    out
+  }
+
+  type glTexImage2DMultisample_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLsizei,
+    InternalFormat,
+    GLsizei,
+    GLsizei,
+    GLboolean,
+  );
+  static glTexImage2DMultisample_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glTexImage2DMultisample_str: &str = "glTexImage2DMultisample\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexImage2DMultisample(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexImage2DMultisample_p.store(
+      call_loader(loader, glTexImage2DMultisample_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexImage2DMultisample_is_loaded() -> bool {
+    glTexImage2DMultisample_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexImage2DMultisample(
+    target: TextureTarget,
+    samples: GLsizei,
+    internalformat: InternalFormat,
+    width: GLsizei,
+    height: GLsizei,
+    fixedsamplelocations: GLboolean,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexImage2DMultisample_str[..glTexImage2DMultisample_str.len() - 1]
+      );
+    }
+    let p = glTexImage2DMultisample_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexImage2DMultisample_str[..glTexImage2DMultisample_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glTexImage2DMultisample_t>(p)(
+      target,
+      samples,
+      internalformat,
+      width,
+      height,
+      fixedsamplelocations,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glTexImage2DMultisample_str[..glTexImage2DMultisample_str.len() - 1],
+          target,
+          samples,
+          internalformat,
+          width,
+          height,
+          fixedsamplelocations,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexImage2D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+    GLint,
+    PixelFormat,
+    PixelType,
+    *const c_void,
+  );
+  static glTexImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexImage2D_str: &str = "glTexImage2D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexImage2D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexImage2D_p
+      .store(call_loader(loader, glTexImage2D_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexImage2D_is_loaded() -> bool {
+    glTexImage2D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexImage2D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexImage2D_str[..glTexImage2D_str.len() - 1]
+      );
+    }
+    let p = glTexImage2D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glTexImage2D_str[..glTexImage2D_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glTexImage2D_t>(p)(
+      target,
+      level,
+      internalformat,
+      width,
+      height,
+      border,
+      format,
+      type_,
+      pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}", &glTexImage2D_str[..glTexImage2D_str.len()-1], target, level, internalformat, width, height, border, format, type_, pixels,  err_name = error_name_for(err));
+      }
+    }
+    out
+  }
+
+  type glTexImage3DMultisample_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLsizei,
+    InternalFormat,
+    GLsizei,
+    GLsizei,
+    GLsizei,
+    GLboolean,
+  );
+  static glTexImage3DMultisample_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glTexImage3DMultisample_str: &str = "glTexImage3DMultisample\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexImage3DMultisample(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexImage3DMultisample_p.store(
+      call_loader(loader, glTexImage3DMultisample_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexImage3DMultisample_is_loaded() -> bool {
+    glTexImage3DMultisample_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexImage3DMultisample(
+    target: TextureTarget,
+    samples: GLsizei,
+    internalformat: InternalFormat,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    fixedsamplelocations: GLboolean,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexImage3DMultisample_str[..glTexImage3DMultisample_str.len() - 1]
+      );
+    }
+    let p = glTexImage3DMultisample_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexImage3DMultisample_str[..glTexImage3DMultisample_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glTexImage3DMultisample_t>(p)(
+      target,
+      samples,
+      internalformat,
+      width,
+      height,
+      depth,
+      fixedsamplelocations,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, {:?}, 0x{:X}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glTexImage3DMultisample_str[..glTexImage3DMultisample_str.len() - 1],
+          target,
+          samples,
+          internalformat,
+          width,
+          height,
+          depth,
+          fixedsamplelocations,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexImage3D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+    GLsizei,
+    GLint,
+    PixelFormat,
+    PixelType,
+    *const c_void,
+  );
+  static glTexImage3D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexImage3D_str: &str = "glTexImage3D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexImage3D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexImage3D_p
+      .store(call_loader(loader, glTexImage3D_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexImage3D_is_loaded() -> bool {
+    glTexImage3D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexImage3D(
+    target: TextureTarget,
+    level: GLint,
+    internalformat: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    border: GLint,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexImage3D_str[..glTexImage3D_str.len() - 1]
+      );
+    }
+    let p = glTexImage3D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glTexImage3D_str[..glTexImage3D_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glTexImage3D_t>(p)(
+      target,
+      level,
+      internalformat,
+      width,
+      height,
+      depth,
+      border,
+      format,
+      type_,
+      pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}", &glTexImage3D_str[..glTexImage3D_str.len()-1], target, level, internalformat, width, height, depth, border, format, type_, pixels,  err_name = error_name_for(err));
+      }
+    }
+    out
+  }
+
+  type glTexParameterIiv_t = unsafe extern "system" fn(
+    TextureTarget,
+    TextureParameterName,
+    *const GLint,
+  );
+  static glTexParameterIiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexParameterIiv_str: &str = "glTexParameterIiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexParameterIiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexParameterIiv_p.store(
+      call_loader(loader, glTexParameterIiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexParameterIiv_is_loaded() -> bool {
+    glTexParameterIiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexParameterIiv(
+    target: TextureTarget,
+    pname: TextureParameterName,
+    params: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexParameterIiv_str[..glTexParameterIiv_str.len() - 1]
+      );
+    }
+    let p = glTexParameterIiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexParameterIiv_str[..glTexParameterIiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glTexParameterIiv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glTexParameterIiv_str[..glTexParameterIiv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexParameterIuiv_t = unsafe extern "system" fn(
+    TextureTarget,
+    TextureParameterName,
+    *const GLuint,
+  );
+  static glTexParameterIuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexParameterIuiv_str: &str = "glTexParameterIuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexParameterIuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexParameterIuiv_p.store(
+      call_loader(loader, glTexParameterIuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexParameterIuiv_is_loaded() -> bool {
+    glTexParameterIuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexParameterIuiv(
+    target: TextureTarget,
+    pname: TextureParameterName,
+    params: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexParameterIuiv_str[..glTexParameterIuiv_str.len() - 1]
+      );
+    }
+    let p = glTexParameterIuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexParameterIuiv_str[..glTexParameterIuiv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glTexParameterIuiv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glTexParameterIuiv_str[..glTexParameterIuiv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexParameterf_t =
+    unsafe extern "system" fn(TextureTarget, TextureParameterName, GLfloat);
+  static glTexParameterf_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexParameterf_str: &str = "glTexParameterf\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexParameterf(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexParameterf_p.store(
+      call_loader(loader, glTexParameterf_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexParameterf_is_loaded() -> bool {
+    glTexParameterf_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexParameterf(
+    target: TextureTarget,
+    pname: TextureParameterName,
+    param: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexParameterf_str[..glTexParameterf_str.len() - 1]
+      );
+    }
+    let p = glTexParameterf_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexParameterf_str[..glTexParameterf_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glTexParameterf_t>(p)(target, pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glTexParameterf_str[..glTexParameterf_str.len() - 1],
+          target,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexParameterfv_t = unsafe extern "system" fn(
+    TextureTarget,
+    TextureParameterName,
+    *const GLfloat,
+  );
+  static glTexParameterfv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexParameterfv_str: &str = "glTexParameterfv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexParameterfv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexParameterfv_p.store(
+      call_loader(loader, glTexParameterfv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexParameterfv_is_loaded() -> bool {
+    glTexParameterfv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexParameterfv(
+    target: TextureTarget,
+    pname: TextureParameterName,
+    params: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexParameterfv_str[..glTexParameterfv_str.len() - 1]
+      );
+    }
+    let p = glTexParameterfv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexParameterfv_str[..glTexParameterfv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glTexParameterfv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glTexParameterfv_str[..glTexParameterfv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexParameteri_t =
+    unsafe extern "system" fn(TextureTarget, TextureParameterName, GLint);
+  static glTexParameteri_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexParameteri_str: &str = "glTexParameteri\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexParameteri(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexParameteri_p.store(
+      call_loader(loader, glTexParameteri_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexParameteri_is_loaded() -> bool {
+    glTexParameteri_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexParameteri(
+    target: TextureTarget,
+    pname: TextureParameterName,
+    param: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexParameteri_str[..glTexParameteri_str.len() - 1]
+      );
+    }
+    let p = glTexParameteri_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexParameteri_str[..glTexParameteri_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glTexParameteri_t>(p)(target, pname, param);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glTexParameteri_str[..glTexParameteri_str.len() - 1],
+          target,
+          pname,
+          param,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexParameteriv_t = unsafe extern "system" fn(
+    TextureTarget,
+    TextureParameterName,
+    *const GLint,
+  );
+  static glTexParameteriv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexParameteriv_str: &str = "glTexParameteriv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexParameteriv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexParameteriv_p.store(
+      call_loader(loader, glTexParameteriv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexParameteriv_is_loaded() -> bool {
+    glTexParameteriv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexParameteriv(
+    target: TextureTarget,
+    pname: TextureParameterName,
+    params: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexParameteriv_str[..glTexParameteriv_str.len() - 1]
+      );
+    }
+    let p = glTexParameteriv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexParameteriv_str[..glTexParameteriv_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glTexParameteriv_t>(p)(target, pname, params);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}, 0x{:X}, {:?}) error: {err_name}",
+          &glTexParameteriv_str[..glTexParameteriv_str.len() - 1],
+          target,
+          pname,
+          params,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glTexSubImage1D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLsizei,
+    PixelFormat,
+    PixelType,
+    *const c_void,
+  );
+  static glTexSubImage1D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexSubImage1D_str: &str = "glTexSubImage1D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexSubImage1D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexSubImage1D_p.store(
+      call_loader(loader, glTexSubImage1D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexSubImage1D_is_loaded() -> bool {
+    glTexSubImage1D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexSubImage1D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    width: GLsizei,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexSubImage1D_str[..glTexSubImage1D_str.len() - 1]
+      );
+    }
+    let p = glTexSubImage1D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexSubImage1D_str[..glTexSubImage1D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glTexSubImage1D_t>(p)(
+      target, level, xoffset, width, format, type_, pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}", &glTexSubImage1D_str[..glTexSubImage1D_str.len()-1], target, level, xoffset, width, format, type_, pixels,  err_name = error_name_for(err));
+      }
+    }
+    out
+  }
+
+  type glTexSubImage2D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+    PixelFormat,
+    PixelType,
+    *const c_void,
+  );
+  static glTexSubImage2D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexSubImage2D_str: &str = "glTexSubImage2D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexSubImage2D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexSubImage2D_p.store(
+      call_loader(loader, glTexSubImage2D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexSubImage2D_is_loaded() -> bool {
+    glTexSubImage2D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexSubImage2D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexSubImage2D_str[..glTexSubImage2D_str.len() - 1]
+      );
+    }
+    let p = glTexSubImage2D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexSubImage2D_str[..glTexSubImage2D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glTexSubImage2D_t>(p)(
+      target, level, xoffset, yoffset, width, height, format, type_, pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}", &glTexSubImage2D_str[..glTexSubImage2D_str.len()-1], target, level, xoffset, yoffset, width, height, format, type_, pixels,  err_name = error_name_for(err));
+      }
+    }
+    out
+  }
+
+  type glTexSubImage3D_t = unsafe extern "system" fn(
+    TextureTarget,
+    GLint,
+    GLint,
+    GLint,
+    GLint,
+    GLsizei,
+    GLsizei,
+    GLsizei,
+    PixelFormat,
+    PixelType,
+    *const c_void,
+  );
+  static glTexSubImage3D_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glTexSubImage3D_str: &str = "glTexSubImage3D\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTexSubImage3D(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTexSubImage3D_p.store(
+      call_loader(loader, glTexSubImage3D_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTexSubImage3D_is_loaded() -> bool {
+    glTexSubImage3D_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTexSubImage3D(
+    target: TextureTarget,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: PixelFormat,
+    type_: PixelType,
+    pixels: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTexSubImage3D_str[..glTexSubImage3D_str.len() - 1]
+      );
+    }
+    let p = glTexSubImage3D_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTexSubImage3D_str[..glTexSubImage3D_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glTexSubImage3D_t>(p)(
+      target, level, xoffset, yoffset, zoffset, width, height, depth, format,
+      type_, pixels,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!("{}(0x{:X}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, 0x{:X}, 0x{:X}, {:?}) error: {err_name}", &glTexSubImage3D_str[..glTexSubImage3D_str.len()-1], target, level, xoffset, yoffset, zoffset, width, height, depth, format, type_, pixels,  err_name = error_name_for(err));
+      }
+    }
+    out
+  }
+
+  type glTransformFeedbackVaryings_t = unsafe extern "system" fn(
+    GLuint,
+    GLsizei,
+    *const *const GLchar,
+    TransformFeedbackBufferMode,
+  );
+  static glTransformFeedbackVaryings_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glTransformFeedbackVaryings_str: &str = "glTransformFeedbackVaryings\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glTransformFeedbackVaryings(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glTransformFeedbackVaryings_p.store(
+      call_loader(loader, glTransformFeedbackVaryings_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glTransformFeedbackVaryings_is_loaded() -> bool {
+    glTransformFeedbackVaryings_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glTransformFeedbackVaryings(
+    program: GLuint,
+    count: GLsizei,
+    varyings: *const *const GLchar,
+    bufferMode: TransformFeedbackBufferMode,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glTransformFeedbackVaryings_str
+          [..glTransformFeedbackVaryings_str.len() - 1]
+      );
+    }
+    let p = glTransformFeedbackVaryings_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glTransformFeedbackVaryings_str
+          [..glTransformFeedbackVaryings_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glTransformFeedbackVaryings_t>(p)(
+      program, count, varyings, bufferMode,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, 0x{:X}) error: {err_name}",
+          &glTransformFeedbackVaryings_str
+            [..glTransformFeedbackVaryings_str.len() - 1],
+          program,
+          count,
+          varyings,
+          bufferMode,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform1f_t = unsafe extern "system" fn(GLint, GLfloat);
+  static glUniform1f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform1f_str: &str = "glUniform1f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform1f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform1f_p
+      .store(call_loader(loader, glUniform1f_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform1f_is_loaded() -> bool {
+    glUniform1f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform1f(location: GLint, v0: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform1f_str[..glUniform1f_str.len() - 1]
+      );
+    }
+    let p = glUniform1f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform1f_str[..glUniform1f_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform1f_t>(p)(location, v0);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glUniform1f_str[..glUniform1f_str.len() - 1],
+          location,
+          v0,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform1fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
+  static glUniform1fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform1fv_str: &str = "glUniform1fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform1fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform1fv_p
+      .store(call_loader(loader, glUniform1fv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform1fv_is_loaded() -> bool {
+    glUniform1fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform1fv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform1fv_str[..glUniform1fv_str.len() - 1]
+      );
+    }
+    let p = glUniform1fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform1fv_str[..glUniform1fv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform1fv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform1fv_str[..glUniform1fv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform1i_t = unsafe extern "system" fn(GLint, GLint);
+  static glUniform1i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform1i_str: &str = "glUniform1i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform1i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform1i_p
+      .store(call_loader(loader, glUniform1i_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform1i_is_loaded() -> bool {
+    glUniform1i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform1i(location: GLint, v0: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform1i_str[..glUniform1i_str.len() - 1]
+      );
+    }
+    let p = glUniform1i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform1i_str[..glUniform1i_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform1i_t>(p)(location, v0);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glUniform1i_str[..glUniform1i_str.len() - 1],
+          location,
+          v0,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform1iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
+  static glUniform1iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform1iv_str: &str = "glUniform1iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform1iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform1iv_p
+      .store(call_loader(loader, glUniform1iv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform1iv_is_loaded() -> bool {
+    glUniform1iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform1iv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform1iv_str[..glUniform1iv_str.len() - 1]
+      );
+    }
+    let p = glUniform1iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform1iv_str[..glUniform1iv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform1iv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform1iv_str[..glUniform1iv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform1ui_t = unsafe extern "system" fn(GLint, GLuint);
+  static glUniform1ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform1ui_str: &str = "glUniform1ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform1ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform1ui_p
+      .store(call_loader(loader, glUniform1ui_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform1ui_is_loaded() -> bool {
+    glUniform1ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform1ui(location: GLint, v0: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform1ui_str[..glUniform1ui_str.len() - 1]
+      );
+    }
+    let p = glUniform1ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform1ui_str[..glUniform1ui_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform1ui_t>(p)(location, v0);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glUniform1ui_str[..glUniform1ui_str.len() - 1],
+          location,
+          v0,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform1uiv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
+  static glUniform1uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform1uiv_str: &str = "glUniform1uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform1uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform1uiv_p.store(
+      call_loader(loader, glUniform1uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform1uiv_is_loaded() -> bool {
+    glUniform1uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform1uiv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform1uiv_str[..glUniform1uiv_str.len() - 1]
+      );
+    }
+    let p = glUniform1uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform1uiv_str[..glUniform1uiv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform1uiv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform1uiv_str[..glUniform1uiv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform2f_t = unsafe extern "system" fn(GLint, GLfloat, GLfloat);
+  static glUniform2f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform2f_str: &str = "glUniform2f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform2f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform2f_p
+      .store(call_loader(loader, glUniform2f_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform2f_is_loaded() -> bool {
+    glUniform2f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform2f(location: GLint, v0: GLfloat, v1: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform2f_str[..glUniform2f_str.len() - 1]
+      );
+    }
+    let p = glUniform2f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform2f_str[..glUniform2f_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform2f_t>(p)(location, v0, v1);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform2f_str[..glUniform2f_str.len() - 1],
+          location,
+          v0,
+          v1,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform2fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
+  static glUniform2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform2fv_str: &str = "glUniform2fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform2fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform2fv_p
+      .store(call_loader(loader, glUniform2fv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform2fv_is_loaded() -> bool {
+    glUniform2fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform2fv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform2fv_str[..glUniform2fv_str.len() - 1]
+      );
+    }
+    let p = glUniform2fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform2fv_str[..glUniform2fv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform2fv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform2fv_str[..glUniform2fv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform2i_t = unsafe extern "system" fn(GLint, GLint, GLint);
+  static glUniform2i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform2i_str: &str = "glUniform2i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform2i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform2i_p
+      .store(call_loader(loader, glUniform2i_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform2i_is_loaded() -> bool {
+    glUniform2i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform2i(location: GLint, v0: GLint, v1: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform2i_str[..glUniform2i_str.len() - 1]
+      );
+    }
+    let p = glUniform2i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform2i_str[..glUniform2i_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform2i_t>(p)(location, v0, v1);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform2i_str[..glUniform2i_str.len() - 1],
+          location,
+          v0,
+          v1,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform2iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
+  static glUniform2iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform2iv_str: &str = "glUniform2iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform2iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform2iv_p
+      .store(call_loader(loader, glUniform2iv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform2iv_is_loaded() -> bool {
+    glUniform2iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform2iv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform2iv_str[..glUniform2iv_str.len() - 1]
+      );
+    }
+    let p = glUniform2iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform2iv_str[..glUniform2iv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform2iv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform2iv_str[..glUniform2iv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform2ui_t = unsafe extern "system" fn(GLint, GLuint, GLuint);
+  static glUniform2ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform2ui_str: &str = "glUniform2ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform2ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform2ui_p
+      .store(call_loader(loader, glUniform2ui_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform2ui_is_loaded() -> bool {
+    glUniform2ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform2ui(location: GLint, v0: GLuint, v1: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform2ui_str[..glUniform2ui_str.len() - 1]
+      );
+    }
+    let p = glUniform2ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform2ui_str[..glUniform2ui_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform2ui_t>(p)(location, v0, v1);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform2ui_str[..glUniform2ui_str.len() - 1],
+          location,
+          v0,
+          v1,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform2uiv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
+  static glUniform2uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform2uiv_str: &str = "glUniform2uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform2uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform2uiv_p.store(
+      call_loader(loader, glUniform2uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform2uiv_is_loaded() -> bool {
+    glUniform2uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform2uiv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform2uiv_str[..glUniform2uiv_str.len() - 1]
+      );
+    }
+    let p = glUniform2uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform2uiv_str[..glUniform2uiv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform2uiv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform2uiv_str[..glUniform2uiv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform3f_t =
+    unsafe extern "system" fn(GLint, GLfloat, GLfloat, GLfloat);
+  static glUniform3f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform3f_str: &str = "glUniform3f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform3f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform3f_p
+      .store(call_loader(loader, glUniform3f_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform3f_is_loaded() -> bool {
+    glUniform3f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform3f(
+    location: GLint,
+    v0: GLfloat,
+    v1: GLfloat,
+    v2: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform3f_str[..glUniform3f_str.len() - 1]
+      );
+    }
+    let p = glUniform3f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform3f_str[..glUniform3f_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform3f_t>(p)(location, v0, v1, v2);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform3f_str[..glUniform3f_str.len() - 1],
+          location,
+          v0,
+          v1,
+          v2,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform3fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
+  static glUniform3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform3fv_str: &str = "glUniform3fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform3fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform3fv_p
+      .store(call_loader(loader, glUniform3fv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform3fv_is_loaded() -> bool {
+    glUniform3fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform3fv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform3fv_str[..glUniform3fv_str.len() - 1]
+      );
+    }
+    let p = glUniform3fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform3fv_str[..glUniform3fv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform3fv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform3fv_str[..glUniform3fv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform3i_t = unsafe extern "system" fn(GLint, GLint, GLint, GLint);
+  static glUniform3i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform3i_str: &str = "glUniform3i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform3i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform3i_p
+      .store(call_loader(loader, glUniform3i_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform3i_is_loaded() -> bool {
+    glUniform3i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform3i(location: GLint, v0: GLint, v1: GLint, v2: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform3i_str[..glUniform3i_str.len() - 1]
+      );
+    }
+    let p = glUniform3i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform3i_str[..glUniform3i_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform3i_t>(p)(location, v0, v1, v2);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform3i_str[..glUniform3i_str.len() - 1],
+          location,
+          v0,
+          v1,
+          v2,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform3iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
+  static glUniform3iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform3iv_str: &str = "glUniform3iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform3iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform3iv_p
+      .store(call_loader(loader, glUniform3iv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform3iv_is_loaded() -> bool {
+    glUniform3iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform3iv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform3iv_str[..glUniform3iv_str.len() - 1]
+      );
+    }
+    let p = glUniform3iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform3iv_str[..glUniform3iv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform3iv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform3iv_str[..glUniform3iv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform3ui_t =
+    unsafe extern "system" fn(GLint, GLuint, GLuint, GLuint);
+  static glUniform3ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform3ui_str: &str = "glUniform3ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform3ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform3ui_p
+      .store(call_loader(loader, glUniform3ui_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform3ui_is_loaded() -> bool {
+    glUniform3ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform3ui(
+    location: GLint,
+    v0: GLuint,
+    v1: GLuint,
+    v2: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform3ui_str[..glUniform3ui_str.len() - 1]
+      );
+    }
+    let p = glUniform3ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform3ui_str[..glUniform3ui_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUniform3ui_t>(p)(location, v0, v1, v2);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform3ui_str[..glUniform3ui_str.len() - 1],
+          location,
+          v0,
+          v1,
+          v2,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform3uiv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
+  static glUniform3uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform3uiv_str: &str = "glUniform3uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform3uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform3uiv_p.store(
+      call_loader(loader, glUniform3uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform3uiv_is_loaded() -> bool {
+    glUniform3uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform3uiv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform3uiv_str[..glUniform3uiv_str.len() - 1]
+      );
+    }
+    let p = glUniform3uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform3uiv_str[..glUniform3uiv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform3uiv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform3uiv_str[..glUniform3uiv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform4f_t =
+    unsafe extern "system" fn(GLint, GLfloat, GLfloat, GLfloat, GLfloat);
+  static glUniform4f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform4f_str: &str = "glUniform4f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform4f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform4f_p
+      .store(call_loader(loader, glUniform4f_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform4f_is_loaded() -> bool {
+    glUniform4f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform4f(
+    location: GLint,
+    v0: GLfloat,
+    v1: GLfloat,
+    v2: GLfloat,
+    v3: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform4f_str[..glUniform4f_str.len() - 1]
+      );
+    }
+    let p = glUniform4f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform4f_str[..glUniform4f_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform4f_t>(p)(location, v0, v1, v2, v3);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform4f_str[..glUniform4f_str.len() - 1],
+          location,
+          v0,
+          v1,
+          v2,
+          v3,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform4fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLfloat);
+  static glUniform4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform4fv_str: &str = "glUniform4fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform4fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform4fv_p
+      .store(call_loader(loader, glUniform4fv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform4fv_is_loaded() -> bool {
+    glUniform4fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform4fv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform4fv_str[..glUniform4fv_str.len() - 1]
+      );
+    }
+    let p = glUniform4fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform4fv_str[..glUniform4fv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform4fv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform4fv_str[..glUniform4fv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform4i_t =
+    unsafe extern "system" fn(GLint, GLint, GLint, GLint, GLint);
+  static glUniform4i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform4i_str: &str = "glUniform4i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform4i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform4i_p
+      .store(call_loader(loader, glUniform4i_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform4i_is_loaded() -> bool {
+    glUniform4i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform4i(
+    location: GLint,
+    v0: GLint,
+    v1: GLint,
+    v2: GLint,
+    v3: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform4i_str[..glUniform4i_str.len() - 1]
+      );
+    }
+    let p = glUniform4i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform4i_str[..glUniform4i_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform4i_t>(p)(location, v0, v1, v2, v3);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform4i_str[..glUniform4i_str.len() - 1],
+          location,
+          v0,
+          v1,
+          v2,
+          v3,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform4iv_t = unsafe extern "system" fn(GLint, GLsizei, *const GLint);
+  static glUniform4iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform4iv_str: &str = "glUniform4iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform4iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform4iv_p
+      .store(call_loader(loader, glUniform4iv_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform4iv_is_loaded() -> bool {
+    glUniform4iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform4iv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform4iv_str[..glUniform4iv_str.len() - 1]
+      );
+    }
+    let p = glUniform4iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform4iv_str[..glUniform4iv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform4iv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform4iv_str[..glUniform4iv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform4ui_t =
+    unsafe extern "system" fn(GLint, GLuint, GLuint, GLuint, GLuint);
+  static glUniform4ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform4ui_str: &str = "glUniform4ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform4ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform4ui_p
+      .store(call_loader(loader, glUniform4ui_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform4ui_is_loaded() -> bool {
+    glUniform4ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform4ui(
+    location: GLint,
+    v0: GLuint,
+    v1: GLuint,
+    v2: GLuint,
+    v3: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform4ui_str[..glUniform4ui_str.len() - 1]
+      );
+    }
+    let p = glUniform4ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform4ui_str[..glUniform4ui_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform4ui_t>(p)(location, v0, v1, v2, v3);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform4ui_str[..glUniform4ui_str.len() - 1],
+          location,
+          v0,
+          v1,
+          v2,
+          v3,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniform4uiv_t =
+    unsafe extern "system" fn(GLint, GLsizei, *const GLuint);
+  static glUniform4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniform4uiv_str: &str = "glUniform4uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniform4uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniform4uiv_p.store(
+      call_loader(loader, glUniform4uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniform4uiv_is_loaded() -> bool {
+    glUniform4uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniform4uiv(
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniform4uiv_str[..glUniform4uiv_str.len() - 1]
+      );
+    }
+    let p = glUniform4uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUniform4uiv_str[..glUniform4uiv_str.len() - 1])
+    }
+    let out =
+      transmute::<*mut c_void, glUniform4uiv_t>(p)(location, count, value);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniform4uiv_str[..glUniform4uiv_str.len() - 1],
+          location,
+          count,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformBlockBinding_t =
+    unsafe extern "system" fn(GLuint, GLuint, GLuint);
+  static glUniformBlockBinding_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glUniformBlockBinding_str: &str = "glUniformBlockBinding\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformBlockBinding(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformBlockBinding_p.store(
+      call_loader(loader, glUniformBlockBinding_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformBlockBinding_is_loaded() -> bool {
+    glUniformBlockBinding_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformBlockBinding(
+    program: GLuint,
+    uniformBlockIndex: GLuint,
+    uniformBlockBinding: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformBlockBinding_str[..glUniformBlockBinding_str.len() - 1]
+      );
+    }
+    let p = glUniformBlockBinding_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformBlockBinding_str[..glUniformBlockBinding_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformBlockBinding_t>(p)(
+      program,
+      uniformBlockIndex,
+      uniformBlockBinding,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformBlockBinding_str[..glUniformBlockBinding_str.len() - 1],
+          program,
+          uniformBlockIndex,
+          uniformBlockBinding,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix2fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix2fv_str: &str = "glUniformMatrix2fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix2fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix2fv_p.store(
+      call_loader(loader, glUniformMatrix2fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix2fv_is_loaded() -> bool {
+    glUniformMatrix2fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix2fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix2fv_str[..glUniformMatrix2fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix2fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix2fv_str[..glUniformMatrix2fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix2fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix2fv_str[..glUniformMatrix2fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix2x3fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix2x3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix2x3fv_str: &str = "glUniformMatrix2x3fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix2x3fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix2x3fv_p.store(
+      call_loader(loader, glUniformMatrix2x3fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix2x3fv_is_loaded() -> bool {
+    glUniformMatrix2x3fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix2x3fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix2x3fv_str[..glUniformMatrix2x3fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix2x3fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix2x3fv_str[..glUniformMatrix2x3fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix2x3fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix2x3fv_str[..glUniformMatrix2x3fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix2x4fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix2x4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix2x4fv_str: &str = "glUniformMatrix2x4fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix2x4fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix2x4fv_p.store(
+      call_loader(loader, glUniformMatrix2x4fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix2x4fv_is_loaded() -> bool {
+    glUniformMatrix2x4fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix2x4fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix2x4fv_str[..glUniformMatrix2x4fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix2x4fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix2x4fv_str[..glUniformMatrix2x4fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix2x4fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix2x4fv_str[..glUniformMatrix2x4fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix3fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix3fv_str: &str = "glUniformMatrix3fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix3fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix3fv_p.store(
+      call_loader(loader, glUniformMatrix3fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix3fv_is_loaded() -> bool {
+    glUniformMatrix3fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix3fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix3fv_str[..glUniformMatrix3fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix3fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix3fv_str[..glUniformMatrix3fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix3fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix3fv_str[..glUniformMatrix3fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix3x2fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix3x2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix3x2fv_str: &str = "glUniformMatrix3x2fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix3x2fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix3x2fv_p.store(
+      call_loader(loader, glUniformMatrix3x2fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix3x2fv_is_loaded() -> bool {
+    glUniformMatrix3x2fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix3x2fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix3x2fv_str[..glUniformMatrix3x2fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix3x2fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix3x2fv_str[..glUniformMatrix3x2fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix3x2fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix3x2fv_str[..glUniformMatrix3x2fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix3x4fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix3x4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix3x4fv_str: &str = "glUniformMatrix3x4fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix3x4fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix3x4fv_p.store(
+      call_loader(loader, glUniformMatrix3x4fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix3x4fv_is_loaded() -> bool {
+    glUniformMatrix3x4fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix3x4fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix3x4fv_str[..glUniformMatrix3x4fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix3x4fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix3x4fv_str[..glUniformMatrix3x4fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix3x4fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix3x4fv_str[..glUniformMatrix3x4fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix4fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix4fv_str: &str = "glUniformMatrix4fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix4fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix4fv_p.store(
+      call_loader(loader, glUniformMatrix4fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix4fv_is_loaded() -> bool {
+    glUniformMatrix4fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix4fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix4fv_str[..glUniformMatrix4fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix4fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix4fv_str[..glUniformMatrix4fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix4fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix4fv_str[..glUniformMatrix4fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix4x2fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix4x2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix4x2fv_str: &str = "glUniformMatrix4x2fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix4x2fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix4x2fv_p.store(
+      call_loader(loader, glUniformMatrix4x2fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix4x2fv_is_loaded() -> bool {
+    glUniformMatrix4x2fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix4x2fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix4x2fv_str[..glUniformMatrix4x2fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix4x2fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix4x2fv_str[..glUniformMatrix4x2fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix4x2fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix4x2fv_str[..glUniformMatrix4x2fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUniformMatrix4x3fv_t =
+    unsafe extern "system" fn(GLint, GLsizei, GLboolean, *const GLfloat);
+  static glUniformMatrix4x3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUniformMatrix4x3fv_str: &str = "glUniformMatrix4x3fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUniformMatrix4x3fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUniformMatrix4x3fv_p.store(
+      call_loader(loader, glUniformMatrix4x3fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUniformMatrix4x3fv_is_loaded() -> bool {
+    glUniformMatrix4x3fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUniformMatrix4x3fv(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUniformMatrix4x3fv_str[..glUniformMatrix4x3fv_str.len() - 1]
+      );
+    }
+    let p = glUniformMatrix4x3fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glUniformMatrix4x3fv_str[..glUniformMatrix4x3fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glUniformMatrix4x3fv_t>(p)(
+      location, count, transpose, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glUniformMatrix4x3fv_str[..glUniformMatrix4x3fv_str.len() - 1],
+          location,
+          count,
+          transpose,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUnmapBuffer_t =
+    unsafe extern "system" fn(BufferTargetARB) -> GLboolean;
+  static glUnmapBuffer_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUnmapBuffer_str: &str = "glUnmapBuffer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUnmapBuffer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUnmapBuffer_p.store(
+      call_loader(loader, glUnmapBuffer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUnmapBuffer_is_loaded() -> bool {
+    glUnmapBuffer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUnmapBuffer(target: BufferTargetARB) -> GLboolean {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUnmapBuffer_str[..glUnmapBuffer_str.len() - 1]
+      );
+    }
+    let p = glUnmapBuffer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUnmapBuffer_str[..glUnmapBuffer_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUnmapBuffer_t>(p)(target);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}(0x{:X}) error: {err_name}",
+          &glUnmapBuffer_str[..glUnmapBuffer_str.len() - 1],
+          target,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glUseProgram_t = unsafe extern "system" fn(GLuint);
+  static glUseProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glUseProgram_str: &str = "glUseProgram\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glUseProgram(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glUseProgram_p
+      .store(call_loader(loader, glUseProgram_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glUseProgram_is_loaded() -> bool {
+    glUseProgram_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glUseProgram(program: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glUseProgram_str[..glUseProgram_str.len() - 1]
+      );
+    }
+    let p = glUseProgram_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glUseProgram_str[..glUseProgram_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glUseProgram_t>(p)(program);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glUseProgram_str[..glUseProgram_str.len() - 1],
+          program,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glValidateProgram_t = unsafe extern "system" fn(GLuint);
+  static glValidateProgram_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glValidateProgram_str: &str = "glValidateProgram\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glValidateProgram(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glValidateProgram_p.store(
+      call_loader(loader, glValidateProgram_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glValidateProgram_is_loaded() -> bool {
+    glValidateProgram_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glValidateProgram(program: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glValidateProgram_str[..glValidateProgram_str.len() - 1]
+      );
+    }
+    let p = glValidateProgram_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glValidateProgram_str[..glValidateProgram_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glValidateProgram_t>(p)(program);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}) error: {err_name}",
+          &glValidateProgram_str[..glValidateProgram_str.len() - 1],
+          program,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib1d_t = unsafe extern "system" fn(GLuint, GLdouble);
+  static glVertexAttrib1d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib1d_str: &str = "glVertexAttrib1d\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib1d(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib1d_p.store(
+      call_loader(loader, glVertexAttrib1d_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib1d_is_loaded() -> bool {
+    glVertexAttrib1d_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib1d(index: GLuint, x: GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib1d_str[..glVertexAttrib1d_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib1d_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib1d_str[..glVertexAttrib1d_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib1d_t>(p)(index, x);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib1d_str[..glVertexAttrib1d_str.len() - 1],
+          index,
+          x,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib1dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
+  static glVertexAttrib1dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib1dv_str: &str = "glVertexAttrib1dv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib1dv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib1dv_p.store(
+      call_loader(loader, glVertexAttrib1dv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib1dv_is_loaded() -> bool {
+    glVertexAttrib1dv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib1dv(index: GLuint, v: *const GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib1dv_str[..glVertexAttrib1dv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib1dv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib1dv_str[..glVertexAttrib1dv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib1dv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib1dv_str[..glVertexAttrib1dv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib1f_t = unsafe extern "system" fn(GLuint, GLfloat);
+  static glVertexAttrib1f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib1f_str: &str = "glVertexAttrib1f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib1f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib1f_p.store(
+      call_loader(loader, glVertexAttrib1f_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib1f_is_loaded() -> bool {
+    glVertexAttrib1f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib1f(index: GLuint, x: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib1f_str[..glVertexAttrib1f_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib1f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib1f_str[..glVertexAttrib1f_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib1f_t>(p)(index, x);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib1f_str[..glVertexAttrib1f_str.len() - 1],
+          index,
+          x,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib1fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
+  static glVertexAttrib1fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib1fv_str: &str = "glVertexAttrib1fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib1fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib1fv_p.store(
+      call_loader(loader, glVertexAttrib1fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib1fv_is_loaded() -> bool {
+    glVertexAttrib1fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib1fv(index: GLuint, v: *const GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib1fv_str[..glVertexAttrib1fv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib1fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib1fv_str[..glVertexAttrib1fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib1fv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib1fv_str[..glVertexAttrib1fv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib1s_t = unsafe extern "system" fn(GLuint, GLshort);
+  static glVertexAttrib1s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib1s_str: &str = "glVertexAttrib1s\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib1s(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib1s_p.store(
+      call_loader(loader, glVertexAttrib1s_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib1s_is_loaded() -> bool {
+    glVertexAttrib1s_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib1s(index: GLuint, x: GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib1s_str[..glVertexAttrib1s_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib1s_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib1s_str[..glVertexAttrib1s_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib1s_t>(p)(index, x);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib1s_str[..glVertexAttrib1s_str.len() - 1],
+          index,
+          x,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib1sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
+  static glVertexAttrib1sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib1sv_str: &str = "glVertexAttrib1sv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib1sv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib1sv_p.store(
+      call_loader(loader, glVertexAttrib1sv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib1sv_is_loaded() -> bool {
+    glVertexAttrib1sv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib1sv(index: GLuint, v: *const GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib1sv_str[..glVertexAttrib1sv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib1sv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib1sv_str[..glVertexAttrib1sv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib1sv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib1sv_str[..glVertexAttrib1sv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib2d_t =
+    unsafe extern "system" fn(GLuint, GLdouble, GLdouble);
+  static glVertexAttrib2d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib2d_str: &str = "glVertexAttrib2d\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib2d(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib2d_p.store(
+      call_loader(loader, glVertexAttrib2d_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib2d_is_loaded() -> bool {
+    glVertexAttrib2d_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib2d(index: GLuint, x: GLdouble, y: GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib2d_str[..glVertexAttrib2d_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib2d_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib2d_str[..glVertexAttrib2d_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib2d_t>(p)(index, x, y);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib2d_str[..glVertexAttrib2d_str.len() - 1],
+          index,
+          x,
+          y,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib2dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
+  static glVertexAttrib2dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib2dv_str: &str = "glVertexAttrib2dv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib2dv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib2dv_p.store(
+      call_loader(loader, glVertexAttrib2dv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib2dv_is_loaded() -> bool {
+    glVertexAttrib2dv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib2dv(index: GLuint, v: *const GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib2dv_str[..glVertexAttrib2dv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib2dv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib2dv_str[..glVertexAttrib2dv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib2dv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib2dv_str[..glVertexAttrib2dv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib2f_t = unsafe extern "system" fn(GLuint, GLfloat, GLfloat);
+  static glVertexAttrib2f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib2f_str: &str = "glVertexAttrib2f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib2f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib2f_p.store(
+      call_loader(loader, glVertexAttrib2f_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib2f_is_loaded() -> bool {
+    glVertexAttrib2f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib2f(index: GLuint, x: GLfloat, y: GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib2f_str[..glVertexAttrib2f_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib2f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib2f_str[..glVertexAttrib2f_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib2f_t>(p)(index, x, y);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib2f_str[..glVertexAttrib2f_str.len() - 1],
+          index,
+          x,
+          y,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib2fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
+  static glVertexAttrib2fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib2fv_str: &str = "glVertexAttrib2fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib2fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib2fv_p.store(
+      call_loader(loader, glVertexAttrib2fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib2fv_is_loaded() -> bool {
+    glVertexAttrib2fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib2fv(index: GLuint, v: *const GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib2fv_str[..glVertexAttrib2fv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib2fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib2fv_str[..glVertexAttrib2fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib2fv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib2fv_str[..glVertexAttrib2fv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib2s_t = unsafe extern "system" fn(GLuint, GLshort, GLshort);
+  static glVertexAttrib2s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib2s_str: &str = "glVertexAttrib2s\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib2s(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib2s_p.store(
+      call_loader(loader, glVertexAttrib2s_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib2s_is_loaded() -> bool {
+    glVertexAttrib2s_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib2s(index: GLuint, x: GLshort, y: GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib2s_str[..glVertexAttrib2s_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib2s_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib2s_str[..glVertexAttrib2s_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib2s_t>(p)(index, x, y);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib2s_str[..glVertexAttrib2s_str.len() - 1],
+          index,
+          x,
+          y,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib2sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
+  static glVertexAttrib2sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib2sv_str: &str = "glVertexAttrib2sv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib2sv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib2sv_p.store(
+      call_loader(loader, glVertexAttrib2sv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib2sv_is_loaded() -> bool {
+    glVertexAttrib2sv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib2sv(index: GLuint, v: *const GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib2sv_str[..glVertexAttrib2sv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib2sv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib2sv_str[..glVertexAttrib2sv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib2sv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib2sv_str[..glVertexAttrib2sv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib3d_t =
+    unsafe extern "system" fn(GLuint, GLdouble, GLdouble, GLdouble);
+  static glVertexAttrib3d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib3d_str: &str = "glVertexAttrib3d\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib3d(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib3d_p.store(
+      call_loader(loader, glVertexAttrib3d_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib3d_is_loaded() -> bool {
+    glVertexAttrib3d_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib3d(
+    index: GLuint,
+    x: GLdouble,
+    y: GLdouble,
+    z: GLdouble,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib3d_str[..glVertexAttrib3d_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib3d_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib3d_str[..glVertexAttrib3d_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib3d_t>(p)(index, x, y, z);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib3d_str[..glVertexAttrib3d_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib3dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
+  static glVertexAttrib3dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib3dv_str: &str = "glVertexAttrib3dv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib3dv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib3dv_p.store(
+      call_loader(loader, glVertexAttrib3dv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib3dv_is_loaded() -> bool {
+    glVertexAttrib3dv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib3dv(index: GLuint, v: *const GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib3dv_str[..glVertexAttrib3dv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib3dv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib3dv_str[..glVertexAttrib3dv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib3dv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib3dv_str[..glVertexAttrib3dv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib3f_t =
+    unsafe extern "system" fn(GLuint, GLfloat, GLfloat, GLfloat);
+  static glVertexAttrib3f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib3f_str: &str = "glVertexAttrib3f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib3f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib3f_p.store(
+      call_loader(loader, glVertexAttrib3f_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib3f_is_loaded() -> bool {
+    glVertexAttrib3f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib3f(
+    index: GLuint,
+    x: GLfloat,
+    y: GLfloat,
+    z: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib3f_str[..glVertexAttrib3f_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib3f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib3f_str[..glVertexAttrib3f_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib3f_t>(p)(index, x, y, z);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib3f_str[..glVertexAttrib3f_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib3fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
+  static glVertexAttrib3fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib3fv_str: &str = "glVertexAttrib3fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib3fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib3fv_p.store(
+      call_loader(loader, glVertexAttrib3fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib3fv_is_loaded() -> bool {
+    glVertexAttrib3fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib3fv(index: GLuint, v: *const GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib3fv_str[..glVertexAttrib3fv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib3fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib3fv_str[..glVertexAttrib3fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib3fv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib3fv_str[..glVertexAttrib3fv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib3s_t =
+    unsafe extern "system" fn(GLuint, GLshort, GLshort, GLshort);
+  static glVertexAttrib3s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib3s_str: &str = "glVertexAttrib3s\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib3s(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib3s_p.store(
+      call_loader(loader, glVertexAttrib3s_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib3s_is_loaded() -> bool {
+    glVertexAttrib3s_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib3s(
+    index: GLuint,
+    x: GLshort,
+    y: GLshort,
+    z: GLshort,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib3s_str[..glVertexAttrib3s_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib3s_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib3s_str[..glVertexAttrib3s_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib3s_t>(p)(index, x, y, z);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib3s_str[..glVertexAttrib3s_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib3sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
+  static glVertexAttrib3sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib3sv_str: &str = "glVertexAttrib3sv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib3sv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib3sv_p.store(
+      call_loader(loader, glVertexAttrib3sv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib3sv_is_loaded() -> bool {
+    glVertexAttrib3sv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib3sv(index: GLuint, v: *const GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib3sv_str[..glVertexAttrib3sv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib3sv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib3sv_str[..glVertexAttrib3sv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib3sv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib3sv_str[..glVertexAttrib3sv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4Nbv_t = unsafe extern "system" fn(GLuint, *const GLbyte);
+  static glVertexAttrib4Nbv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4Nbv_str: &str = "glVertexAttrib4Nbv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4Nbv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4Nbv_p.store(
+      call_loader(loader, glVertexAttrib4Nbv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4Nbv_is_loaded() -> bool {
+    glVertexAttrib4Nbv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4Nbv(index: GLuint, v: *const GLbyte) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4Nbv_str[..glVertexAttrib4Nbv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4Nbv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4Nbv_str[..glVertexAttrib4Nbv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4Nbv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4Nbv_str[..glVertexAttrib4Nbv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4Niv_t = unsafe extern "system" fn(GLuint, *const GLint);
+  static glVertexAttrib4Niv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4Niv_str: &str = "glVertexAttrib4Niv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4Niv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4Niv_p.store(
+      call_loader(loader, glVertexAttrib4Niv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4Niv_is_loaded() -> bool {
+    glVertexAttrib4Niv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4Niv(index: GLuint, v: *const GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4Niv_str[..glVertexAttrib4Niv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4Niv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4Niv_str[..glVertexAttrib4Niv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4Niv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4Niv_str[..glVertexAttrib4Niv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4Nsv_t = unsafe extern "system" fn(GLuint, *const GLshort);
+  static glVertexAttrib4Nsv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4Nsv_str: &str = "glVertexAttrib4Nsv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4Nsv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4Nsv_p.store(
+      call_loader(loader, glVertexAttrib4Nsv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4Nsv_is_loaded() -> bool {
+    glVertexAttrib4Nsv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4Nsv(index: GLuint, v: *const GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4Nsv_str[..glVertexAttrib4Nsv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4Nsv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4Nsv_str[..glVertexAttrib4Nsv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4Nsv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4Nsv_str[..glVertexAttrib4Nsv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4Nub_t =
+    unsafe extern "system" fn(GLuint, GLubyte, GLubyte, GLubyte, GLubyte);
+  static glVertexAttrib4Nub_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4Nub_str: &str = "glVertexAttrib4Nub\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4Nub(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4Nub_p.store(
+      call_loader(loader, glVertexAttrib4Nub_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4Nub_is_loaded() -> bool {
+    glVertexAttrib4Nub_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4Nub(
+    index: GLuint,
+    x: GLubyte,
+    y: GLubyte,
+    z: GLubyte,
+    w: GLubyte,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4Nub_str[..glVertexAttrib4Nub_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4Nub_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4Nub_str[..glVertexAttrib4Nub_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glVertexAttrib4Nub_t>(p)(index, x, y, z, w);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4Nub_str[..glVertexAttrib4Nub_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          w,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4Nubv_t =
+    unsafe extern "system" fn(GLuint, *const GLubyte);
+  static glVertexAttrib4Nubv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4Nubv_str: &str = "glVertexAttrib4Nubv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4Nubv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4Nubv_p.store(
+      call_loader(loader, glVertexAttrib4Nubv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4Nubv_is_loaded() -> bool {
+    glVertexAttrib4Nubv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4Nubv(index: GLuint, v: *const GLubyte) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4Nubv_str[..glVertexAttrib4Nubv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4Nubv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4Nubv_str[..glVertexAttrib4Nubv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4Nubv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4Nubv_str[..glVertexAttrib4Nubv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4Nuiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
+  static glVertexAttrib4Nuiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4Nuiv_str: &str = "glVertexAttrib4Nuiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4Nuiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4Nuiv_p.store(
+      call_loader(loader, glVertexAttrib4Nuiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4Nuiv_is_loaded() -> bool {
+    glVertexAttrib4Nuiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4Nuiv(index: GLuint, v: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4Nuiv_str[..glVertexAttrib4Nuiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4Nuiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4Nuiv_str[..glVertexAttrib4Nuiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4Nuiv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4Nuiv_str[..glVertexAttrib4Nuiv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4Nusv_t =
+    unsafe extern "system" fn(GLuint, *const GLushort);
+  static glVertexAttrib4Nusv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4Nusv_str: &str = "glVertexAttrib4Nusv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4Nusv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4Nusv_p.store(
+      call_loader(loader, glVertexAttrib4Nusv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4Nusv_is_loaded() -> bool {
+    glVertexAttrib4Nusv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4Nusv(index: GLuint, v: *const GLushort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4Nusv_str[..glVertexAttrib4Nusv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4Nusv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4Nusv_str[..glVertexAttrib4Nusv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4Nusv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4Nusv_str[..glVertexAttrib4Nusv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4bv_t = unsafe extern "system" fn(GLuint, *const GLbyte);
+  static glVertexAttrib4bv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4bv_str: &str = "glVertexAttrib4bv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4bv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4bv_p.store(
+      call_loader(loader, glVertexAttrib4bv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4bv_is_loaded() -> bool {
+    glVertexAttrib4bv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4bv(index: GLuint, v: *const GLbyte) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4bv_str[..glVertexAttrib4bv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4bv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4bv_str[..glVertexAttrib4bv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4bv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4bv_str[..glVertexAttrib4bv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4d_t =
+    unsafe extern "system" fn(GLuint, GLdouble, GLdouble, GLdouble, GLdouble);
+  static glVertexAttrib4d_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4d_str: &str = "glVertexAttrib4d\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4d(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4d_p.store(
+      call_loader(loader, glVertexAttrib4d_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4d_is_loaded() -> bool {
+    glVertexAttrib4d_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4d(
+    index: GLuint,
+    x: GLdouble,
+    y: GLdouble,
+    z: GLdouble,
+    w: GLdouble,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4d_str[..glVertexAttrib4d_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4d_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4d_str[..glVertexAttrib4d_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glVertexAttrib4d_t>(p)(index, x, y, z, w);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4d_str[..glVertexAttrib4d_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          w,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4dv_t = unsafe extern "system" fn(GLuint, *const GLdouble);
+  static glVertexAttrib4dv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4dv_str: &str = "glVertexAttrib4dv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4dv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4dv_p.store(
+      call_loader(loader, glVertexAttrib4dv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4dv_is_loaded() -> bool {
+    glVertexAttrib4dv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4dv(index: GLuint, v: *const GLdouble) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4dv_str[..glVertexAttrib4dv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4dv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4dv_str[..glVertexAttrib4dv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4dv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4dv_str[..glVertexAttrib4dv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4f_t =
+    unsafe extern "system" fn(GLuint, GLfloat, GLfloat, GLfloat, GLfloat);
+  static glVertexAttrib4f_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4f_str: &str = "glVertexAttrib4f\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4f(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4f_p.store(
+      call_loader(loader, glVertexAttrib4f_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4f_is_loaded() -> bool {
+    glVertexAttrib4f_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4f(
+    index: GLuint,
+    x: GLfloat,
+    y: GLfloat,
+    z: GLfloat,
+    w: GLfloat,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4f_str[..glVertexAttrib4f_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4f_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4f_str[..glVertexAttrib4f_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glVertexAttrib4f_t>(p)(index, x, y, z, w);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4f_str[..glVertexAttrib4f_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          w,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4fv_t = unsafe extern "system" fn(GLuint, *const GLfloat);
+  static glVertexAttrib4fv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4fv_str: &str = "glVertexAttrib4fv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4fv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4fv_p.store(
+      call_loader(loader, glVertexAttrib4fv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4fv_is_loaded() -> bool {
+    glVertexAttrib4fv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4fv(index: GLuint, v: *const GLfloat) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4fv_str[..glVertexAttrib4fv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4fv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4fv_str[..glVertexAttrib4fv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4fv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4fv_str[..glVertexAttrib4fv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4iv_t = unsafe extern "system" fn(GLuint, *const GLint);
+  static glVertexAttrib4iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4iv_str: &str = "glVertexAttrib4iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4iv_p.store(
+      call_loader(loader, glVertexAttrib4iv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4iv_is_loaded() -> bool {
+    glVertexAttrib4iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4iv(index: GLuint, v: *const GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4iv_str[..glVertexAttrib4iv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4iv_str[..glVertexAttrib4iv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4iv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4iv_str[..glVertexAttrib4iv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4s_t =
+    unsafe extern "system" fn(GLuint, GLshort, GLshort, GLshort, GLshort);
+  static glVertexAttrib4s_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4s_str: &str = "glVertexAttrib4s\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4s(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4s_p.store(
+      call_loader(loader, glVertexAttrib4s_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4s_is_loaded() -> bool {
+    glVertexAttrib4s_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4s(
+    index: GLuint,
+    x: GLshort,
+    y: GLshort,
+    z: GLshort,
+    w: GLshort,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4s_str[..glVertexAttrib4s_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4s_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4s_str[..glVertexAttrib4s_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glVertexAttrib4s_t>(p)(index, x, y, z, w);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4s_str[..glVertexAttrib4s_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          w,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
+  static glVertexAttrib4sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4sv_str: &str = "glVertexAttrib4sv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4sv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4sv_p.store(
+      call_loader(loader, glVertexAttrib4sv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4sv_is_loaded() -> bool {
+    glVertexAttrib4sv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4sv(index: GLuint, v: *const GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4sv_str[..glVertexAttrib4sv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4sv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4sv_str[..glVertexAttrib4sv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4sv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4sv_str[..glVertexAttrib4sv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4ubv_t = unsafe extern "system" fn(GLuint, *const GLubyte);
+  static glVertexAttrib4ubv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4ubv_str: &str = "glVertexAttrib4ubv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4ubv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4ubv_p.store(
+      call_loader(loader, glVertexAttrib4ubv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4ubv_is_loaded() -> bool {
+    glVertexAttrib4ubv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4ubv(index: GLuint, v: *const GLubyte) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4ubv_str[..glVertexAttrib4ubv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4ubv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4ubv_str[..glVertexAttrib4ubv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4ubv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4ubv_str[..glVertexAttrib4ubv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
+  static glVertexAttrib4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4uiv_str: &str = "glVertexAttrib4uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4uiv_p.store(
+      call_loader(loader, glVertexAttrib4uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4uiv_is_loaded() -> bool {
+    glVertexAttrib4uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4uiv(index: GLuint, v: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4uiv_str[..glVertexAttrib4uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4uiv_str[..glVertexAttrib4uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4uiv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4uiv_str[..glVertexAttrib4uiv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttrib4usv_t =
+    unsafe extern "system" fn(GLuint, *const GLushort);
+  static glVertexAttrib4usv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttrib4usv_str: &str = "glVertexAttrib4usv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttrib4usv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttrib4usv_p.store(
+      call_loader(loader, glVertexAttrib4usv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttrib4usv_is_loaded() -> bool {
+    glVertexAttrib4usv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttrib4usv(index: GLuint, v: *const GLushort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttrib4usv_str[..glVertexAttrib4usv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttrib4usv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttrib4usv_str[..glVertexAttrib4usv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttrib4usv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttrib4usv_str[..glVertexAttrib4usv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribDivisor_t = unsafe extern "system" fn(GLuint, GLuint);
+  static glVertexAttribDivisor_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glVertexAttribDivisor_str: &str = "glVertexAttribDivisor\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribDivisor(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribDivisor_p.store(
+      call_loader(loader, glVertexAttribDivisor_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribDivisor_is_loaded() -> bool {
+    glVertexAttribDivisor_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribDivisor(index: GLuint, divisor: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribDivisor_str[..glVertexAttribDivisor_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribDivisor_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribDivisor_str[..glVertexAttribDivisor_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glVertexAttribDivisor_t>(p)(index, divisor);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribDivisor_str[..glVertexAttribDivisor_str.len() - 1],
+          index,
+          divisor,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI1i_t = unsafe extern "system" fn(GLuint, GLint);
+  static glVertexAttribI1i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI1i_str: &str = "glVertexAttribI1i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI1i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI1i_p.store(
+      call_loader(loader, glVertexAttribI1i_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI1i_is_loaded() -> bool {
+    glVertexAttribI1i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI1i(index: GLuint, x: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI1i_str[..glVertexAttribI1i_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI1i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI1i_str[..glVertexAttribI1i_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI1i_t>(p)(index, x);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI1i_str[..glVertexAttribI1i_str.len() - 1],
+          index,
+          x,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI1iv_t = unsafe extern "system" fn(GLuint, *const GLint);
+  static glVertexAttribI1iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI1iv_str: &str = "glVertexAttribI1iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI1iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI1iv_p.store(
+      call_loader(loader, glVertexAttribI1iv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI1iv_is_loaded() -> bool {
+    glVertexAttribI1iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI1iv(index: GLuint, v: *const GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI1iv_str[..glVertexAttribI1iv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI1iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI1iv_str[..glVertexAttribI1iv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI1iv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI1iv_str[..glVertexAttribI1iv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI1ui_t = unsafe extern "system" fn(GLuint, GLuint);
+  static glVertexAttribI1ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI1ui_str: &str = "glVertexAttribI1ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI1ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI1ui_p.store(
+      call_loader(loader, glVertexAttribI1ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI1ui_is_loaded() -> bool {
+    glVertexAttribI1ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI1ui(index: GLuint, x: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI1ui_str[..glVertexAttribI1ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI1ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI1ui_str[..glVertexAttribI1ui_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI1ui_t>(p)(index, x);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI1ui_str[..glVertexAttribI1ui_str.len() - 1],
+          index,
+          x,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI1uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
+  static glVertexAttribI1uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI1uiv_str: &str = "glVertexAttribI1uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI1uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI1uiv_p.store(
+      call_loader(loader, glVertexAttribI1uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI1uiv_is_loaded() -> bool {
+    glVertexAttribI1uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI1uiv(index: GLuint, v: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI1uiv_str[..glVertexAttribI1uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI1uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI1uiv_str[..glVertexAttribI1uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI1uiv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI1uiv_str[..glVertexAttribI1uiv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI2i_t = unsafe extern "system" fn(GLuint, GLint, GLint);
+  static glVertexAttribI2i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI2i_str: &str = "glVertexAttribI2i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI2i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI2i_p.store(
+      call_loader(loader, glVertexAttribI2i_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI2i_is_loaded() -> bool {
+    glVertexAttribI2i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI2i(index: GLuint, x: GLint, y: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI2i_str[..glVertexAttribI2i_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI2i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI2i_str[..glVertexAttribI2i_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI2i_t>(p)(index, x, y);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribI2i_str[..glVertexAttribI2i_str.len() - 1],
+          index,
+          x,
+          y,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI2iv_t = unsafe extern "system" fn(GLuint, *const GLint);
+  static glVertexAttribI2iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI2iv_str: &str = "glVertexAttribI2iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI2iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI2iv_p.store(
+      call_loader(loader, glVertexAttribI2iv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI2iv_is_loaded() -> bool {
+    glVertexAttribI2iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI2iv(index: GLuint, v: *const GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI2iv_str[..glVertexAttribI2iv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI2iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI2iv_str[..glVertexAttribI2iv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI2iv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI2iv_str[..glVertexAttribI2iv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI2ui_t = unsafe extern "system" fn(GLuint, GLuint, GLuint);
+  static glVertexAttribI2ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI2ui_str: &str = "glVertexAttribI2ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI2ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI2ui_p.store(
+      call_loader(loader, glVertexAttribI2ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI2ui_is_loaded() -> bool {
+    glVertexAttribI2ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI2ui(index: GLuint, x: GLuint, y: GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI2ui_str[..glVertexAttribI2ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI2ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI2ui_str[..glVertexAttribI2ui_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI2ui_t>(p)(index, x, y);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribI2ui_str[..glVertexAttribI2ui_str.len() - 1],
+          index,
+          x,
+          y,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI2uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
+  static glVertexAttribI2uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI2uiv_str: &str = "glVertexAttribI2uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI2uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI2uiv_p.store(
+      call_loader(loader, glVertexAttribI2uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI2uiv_is_loaded() -> bool {
+    glVertexAttribI2uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI2uiv(index: GLuint, v: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI2uiv_str[..glVertexAttribI2uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI2uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI2uiv_str[..glVertexAttribI2uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI2uiv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI2uiv_str[..glVertexAttribI2uiv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI3i_t =
+    unsafe extern "system" fn(GLuint, GLint, GLint, GLint);
+  static glVertexAttribI3i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI3i_str: &str = "glVertexAttribI3i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI3i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI3i_p.store(
+      call_loader(loader, glVertexAttribI3i_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI3i_is_loaded() -> bool {
+    glVertexAttribI3i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI3i(index: GLuint, x: GLint, y: GLint, z: GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI3i_str[..glVertexAttribI3i_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI3i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI3i_str[..glVertexAttribI3i_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI3i_t>(p)(index, x, y, z);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribI3i_str[..glVertexAttribI3i_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI3iv_t = unsafe extern "system" fn(GLuint, *const GLint);
+  static glVertexAttribI3iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI3iv_str: &str = "glVertexAttribI3iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI3iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI3iv_p.store(
+      call_loader(loader, glVertexAttribI3iv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI3iv_is_loaded() -> bool {
+    glVertexAttribI3iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI3iv(index: GLuint, v: *const GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI3iv_str[..glVertexAttribI3iv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI3iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI3iv_str[..glVertexAttribI3iv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI3iv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI3iv_str[..glVertexAttribI3iv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI3ui_t =
+    unsafe extern "system" fn(GLuint, GLuint, GLuint, GLuint);
+  static glVertexAttribI3ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI3ui_str: &str = "glVertexAttribI3ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI3ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI3ui_p.store(
+      call_loader(loader, glVertexAttribI3ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI3ui_is_loaded() -> bool {
+    glVertexAttribI3ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI3ui(
+    index: GLuint,
+    x: GLuint,
+    y: GLuint,
+    z: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI3ui_str[..glVertexAttribI3ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI3ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI3ui_str[..glVertexAttribI3ui_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI3ui_t>(p)(index, x, y, z);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribI3ui_str[..glVertexAttribI3ui_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI3uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
+  static glVertexAttribI3uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI3uiv_str: &str = "glVertexAttribI3uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI3uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI3uiv_p.store(
+      call_loader(loader, glVertexAttribI3uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI3uiv_is_loaded() -> bool {
+    glVertexAttribI3uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI3uiv(index: GLuint, v: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI3uiv_str[..glVertexAttribI3uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI3uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI3uiv_str[..glVertexAttribI3uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI3uiv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI3uiv_str[..glVertexAttribI3uiv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4bv_t = unsafe extern "system" fn(GLuint, *const GLbyte);
+  static glVertexAttribI4bv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4bv_str: &str = "glVertexAttribI4bv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4bv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4bv_p.store(
+      call_loader(loader, glVertexAttribI4bv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4bv_is_loaded() -> bool {
+    glVertexAttribI4bv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4bv(index: GLuint, v: *const GLbyte) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4bv_str[..glVertexAttribI4bv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4bv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4bv_str[..glVertexAttribI4bv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI4bv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4bv_str[..glVertexAttribI4bv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4i_t =
+    unsafe extern "system" fn(GLuint, GLint, GLint, GLint, GLint);
+  static glVertexAttribI4i_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4i_str: &str = "glVertexAttribI4i\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4i(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4i_p.store(
+      call_loader(loader, glVertexAttribI4i_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4i_is_loaded() -> bool {
+    glVertexAttribI4i_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4i(
+    index: GLuint,
+    x: GLint,
+    y: GLint,
+    z: GLint,
+    w: GLint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4i_str[..glVertexAttribI4i_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4i_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4i_str[..glVertexAttribI4i_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glVertexAttribI4i_t>(p)(index, x, y, z, w);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4i_str[..glVertexAttribI4i_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          w,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4iv_t = unsafe extern "system" fn(GLuint, *const GLint);
+  static glVertexAttribI4iv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4iv_str: &str = "glVertexAttribI4iv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4iv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4iv_p.store(
+      call_loader(loader, glVertexAttribI4iv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4iv_is_loaded() -> bool {
+    glVertexAttribI4iv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4iv(index: GLuint, v: *const GLint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4iv_str[..glVertexAttribI4iv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4iv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4iv_str[..glVertexAttribI4iv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI4iv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4iv_str[..glVertexAttribI4iv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4sv_t = unsafe extern "system" fn(GLuint, *const GLshort);
+  static glVertexAttribI4sv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4sv_str: &str = "glVertexAttribI4sv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4sv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4sv_p.store(
+      call_loader(loader, glVertexAttribI4sv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4sv_is_loaded() -> bool {
+    glVertexAttribI4sv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4sv(index: GLuint, v: *const GLshort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4sv_str[..glVertexAttribI4sv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4sv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4sv_str[..glVertexAttribI4sv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI4sv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4sv_str[..glVertexAttribI4sv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4ubv_t =
+    unsafe extern "system" fn(GLuint, *const GLubyte);
+  static glVertexAttribI4ubv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4ubv_str: &str = "glVertexAttribI4ubv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4ubv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4ubv_p.store(
+      call_loader(loader, glVertexAttribI4ubv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4ubv_is_loaded() -> bool {
+    glVertexAttribI4ubv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4ubv(index: GLuint, v: *const GLubyte) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4ubv_str[..glVertexAttribI4ubv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4ubv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4ubv_str[..glVertexAttribI4ubv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI4ubv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4ubv_str[..glVertexAttribI4ubv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4ui_t =
+    unsafe extern "system" fn(GLuint, GLuint, GLuint, GLuint, GLuint);
+  static glVertexAttribI4ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4ui_str: &str = "glVertexAttribI4ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4ui_p.store(
+      call_loader(loader, glVertexAttribI4ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4ui_is_loaded() -> bool {
+    glVertexAttribI4ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4ui(
+    index: GLuint,
+    x: GLuint,
+    y: GLuint,
+    z: GLuint,
+    w: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4ui_str[..glVertexAttribI4ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4ui_str[..glVertexAttribI4ui_str.len() - 1]
+      )
+    }
+    let out =
+      transmute::<*mut c_void, glVertexAttribI4ui_t>(p)(index, x, y, z, w);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4ui_str[..glVertexAttribI4ui_str.len() - 1],
+          index,
+          x,
+          y,
+          z,
+          w,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4uiv_t = unsafe extern "system" fn(GLuint, *const GLuint);
+  static glVertexAttribI4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4uiv_str: &str = "glVertexAttribI4uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4uiv_p.store(
+      call_loader(loader, glVertexAttribI4uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4uiv_is_loaded() -> bool {
+    glVertexAttribI4uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4uiv(index: GLuint, v: *const GLuint) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4uiv_str[..glVertexAttribI4uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4uiv_str[..glVertexAttribI4uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI4uiv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4uiv_str[..glVertexAttribI4uiv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribI4usv_t =
+    unsafe extern "system" fn(GLuint, *const GLushort);
+  static glVertexAttribI4usv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribI4usv_str: &str = "glVertexAttribI4usv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribI4usv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribI4usv_p.store(
+      call_loader(loader, glVertexAttribI4usv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribI4usv_is_loaded() -> bool {
+    glVertexAttribI4usv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribI4usv(index: GLuint, v: *const GLushort) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribI4usv_str[..glVertexAttribI4usv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribI4usv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribI4usv_str[..glVertexAttribI4usv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribI4usv_t>(p)(index, v);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}) error: {err_name}",
+          &glVertexAttribI4usv_str[..glVertexAttribI4usv_str.len() - 1],
+          index,
+          v,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribIPointer_t = unsafe extern "system" fn(
+    GLuint,
+    GLint,
+    VertexAttribPointerType,
+    GLsizei,
+    *const c_void,
+  );
+  static glVertexAttribIPointer_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glVertexAttribIPointer_str: &str = "glVertexAttribIPointer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribIPointer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribIPointer_p.store(
+      call_loader(loader, glVertexAttribIPointer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribIPointer_is_loaded() -> bool {
+    glVertexAttribIPointer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribIPointer(
+    index: GLuint,
+    size: GLint,
+    type_: VertexAttribPointerType,
+    stride: GLsizei,
+    pointer: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribIPointer_str[..glVertexAttribIPointer_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribIPointer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribIPointer_str[..glVertexAttribIPointer_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribIPointer_t>(p)(
+      index, size, type_, stride, pointer,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribIPointer_str[..glVertexAttribIPointer_str.len() - 1],
+          index,
+          size,
+          type_,
+          stride,
+          pointer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP1ui_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    GLuint,
+  );
+  static glVertexAttribP1ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP1ui_str: &str = "glVertexAttribP1ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP1ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP1ui_p.store(
+      call_loader(loader, glVertexAttribP1ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP1ui_is_loaded() -> bool {
+    glVertexAttribP1ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP1ui(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP1ui_str[..glVertexAttribP1ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP1ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP1ui_str[..glVertexAttribP1ui_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP1ui_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP1ui_str[..glVertexAttribP1ui_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP1uiv_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    *const GLuint,
+  );
+  static glVertexAttribP1uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP1uiv_str: &str = "glVertexAttribP1uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP1uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP1uiv_p.store(
+      call_loader(loader, glVertexAttribP1uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP1uiv_is_loaded() -> bool {
+    glVertexAttribP1uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP1uiv(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP1uiv_str[..glVertexAttribP1uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP1uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP1uiv_str[..glVertexAttribP1uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP1uiv_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP1uiv_str[..glVertexAttribP1uiv_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP2ui_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    GLuint,
+  );
+  static glVertexAttribP2ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP2ui_str: &str = "glVertexAttribP2ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP2ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP2ui_p.store(
+      call_loader(loader, glVertexAttribP2ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP2ui_is_loaded() -> bool {
+    glVertexAttribP2ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP2ui(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP2ui_str[..glVertexAttribP2ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP2ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP2ui_str[..glVertexAttribP2ui_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP2ui_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP2ui_str[..glVertexAttribP2ui_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP2uiv_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    *const GLuint,
+  );
+  static glVertexAttribP2uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP2uiv_str: &str = "glVertexAttribP2uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP2uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP2uiv_p.store(
+      call_loader(loader, glVertexAttribP2uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP2uiv_is_loaded() -> bool {
+    glVertexAttribP2uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP2uiv(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP2uiv_str[..glVertexAttribP2uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP2uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP2uiv_str[..glVertexAttribP2uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP2uiv_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP2uiv_str[..glVertexAttribP2uiv_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP3ui_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    GLuint,
+  );
+  static glVertexAttribP3ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP3ui_str: &str = "glVertexAttribP3ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP3ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP3ui_p.store(
+      call_loader(loader, glVertexAttribP3ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP3ui_is_loaded() -> bool {
+    glVertexAttribP3ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP3ui(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP3ui_str[..glVertexAttribP3ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP3ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP3ui_str[..glVertexAttribP3ui_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP3ui_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP3ui_str[..glVertexAttribP3ui_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP3uiv_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    *const GLuint,
+  );
+  static glVertexAttribP3uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP3uiv_str: &str = "glVertexAttribP3uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP3uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP3uiv_p.store(
+      call_loader(loader, glVertexAttribP3uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP3uiv_is_loaded() -> bool {
+    glVertexAttribP3uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP3uiv(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP3uiv_str[..glVertexAttribP3uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP3uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP3uiv_str[..glVertexAttribP3uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP3uiv_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP3uiv_str[..glVertexAttribP3uiv_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP4ui_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    GLuint,
+  );
+  static glVertexAttribP4ui_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP4ui_str: &str = "glVertexAttribP4ui\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP4ui(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP4ui_p.store(
+      call_loader(loader, glVertexAttribP4ui_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP4ui_is_loaded() -> bool {
+    glVertexAttribP4ui_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP4ui(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP4ui_str[..glVertexAttribP4ui_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP4ui_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP4ui_str[..glVertexAttribP4ui_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP4ui_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP4ui_str[..glVertexAttribP4ui_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribP4uiv_t = unsafe extern "system" fn(
+    GLuint,
+    VertexAttribPointerType,
+    GLboolean,
+    *const GLuint,
+  );
+  static glVertexAttribP4uiv_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glVertexAttribP4uiv_str: &str = "glVertexAttribP4uiv\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribP4uiv(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribP4uiv_p.store(
+      call_loader(loader, glVertexAttribP4uiv_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribP4uiv_is_loaded() -> bool {
+    glVertexAttribP4uiv_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribP4uiv(
+    index: GLuint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    value: *const GLuint,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribP4uiv_str[..glVertexAttribP4uiv_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribP4uiv_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribP4uiv_str[..glVertexAttribP4uiv_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribP4uiv_t>(p)(
+      index, type_, normalized, value,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, 0x{:X}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribP4uiv_str[..glVertexAttribP4uiv_str.len() - 1],
+          index,
+          type_,
+          normalized,
+          value,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glVertexAttribPointer_t = unsafe extern "system" fn(
+    GLuint,
+    GLint,
+    VertexAttribPointerType,
+    GLboolean,
+    GLsizei,
+    *const c_void,
+  );
+  static glVertexAttribPointer_p: AtomicPtr<c_void> =
+    AtomicPtr::new(null_mut());
+  const glVertexAttribPointer_str: &str = "glVertexAttribPointer\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glVertexAttribPointer(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glVertexAttribPointer_p.store(
+      call_loader(loader, glVertexAttribPointer_str.as_bytes()),
+      Ordering::SeqCst,
+    )
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glVertexAttribPointer_is_loaded() -> bool {
+    glVertexAttribPointer_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glVertexAttribPointer(
+    index: GLuint,
+    size: GLint,
+    type_: VertexAttribPointerType,
+    normalized: GLboolean,
+    stride: GLsizei,
+    pointer: *const c_void,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!(
+        "calling {}",
+        &glVertexAttribPointer_str[..glVertexAttribPointer_str.len() - 1]
+      );
+    }
+    let p = glVertexAttribPointer_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!(
+        "{} not loaded",
+        &glVertexAttribPointer_str[..glVertexAttribPointer_str.len() - 1]
+      )
+    }
+    let out = transmute::<*mut c_void, glVertexAttribPointer_t>(p)(
+      index, size, type_, normalized, stride, pointer,
+    );
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, 0x{:X}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glVertexAttribPointer_str[..glVertexAttribPointer_str.len() - 1],
+          index,
+          size,
+          type_,
+          normalized,
+          stride,
+          pointer,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glViewport_t = unsafe extern "system" fn(GLint, GLint, GLsizei, GLsizei);
+  static glViewport_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glViewport_str: &str = "glViewport\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glViewport(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glViewport_p
+      .store(call_loader(loader, glViewport_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glViewport_is_loaded() -> bool {
+    glViewport_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glViewport(
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  ) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glViewport_str[..glViewport_str.len() - 1]);
+    }
+    let p = glViewport_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glViewport_str[..glViewport_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glViewport_t>(p)(x, y, width, height);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}, {:?}) error: {err_name}",
+          &glViewport_str[..glViewport_str.len() - 1],
+          x,
+          y,
+          width,
+          height,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
+
+  type glWaitSync_t = unsafe extern "system" fn(GLsync, GLbitfield, GLuint64);
+  static glWaitSync_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+  const glWaitSync_str: &str = "glWaitSync\0";
+  #[inline]
+  #[doc(hidden)]
+  pub unsafe fn load_glWaitSync(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) {
+    glWaitSync_p
+      .store(call_loader(loader, glWaitSync_str.as_bytes()), Ordering::SeqCst)
+  }
+  #[inline]
+  #[doc(hidden)]
+  pub fn glWaitSync_is_loaded() -> bool {
+    glWaitSync_p.load(Ordering::Relaxed).is_null().not()
+  }
+  #[inline]
+  pub unsafe fn glWaitSync(sync: GLsync, flags: GLbitfield, timeout: GLuint64) {
+    #[cfg(feature = "trace_calls")]
+    {
+      std::println!("calling {}", &glWaitSync_str[..glWaitSync_str.len() - 1]);
+    }
+    let p = glWaitSync_p.load(Ordering::Relaxed);
+    if p.is_null() {
+      panic!("{} not loaded", &glWaitSync_str[..glWaitSync_str.len() - 1])
+    }
+    let out = transmute::<*mut c_void, glWaitSync_t>(p)(sync, flags, timeout);
+    #[cfg(feature = "error_checks")]
+    {
+      let err = glGetError();
+      if err != GL_NO_ERROR {
+        std::println!(
+          "{}({:?}, {:?}, {:?}) error: {err_name}",
+          &glWaitSync_str[..glWaitSync_str.len() - 1],
+          sync,
+          flags,
+          timeout,
+          err_name = error_name_for(err)
+        );
+      }
+    }
+    out
+  }
 }
 
 #[cfg(feature = "struct_loader")]

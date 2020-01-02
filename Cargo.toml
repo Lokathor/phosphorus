@@ -14,4 +14,6 @@ chlorine = "1"
 [features]
 global_loader = []
 struct_loader = []
-default = ["global_loader", "struct_loader"]
+trace_calls = []
+error_checks = []
+default = ["global_loader", "struct_loader", "trace_calls", "error_checks"]

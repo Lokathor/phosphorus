@@ -21,9 +21,14 @@ fn main() {
     &[],
   );
 
-  println!("#![no_std]");
+  println!("#![cfg_attr(not(any(feature = \"trace_calls\", feature = \"error_checks\")), no_std)]");
   println!("#![allow(bad_style)]");
   println!("#![allow(clippy::unreadable_literal)]");
+  println!("#![allow(clippy::missing_safety_doc)]");
+  println!("#![allow(clippy::let_unit_value)]");
+  println!("#![allow(clippy::let_and_return)]");
+  println!("#![allow(clippy::too_many_arguments)]");
+  println!("#![allow(clippy::many_single_char_names)]");
   println!();
   println!("/*");
   println!("Bindings for GL.");
@@ -127,20 +132,45 @@ fn main() {
     println!(
       r#"#[cfg(any(feature="global_loader", feature="struct_loader"))]"#
     );
-    println!("use core::ptr::NonNull;");
-    println!(
-      r#"#[cfg(any(feature="global_loader", feature="struct_loader"))]"#
-    );
     println!("fn call_loader(");
-    println!("  loader: &mut dyn FnMut(*const c_char) -> *const c_void,");
+    println!("  loader: &mut dyn FnMut(*const c_char) -> *mut c_void,");
     println!("  name: &[u8],");
-    println!(") -> Option<NonNull<c_void>> {{");
+    println!(") -> *mut c_void {{");
     println!("  debug_assert!(*name.last().unwrap() == 0_u8);");
     println!("  let p = loader(name.as_ptr() as *const c_char);");
     println!("  if fn_ptr_ok(p) {{");
-    println!("    NonNull::new(p as *mut c_void)");
+    println!("    p");
     println!("  }} else {{");
-    println!("    None");
+    println!("    core::ptr::null_mut()");
+    println!("  }}");
+    println!("}}");
+
+    let enum_prefix = "GL_";
+    println!();
+    println!(r#"#[cfg(feature="error_checks")]"#);
+    println!("use std::borrow::Cow;");
+    println!(r#"#[cfg(feature="error_checks")]"#);
+    println!("fn error_name_for(err: GLenum) -> Cow<'static, str> {{");
+    println!("  match err {{");
+    for short_name in &[
+      "INVALID_ENUM",
+      "INVALID_VALUE",
+      "INVALID_OPERATION",
+      "INVALID_FRAMEBUFFER_OPERATION",
+      "OUT_OF_MEMORY",
+      "STACK_UNDERFLOW",
+      "STACK_OVERFLOW",
+    ] {
+      let gl_name = format!("GL_{}", short_name);
+      let prefixed_name = format!("{}{}", enum_prefix, short_name);
+      if output.enums.keys().any(|k| k == &gl_name) {
+        println!(
+          "    {prefixed_name} => Cow::Borrowed(\"{prefixed_name}\"),",
+          prefixed_name = prefixed_name
+        );
+      }
+    }
+    println!("    _ => Cow::Owned(format!(\"0x{{:X}}\", err)),");
     println!("  }}");
     println!("}}");
   }
@@ -153,12 +183,19 @@ fn main() {
     println!("pub mod global_loader {{");
     println!("  use super::*;");
     println!("  use core::ptr::null_mut;");
+    println!("  use core::mem::transmute;");
+    println!("  use core::ops::Not;");
     println!("  use core::sync::atomic::{{AtomicPtr, Ordering}};");
-    for command in output.commands.iter() {
+    let mut command_v: Vec<String> = output
+      .commands
+      .iter()
+      .map(|command| format!("{}", GlobalCommand { command }))
+      .collect();
+    command_v.sort();
+    for command_string in command_v {
       println!();
-      println!("  {}", GlobalCommand { command });
+      println!("  {}", command_string);
     }
-    println!("  // TODO!");
     println!("}}");
     // TODO: output the commands as global functions.
   }

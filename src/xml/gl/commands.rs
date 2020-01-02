@@ -104,6 +104,46 @@ impl Command {
     }
     out
   }
+
+  fn param_names(&self) -> String {
+    let mut out = String::new();
+    for param in self.params.iter() {
+      if param.name == "type" {
+        out.push_str("type_");
+      } else if param.name == "ref" {
+        out.push_str("ref_");
+      } else {
+        out.push_str(&param.name);
+      }
+      out.push_str(", ");
+    }
+    if self.params.len() > 0 {
+      out.pop();
+      out.pop();
+    }
+    out
+  }
+
+  fn param_names_and_types(&self) -> String {
+    let mut out = String::new();
+    for param in self.params.iter() {
+      if param.name == "type" {
+        out.push_str("type_");
+      } else if param.name == "ref" {
+        out.push_str("ref_");
+      } else {
+        out.push_str(&param.name);
+      }
+      out.push_str(": ");
+      out.push_str(&param.rust_param_type());
+      out.push_str(", ");
+    }
+    if self.params.len() > 0 {
+      out.pop();
+      out.pop();
+    }
+    out
+  }
 }
 
 /// Displayer for a global version of a given Command.
@@ -117,19 +157,66 @@ impl core::fmt::Display for GlobalCommand<'_> {
       if f.alternate() { &self.command.name[2..] } else { &self.command.name };
     let rust_fn_type = self.command.rust_fn_type();
     let type_alias_name = format!("{}_t", the_name);
-    write!(f, "type {} = {};", type_alias_name, rust_fn_type)?;
+    let ptr_name = format!("{}_p", the_name);
+    let str_name = format!("{}_str", the_name);
+    let param_names = self.command.param_names();
+    let param_names_and_types = self.command.param_names_and_types();
+    let return_tag = if let Some(r_type) = self.command.return_type.as_ref() {
+      format!("-> {}", r_type)
+    } else {
+      String::new()
+    };
+    let get_error = if f.alternate() { "GetError" } else { "glGetError" };
+    let no_error = if f.alternate() { "NO_ERROR" } else { "GL_NO_ERROR" };
+    let mut error_format_string = String::new();
+    for param in self.command.params.iter() {
+      if param.ptype == "GLenum" {
+        error_format_string.push_str("0x{:X}, ");
+      } else {
+        error_format_string.push_str("{:?}, ");
+      }
+    }
+    if self.command.params.len() > 0 {
+      error_format_string.pop();
+      error_format_string.pop();
+    }
+    let error_check = if self.command.name != "glGetError" {
+      format!("#[cfg(feature = \"error_checks\")] {{ let err = {get_error}(); if err != {no_error} {{ std::println!(\"{{}}({error_format_string}) error: {{err_name}}\", &{str_name}[..{str_name}.len()-1], {param_names}{param_comma} err_name = error_name_for(err)); }} }}", get_error = get_error, no_error = no_error, param_names = param_names, str_name = str_name, error_format_string = error_format_string, param_comma = if self.command.params.len() > 0 { ", " } else { "" })
+    } else {
+      String::new()
+    };
     write!(
       f,
-      " static {}_p: AtomicPtr<c_void> = AtomicPtr::new(null_mut());",
-      the_name
+      "type {type_alias_name} = {rust_fn_type};",
+      type_alias_name = type_alias_name,
+      rust_fn_type = rust_fn_type
     )?;
-    write!(f, " const {}_str: &str = \"{}\\0\";", the_name, self.command.name)?;
     write!(
       f,
-      " #[doc(hidden)] pub fn load_{}() {{ unimplemented!() }}",
-      the_name
+      " static {ptr_name}: AtomicPtr<c_void> = AtomicPtr::new(null_mut());",
+      ptr_name = ptr_name
     )?;
-    write!(f, " pub fn {}() {{ unimplemented!() }}", the_name)?;
+    write!(
+      f,
+      " const {str_name}: &str = \"{full_name}\\0\";",
+      str_name = str_name,
+      full_name = self.command.name
+    )?;
+    write!(
+      f,
+      " #[inline] #[doc(hidden)] pub unsafe fn load_{the_name}(loader: &mut dyn FnMut(*const c_char) -> *mut c_void) {{ {ptr_name}.store(call_loader(loader, {str_name}.as_bytes()), Ordering::SeqCst) }}",
+      the_name = the_name,
+      ptr_name = ptr_name,
+      str_name = str_name,
+    )?;
+    write!(
+      f,
+      " #[inline] #[doc(hidden)] pub fn {the_name}_is_loaded() -> bool {{ {ptr_name}.load(Ordering::Relaxed).is_null().not() }}",
+      the_name = the_name,
+      ptr_name = ptr_name,
+    )?;
+    write!(f, " #[inline] pub unsafe fn {the_name}({param_names_and_types}){return_tag} {{ 
+      #[cfg(feature = \"trace_calls\")] {{ std::println!(\"calling {{}}\", &{str_name}[..{str_name}.len()-1]); }} let p = {ptr_name}.load(Ordering::Relaxed); if p.is_null() {{ panic!(\"{{}} not loaded\", &{str_name}[..{str_name}.len()-1]) }} let out = transmute::<*mut c_void, {type_alias_name}>(p)({param_names}); {error_check} out }}", the_name = the_name, ptr_name = ptr_name, type_alias_name = type_alias_name, str_name = str_name, param_names_and_types = param_names_and_types, return_tag = return_tag, param_names = param_names, error_check = error_check)?;
     Ok(())
   }
 }
