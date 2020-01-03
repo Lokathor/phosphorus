@@ -1045,44 +1045,50 @@ pub mod enums {
   pub const GL_ZERO: GLenum = 0x0;
 }
 
-/// Function pointer sanity check.
-///
-/// * Null pointers (0) are bad.
-/// * Sometimes windows will return non-null error values.
-///   * Known non-null error values include 1, 2, 3, and -1.
 #[cfg(any(feature = "global_loader", feature = "struct_loader"))]
-fn fn_ptr_ok(p: *const c_void) -> bool {
-  let p_u = p as usize;
-  (p_u >= 8) && (p_u != usize::max_value())
-}
+pub(crate) use loader_common::*;
+#[cfg(any(feature = "global_loader", feature = "struct_loader"))]
+pub mod loader_common {
+  //! Elements common to both loaders.
+  use super::*;
 
-#[cfg(any(feature = "global_loader", feature = "struct_loader"))]
-fn call_loader(
-  loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
-  name: &[u8],
-) -> *mut c_void {
-  debug_assert!(*name.last().unwrap() == 0_u8);
-  let p = loader(name.as_ptr() as *const c_char);
-  if fn_ptr_ok(p) {
-    p
-  } else {
-    core::ptr::null_mut()
+  /// Function pointer sanity check.
+  ///
+  /// * Null pointers (0) are bad.
+  /// * Sometimes windows will return non-null error values.
+  ///   * Known non-null error values include 1, 2, 3, and -1.
+  pub(crate) fn fn_ptr_ok(p: *const c_void) -> bool {
+    let p_u = p as usize;
+    (p_u >= 8) && (p_u != usize::max_value())
   }
-}
 
-#[cfg(feature = "error_checks")]
-use std::borrow::Cow;
-#[cfg(feature = "error_checks")]
-fn error_name_for(err: GLenum) -> Cow<'static, str> {
-  match err {
-    GL_INVALID_ENUM => Cow::Borrowed("GL_INVALID_ENUM"),
-    GL_INVALID_VALUE => Cow::Borrowed("GL_INVALID_VALUE"),
-    GL_INVALID_OPERATION => Cow::Borrowed("GL_INVALID_OPERATION"),
-    GL_INVALID_FRAMEBUFFER_OPERATION => {
-      Cow::Borrowed("GL_INVALID_FRAMEBUFFER_OPERATION")
+  pub(crate) fn call_loader(
+    loader: &mut dyn FnMut(*const c_char) -> *mut c_void,
+    name: &[u8],
+  ) -> *mut c_void {
+    debug_assert!(*name.last().unwrap() == 0_u8);
+    let p = loader(name.as_ptr() as *const c_char);
+    if fn_ptr_ok(p) {
+      p
+    } else {
+      core::ptr::null_mut()
     }
-    GL_OUT_OF_MEMORY => Cow::Borrowed("GL_OUT_OF_MEMORY"),
-    _ => Cow::Owned(format!("0x{:X}", err)),
+  }
+
+  #[cfg(feature = "error_checks")]
+  use std::borrow::Cow;
+  #[cfg(feature = "error_checks")]
+  pub(crate) fn error_name_for(err: GLenum) -> Cow<'static, str> {
+    match err {
+      GL_INVALID_ENUM => Cow::Borrowed("GL_INVALID_ENUM"),
+      GL_INVALID_VALUE => Cow::Borrowed("GL_INVALID_VALUE"),
+      GL_INVALID_OPERATION => Cow::Borrowed("GL_INVALID_OPERATION"),
+      GL_INVALID_FRAMEBUFFER_OPERATION => {
+        Cow::Borrowed("GL_INVALID_FRAMEBUFFER_OPERATION")
+      }
+      GL_OUT_OF_MEMORY => Cow::Borrowed("GL_OUT_OF_MEMORY"),
+      _ => Cow::Owned(format!("0x{:X}", err)),
+    }
   }
 }
 
@@ -1103,350 +1109,350 @@ pub mod global_loader {
   where
     F: FnMut(*const c_char) -> *mut c_void,
   {
-    load_glPointParameterf(&mut f);
-    load_glMapBuffer(&mut f);
-    load_glGetActiveUniformsiv(&mut f);
-    load_glGetVertexAttribIiv(&mut f);
-    load_glBlitFramebuffer(&mut f);
-    load_glGetBooleanv(&mut f);
-    load_glGetProgramiv(&mut f);
-    load_glGenerateMipmap(&mut f);
-    load_glGetVertexAttribfv(&mut f);
-    load_glUniform3fv(&mut f);
-    load_glDeleteVertexArrays(&mut f);
-    load_glGetQueryiv(&mut f);
-    load_glVertexAttrib4Nubv(&mut f);
-    load_glClearStencil(&mut f);
-    load_glShaderSource(&mut f);
-    load_glBindBufferRange(&mut f);
-    load_glVertexAttrib3fv(&mut f);
-    load_glWaitSync(&mut f);
-    load_glFramebufferTexture(&mut f);
-    load_glGetQueryObjecti64v(&mut f);
-    load_glGetUniformuiv(&mut f);
-    load_glVertexAttrib1sv(&mut f);
-    load_glGetProgramInfoLog(&mut f);
-    load_glBlendFunc(&mut f);
-    load_glBindFragDataLocationIndexed(&mut f);
-    load_glGetTexImage(&mut f);
-    load_glEndTransformFeedback(&mut f);
-    load_glVertexAttrib2s(&mut f);
-    load_glGetCompressedTexImage(&mut f);
-    load_glUniformMatrix2x4fv(&mut f);
-    load_glGetActiveUniformBlockiv(&mut f);
-    load_glCopyTexSubImage2D(&mut f);
-    load_glVertexAttrib4bv(&mut f);
-    load_glPolygonMode(&mut f);
-    load_glGenTextures(&mut f);
-    load_glVertexAttribI4ui(&mut f);
-    load_glUniform2fv(&mut f);
-    load_glGenSamplers(&mut f);
-    load_glDepthFunc(&mut f);
+    load_glGetSamplerParameterIiv(&mut f);
     load_glGenQueries(&mut f);
-    load_glVertexAttribP3uiv(&mut f);
-    load_glUniform3f(&mut f);
-    load_glUniform1f(&mut f);
-    load_glGetSamplerParameteriv(&mut f);
-    load_glVertexAttribI1i(&mut f);
-    load_glTexParameterfv(&mut f);
-    load_glDrawElements(&mut f);
-    load_glVertexAttrib4Nuiv(&mut f);
-    load_glGetShaderiv(&mut f);
-    load_glDetachShader(&mut f);
-    load_glGetStringi(&mut f);
-    load_glEndConditionalRender(&mut f);
-    load_glCompressedTexSubImage1D(&mut f);
-    load_glPointParameteriv(&mut f);
-    load_glGenVertexArrays(&mut f);
-    load_glVertexAttribP3ui(&mut f);
-    load_glDrawArrays(&mut f);
-    load_glBufferData(&mut f);
-    load_glGetFragDataLocation(&mut f);
-    load_glUniform1iv(&mut f);
-    load_glGetUniformLocation(&mut f);
-    load_glCopyBufferSubData(&mut f);
-    load_glDrawArraysInstanced(&mut f);
-    load_glPointSize(&mut f);
-    load_glVertexAttrib4iv(&mut f);
-    load_glGenBuffers(&mut f);
-    load_glDrawBuffer(&mut f);
-    load_glStencilMask(&mut f);
-    load_glRenderbufferStorage(&mut f);
-    load_glVertexAttribI4uiv(&mut f);
-    load_glVertexAttribP2ui(&mut f);
-    load_glTexParameteriv(&mut f);
-    load_glGetAttribLocation(&mut f);
-    load_glPixelStoref(&mut f);
-    load_glGetShaderInfoLog(&mut f);
-    load_glClearBufferfi(&mut f);
-    load_glBindFramebuffer(&mut f);
-    load_glGetBufferSubData(&mut f);
-    load_glVertexAttribI2uiv(&mut f);
-    load_glActiveTexture(&mut f);
-    load_glCullFace(&mut f);
-    load_glVertexAttrib4Nusv(&mut f);
-    load_glVertexAttrib4Niv(&mut f);
-    load_glTexParameterf(&mut f);
-    load_glVertexAttrib4usv(&mut f);
-    load_glUniform1uiv(&mut f);
-    load_glSamplerParameterf(&mut f);
-    load_glUniform3ui(&mut f);
-    load_glVertexAttribI2ui(&mut f);
-    load_glUniform1i(&mut f);
     load_glUniformMatrix2x3fv(&mut f);
-    load_glIsProgram(&mut f);
-    load_glFramebufferRenderbuffer(&mut f);
-    load_glDeleteRenderbuffers(&mut f);
-    load_glClearBufferfv(&mut f);
-    load_glBlendFuncSeparate(&mut f);
-    load_glIsEnabledi(&mut f);
-    load_glDisable(&mut f);
-    load_glFenceSync(&mut f);
-    load_glClearColor(&mut f);
-    load_glPointParameteri(&mut f);
-    load_glStencilFunc(&mut f);
-    load_glGetBufferPointerv(&mut f);
-    load_glGetUniformBlockIndex(&mut f);
-    load_glBindSampler(&mut f);
-    load_glPixelStorei(&mut f);
-    load_glUniformMatrix4fv(&mut f);
-    load_glUniform2iv(&mut f);
-    load_glColorMaski(&mut f);
-    load_glRenderbufferStorageMultisample(&mut f);
-    load_glVertexAttrib1f(&mut f);
-    load_glUniform3uiv(&mut f);
-    load_glFramebufferTexture3D(&mut f);
-    load_glVertexAttrib4dv(&mut f);
-    load_glGetError(&mut f);
-    load_glMultiDrawArrays(&mut f);
-    load_glVertexAttrib2dv(&mut f);
-    load_glDisablei(&mut f);
-    load_glUniform2uiv(&mut f);
-    load_glSamplerParameterfv(&mut f);
-    load_glSampleMaski(&mut f);
-    load_glGenRenderbuffers(&mut f);
-    load_glVertexAttribI4i(&mut f);
-    load_glVertexAttrib4uiv(&mut f);
+    load_glUniform1f(&mut f);
+    load_glRenderbufferStorage(&mut f);
+    load_glFlush(&mut f);
+    load_glTexImage3D(&mut f);
+    load_glVertexAttribI3i(&mut f);
+    load_glBindBuffer(&mut f);
+    load_glTexImage3DMultisample(&mut f);
     load_glGetActiveUniformName(&mut f);
-    load_glIsVertexArray(&mut f);
-    load_glGetBufferParameteri64v(&mut f);
-    load_glVertexAttribI4iv(&mut f);
-    load_glGetFramebufferAttachmentParameteriv(&mut f);
-    load_glVertexAttribI1ui(&mut f);
-    load_glBindTexture(&mut f);
-    load_glVertexAttribP1uiv(&mut f);
-    load_glVertexAttrib4f(&mut f);
-    load_glVertexAttrib2sv(&mut f);
-    load_glGetBooleani_v(&mut f);
-    load_glVertexAttribI1uiv(&mut f);
-    load_glClearBufferiv(&mut f);
-    load_glBeginConditionalRender(&mut f);
-    load_glMultiDrawElements(&mut f);
-    load_glTexImage1D(&mut f);
-    load_glStencilOpSeparate(&mut f);
-    load_glBindVertexArray(&mut f);
-    load_glGetSamplerParameterIuiv(&mut f);
+    load_glCopyTexSubImage2D(&mut f);
     load_glGetQueryObjectiv(&mut f);
-    load_glVertexAttribI4usv(&mut f);
-    load_glHint(&mut f);
-    load_glVertexAttrib1dv(&mut f);
-    load_glBindRenderbuffer(&mut f);
-    load_glVertexAttribIPointer(&mut f);
-    load_glViewport(&mut f);
-    load_glGetQueryObjectuiv(&mut f);
-    load_glUniformBlockBinding(&mut f);
-    load_glCopyTexSubImage3D(&mut f);
-    load_glUniform3iv(&mut f);
-    load_glDrawRangeElements(&mut f);
-    load_glVertexAttribP2uiv(&mut f);
-    load_glVertexAttribI4ubv(&mut f);
-    load_glUniform2ui(&mut f);
-    load_glUniform4uiv(&mut f);
-    load_glVertexAttrib1fv(&mut f);
-    load_glGetUniformfv(&mut f);
-    load_glGetActiveAttrib(&mut f);
-    load_glVertexAttrib4ubv(&mut f);
-    load_glCompressedTexImage1D(&mut f);
-    load_glFramebufferTexture1D(&mut f);
-    load_glGetActiveUniform(&mut f);
-    load_glGetSynciv(&mut f);
-    load_glFramebufferTextureLayer(&mut f);
-    load_glUniform3i(&mut f);
-    load_glEnable(&mut f);
-    load_glGetInteger64i_v(&mut f);
-    load_glUniform4ui(&mut f);
-    load_glGetTexParameterfv(&mut f);
-    load_glGetDoublev(&mut f);
-    load_glStencilOp(&mut f);
-    load_glIsSampler(&mut f);
+    load_glDeleteProgram(&mut f);
+    load_glTexImage1D(&mut f);
+    load_glBindFramebuffer(&mut f);
+    load_glClearBufferfi(&mut f);
+    load_glDrawBuffer(&mut f);
+    load_glGetVertexAttribPointerv(&mut f);
+    load_glStencilFunc(&mut f);
     load_glGetFragDataIndex(&mut f);
-    load_glIsTexture(&mut f);
-    load_glUseProgram(&mut f);
-    load_glDeleteFramebuffers(&mut f);
-    load_glLogicOp(&mut f);
-    load_glCompressedTexSubImage2D(&mut f);
+    load_glUniform3iv(&mut f);
+    load_glMapBuffer(&mut f);
+    load_glDisableVertexAttribArray(&mut f);
+    load_glGenRenderbuffers(&mut f);
     load_glBeginTransformFeedback(&mut f);
-    load_glSamplerParameteriv(&mut f);
-    load_glGetUniformIndices(&mut f);
-    load_glProvokingVertex(&mut f);
+    load_glClearBufferiv(&mut f);
+    load_glVertexAttribI1ui(&mut f);
+    load_glBindFragDataLocationIndexed(&mut f);
+    load_glGetShaderiv(&mut f);
+    load_glVertexAttrib2sv(&mut f);
+    load_glLogicOp(&mut f);
+    load_glVertexAttribI3iv(&mut f);
+    load_glVertexAttrib3fv(&mut f);
+    load_glDepthFunc(&mut f);
+    load_glDepthRange(&mut f);
+    load_glCreateProgram(&mut f);
+    load_glVertexAttribI1iv(&mut f);
+    load_glDrawArraysInstanced(&mut f);
+    load_glTransformFeedbackVaryings(&mut f);
+    load_glColorMask(&mut f);
+    load_glUniform3uiv(&mut f);
+    load_glVertexAttribP4uiv(&mut f);
+    load_glGetProgramiv(&mut f);
+    load_glVertexAttrib2fv(&mut f);
+    load_glBindTexture(&mut f);
+    load_glIsEnabledi(&mut f);
+    load_glGetActiveUniformBlockName(&mut f);
     load_glMultiDrawElementsBaseVertex(&mut f);
-    load_glGetString(&mut f);
-    load_glUnmapBuffer(&mut f);
+    load_glBlendColor(&mut f);
+    load_glFramebufferTextureLayer(&mut f);
+    load_glUniform1ui(&mut f);
+    load_glDisable(&mut f);
+    load_glSampleMaski(&mut f);
+    load_glGenFramebuffers(&mut f);
+    load_glVertexAttrib4iv(&mut f);
+    load_glCheckFramebufferStatus(&mut f);
+    load_glBindVertexArray(&mut f);
+    load_glVertexAttribP3ui(&mut f);
+    load_glPointParameterf(&mut f);
+    load_glUniform1fv(&mut f);
+    load_glGetFragDataLocation(&mut f);
+    load_glShaderSource(&mut f);
+    load_glDepthMask(&mut f);
+    load_glUniform4iv(&mut f);
+    load_glDeleteRenderbuffers(&mut f);
+    load_glFramebufferTexture1D(&mut f);
+    load_glIsSync(&mut f);
+    load_glBeginQuery(&mut f);
+    load_glUniform1uiv(&mut f);
+    load_glBufferData(&mut f);
+    load_glVertexAttrib4dv(&mut f);
+    load_glGetTexParameterIiv(&mut f);
+    load_glDeleteSync(&mut f);
+    load_glDeleteVertexArrays(&mut f);
+    load_glAttachShader(&mut f);
+    load_glClearDepth(&mut f);
+    load_glGetError(&mut f);
+    load_glDeleteSamplers(&mut f);
+    load_glGetVertexAttribIiv(&mut f);
+    load_glVertexAttribI2uiv(&mut f);
+    load_glGetActiveAttrib(&mut f);
+    load_glUniformMatrix4fv(&mut f);
+    load_glFramebufferTexture3D(&mut f);
+    load_glClientWaitSync(&mut f);
+    load_glHint(&mut f);
+    load_glGetInteger64v(&mut f);
+    load_glGenSamplers(&mut f);
+    load_glReadPixels(&mut f);
+    load_glUniformMatrix3x2fv(&mut f);
+    load_glGetFloatv(&mut f);
+    load_glTexSubImage3D(&mut f);
+    load_glGetMultisamplefv(&mut f);
+    load_glUniform3f(&mut f);
+    load_glTexSubImage1D(&mut f);
+    load_glBindBufferRange(&mut f);
+    load_glGetTexLevelParameteriv(&mut f);
+    load_glDrawElementsBaseVertex(&mut f);
+    load_glGetSamplerParameterfv(&mut f);
+    load_glBufferSubData(&mut f);
+    load_glCompressedTexSubImage1D(&mut f);
+    load_glVertexAttrib4Nuiv(&mut f);
+    load_glGetRenderbufferParameteriv(&mut f);
+    load_glActiveTexture(&mut f);
+    load_glVertexAttrib1f(&mut f);
+    load_glBindFragDataLocation(&mut f);
+    load_glWaitSync(&mut f);
+    load_glVertexAttribI4sv(&mut f);
+    load_glScissor(&mut f);
+    load_glClearBufferfv(&mut f);
+    load_glVertexAttrib3f(&mut f);
+    load_glGetIntegerv(&mut f);
+    load_glGenTextures(&mut f);
+    load_glCopyTexImage2D(&mut f);
+    load_glBlendFuncSeparate(&mut f);
+    load_glVertexAttribP4ui(&mut f);
+    load_glClearBufferuiv(&mut f);
+    load_glVertexAttrib3s(&mut f);
+    load_glIsVertexArray(&mut f);
+    load_glDeleteShader(&mut f);
+    load_glReadBuffer(&mut f);
+    load_glVertexAttribI2ui(&mut f);
+    load_glPointParameteriv(&mut f);
+    load_glGetVertexAttribiv(&mut f);
+    load_glVertexAttrib4usv(&mut f);
+    load_glCompressedTexImage3D(&mut f);
+    load_glGetUniformBlockIndex(&mut f);
+    load_glVertexAttrib1d(&mut f);
+    load_glGetSamplerParameteriv(&mut f);
+    load_glEnablei(&mut f);
+    load_glIsProgram(&mut f);
+    load_glGetBufferPointerv(&mut f);
+    load_glGetUniformiv(&mut f);
+    load_glEndTransformFeedback(&mut f);
+    load_glVertexAttribP1ui(&mut f);
+    load_glVertexAttrib4bv(&mut f);
+    load_glDeleteQueries(&mut f);
+    load_glGetAttribLocation(&mut f);
+    load_glGetActiveUniformsiv(&mut f);
+    load_glGetTexParameteriv(&mut f);
+    load_glCompressedTexImage1D(&mut f);
+    load_glUniform3ui(&mut f);
+    load_glDrawElements(&mut f);
+    load_glCopyBufferSubData(&mut f);
+    load_glClearStencil(&mut f);
+    load_glPixelStorei(&mut f);
+    load_glLineWidth(&mut f);
+    load_glStencilMask(&mut f);
+    load_glMultiDrawArrays(&mut f);
+    load_glVertexAttribI4iv(&mut f);
+    load_glIsQuery(&mut f);
+    load_glGetTransformFeedbackVarying(&mut f);
+    load_glIsShader(&mut f);
+    load_glGetBufferSubData(&mut f);
+    load_glCopyTexSubImage1D(&mut f);
+    load_glStencilOp(&mut f);
+    load_glLinkProgram(&mut f);
+    load_glTexParameterfv(&mut f);
+    load_glBindSampler(&mut f);
+    load_glUniform3fv(&mut f);
+    load_glCreateShader(&mut f);
+    load_glVertexAttrib3sv(&mut f);
+    load_glGetUniformuiv(&mut f);
+    load_glMultiDrawElements(&mut f);
+    load_glUniform2i(&mut f);
+    load_glClampColor(&mut f);
+    load_glGetSynciv(&mut f);
+    load_glGetBufferParameteriv(&mut f);
+    load_glSamplerParameteri(&mut f);
+    load_glUniform2ui(&mut f);
+    load_glBlitFramebuffer(&mut f);
+    load_glSamplerParameteriv(&mut f);
     load_glSampleCoverage(&mut f);
+    load_glVertexAttribPointer(&mut f);
+    load_glFenceSync(&mut f);
+    load_glVertexAttrib2dv(&mut f);
+    load_glGenVertexArrays(&mut f);
+    load_glUniformMatrix2x4fv(&mut f);
+    load_glGetTexImage(&mut f);
+    load_glUniform1iv(&mut f);
+    load_glQueryCounter(&mut f);
+    load_glTexBuffer(&mut f);
+    load_glUniform2uiv(&mut f);
+    load_glGetSamplerParameterIuiv(&mut f);
+    load_glDeleteFramebuffers(&mut f);
+    load_glGetString(&mut f);
+    load_glUniform4i(&mut f);
+    load_glGetUniformfv(&mut f);
+    load_glEnableVertexAttribArray(&mut f);
+    load_glMapBufferRange(&mut f);
+    load_glSamplerParameterf(&mut f);
+    load_glUniform3i(&mut f);
+    load_glProvokingVertex(&mut f);
+    load_glUniform4uiv(&mut f);
+    load_glGetTexParameterIuiv(&mut f);
+    load_glGetCompressedTexImage(&mut f);
+    load_glPointParameteri(&mut f);
+    load_glCompressedTexImage2D(&mut f);
+    load_glVertexAttribI1i(&mut f);
     load_glFlushMappedBufferRange(&mut f);
     load_glVertexAttrib4sv(&mut f);
-    load_glGetVertexAttribiv(&mut f);
-    load_glVertexAttribI1iv(&mut f);
-    load_glPrimitiveRestartIndex(&mut f);
-    load_glGetSamplerParameterfv(&mut f);
-    load_glDrawElementsInstancedBaseVertex(&mut f);
-    load_glGetShaderSource(&mut f);
-    load_glUniform4i(&mut f);
-    load_glUniformMatrix3fv(&mut f);
-    load_glVertexAttribI3ui(&mut f);
-    load_glBindBufferBase(&mut f);
-    load_glFlush(&mut f);
-    load_glVertexAttribI3iv(&mut f);
-    load_glVertexAttrib3f(&mut f);
-    load_glGetTexLevelParameterfv(&mut f);
-    load_glIsEnabled(&mut f);
-    load_glAttachShader(&mut f);
-    load_glIsFramebuffer(&mut f);
-    load_glVertexAttrib4Nub(&mut f);
-    load_glVertexAttrib4s(&mut f);
-    load_glBufferSubData(&mut f);
-    load_glVertexAttribI2i(&mut f);
-    load_glVertexAttrib4Nbv(&mut f);
-    load_glGetTexParameterIuiv(&mut f);
-    load_glGetTransformFeedbackVarying(&mut f);
-    load_glPointParameterfv(&mut f);
-    load_glGetVertexAttribPointerv(&mut f);
-    load_glCopyTexImage1D(&mut f);
-    load_glSamplerParameteri(&mut f);
-    load_glGetSamplerParameterIiv(&mut f);
-    load_glCreateProgram(&mut f);
-    load_glUniformMatrix3x4fv(&mut f);
-    load_glVertexAttribP1ui(&mut f);
-    load_glVertexAttrib2f(&mut f);
-    load_glUniformMatrix2fv(&mut f);
-    load_glGetIntegeri_v(&mut f);
-    load_glGetAttachedShaders(&mut f);
-    load_glGetTexParameterIiv(&mut f);
-    load_glTexBuffer(&mut f);
-    load_glVertexAttrib2d(&mut f);
-    load_glUniformMatrix4x2fv(&mut f);
-    load_glReadBuffer(&mut f);
-    load_glVertexAttrib2fv(&mut f);
-    load_glClearBufferuiv(&mut f);
-    load_glTexParameteri(&mut f);
-    load_glReadPixels(&mut f);
-    load_glDrawRangeElementsBaseVertex(&mut f);
-    load_glDepthRange(&mut f);
-    load_glBeginQuery(&mut f);
-    load_glGetRenderbufferParameteriv(&mut f);
-    load_glClampColor(&mut f);
-    load_glBlendEquationSeparate(&mut f);
-    load_glVertexAttribDivisor(&mut f);
-    load_glTexSubImage3D(&mut f);
-    load_glVertexAttribI4sv(&mut f);
-    load_glEnablei(&mut f);
-    load_glVertexAttrib4fv(&mut f);
-    load_glTexImage2DMultisample(&mut f);
-    load_glClear(&mut f);
-    load_glVertexAttrib3d(&mut f);
-    load_glGetInteger64v(&mut f);
-    load_glGetFloatv(&mut f);
-    load_glVertexAttribPointer(&mut f);
     load_glIsRenderbuffer(&mut f);
-    load_glDeleteSync(&mut f);
-    load_glDrawBuffers(&mut f);
-    load_glClientWaitSync(&mut f);
-    load_glVertexAttribI3uiv(&mut f);
-    load_glFramebufferTexture2D(&mut f);
-    load_glUniform1fv(&mut f);
-    load_glStencilMaskSeparate(&mut f);
-    load_glDepthMask(&mut f);
-    load_glScissor(&mut f);
-    load_glCompileShader(&mut f);
-    load_glMapBufferRange(&mut f);
-    load_glDeleteSamplers(&mut f);
-    load_glBlendColor(&mut f);
-    load_glCompressedTexImage2D(&mut f);
-    load_glLinkProgram(&mut f);
-    load_glBlendEquation(&mut f);
-    load_glVertexAttribI4bv(&mut f);
-    load_glDeleteShader(&mut f);
-    load_glGetIntegerv(&mut f);
-    load_glTexImage3D(&mut f);
-    load_glTransformFeedbackVaryings(&mut f);
-    load_glDisableVertexAttribArray(&mut f);
-    load_glUniform4f(&mut f);
-    load_glTexSubImage2D(&mut f);
-    load_glTexParameterIiv(&mut f);
-    load_glStencilFuncSeparate(&mut f);
-    load_glIsBuffer(&mut f);
-    load_glTexSubImage1D(&mut f);
-    load_glGetTexParameteriv(&mut f);
-    load_glQueryCounter(&mut f);
-    load_glUniform4fv(&mut f);
-    load_glVertexAttrib3s(&mut f);
-    load_glIsSync(&mut f);
     load_glGetQueryObjectui64v(&mut f);
-    load_glFrontFace(&mut f);
-    load_glVertexAttrib3dv(&mut f);
-    load_glDeleteBuffers(&mut f);
-    load_glUniform2i(&mut f);
-    load_glVertexAttrib1s(&mut f);
-    load_glUniform1ui(&mut f);
-    load_glVertexAttribP4uiv(&mut f);
-    load_glCompressedTexSubImage3D(&mut f);
-    load_glVertexAttribI3i(&mut f);
-    load_glCopyTexSubImage1D(&mut f);
-    load_glEndQuery(&mut f);
-    load_glUniform2f(&mut f);
-    load_glBindFragDataLocation(&mut f);
-    load_glGetTexLevelParameteriv(&mut f);
-    load_glGetBufferParameteriv(&mut f);
-    load_glIsQuery(&mut f);
-    load_glUniformMatrix3x2fv(&mut f);
-    load_glGenFramebuffers(&mut f);
-    load_glClearDepth(&mut f);
-    load_glGetVertexAttribdv(&mut f);
-    load_glPolygonOffset(&mut f);
-    load_glUniform4iv(&mut f);
-    load_glSamplerParameterIiv(&mut f);
-    load_glValidateProgram(&mut f);
-    load_glGetUniformiv(&mut f);
-    load_glBindBuffer(&mut f);
-    load_glGetActiveUniformBlockName(&mut f);
-    load_glLineWidth(&mut f);
-    load_glVertexAttribI2iv(&mut f);
-    load_glVertexAttribP4ui(&mut f);
-    load_glTexParameterIuiv(&mut f);
-    load_glFinish(&mut f);
-    load_glBindAttribLocation(&mut f);
-    load_glVertexAttrib3sv(&mut f);
-    load_glDeleteTextures(&mut f);
-    load_glVertexAttrib4Nsv(&mut f);
-    load_glDrawElementsInstanced(&mut f);
+    load_glVertexAttrib4Nusv(&mut f);
+    load_glClearColor(&mut f);
+    load_glVertexAttrib4s(&mut f);
+    load_glGetTexLevelParameterfv(&mut f);
+    load_glVertexAttrib4fv(&mut f);
+    load_glFramebufferRenderbuffer(&mut f);
+    load_glVertexAttribI4ubv(&mut f);
+    load_glVertexAttribP1uiv(&mut f);
     load_glTexImage2D(&mut f);
-    load_glGetMultisamplefv(&mut f);
-    load_glCompressedTexImage3D(&mut f);
-    load_glCreateShader(&mut f);
-    load_glGetVertexAttribIuiv(&mut f);
-    load_glDrawElementsBaseVertex(&mut f);
-    load_glCheckFramebufferStatus(&mut f);
-    load_glUniformMatrix4x3fv(&mut f);
+    load_glVertexAttribI4i(&mut f);
+    load_glGetDoublev(&mut f);
+    load_glBlendFunc(&mut f);
+    load_glGenBuffers(&mut f);
+    load_glVertexAttrib4Niv(&mut f);
+    load_glVertexAttrib1s(&mut f);
+    load_glVertexAttrib3d(&mut f);
+    load_glVertexAttribI3uiv(&mut f);
+    load_glValidateProgram(&mut f);
+    load_glVertexAttrib4Nub(&mut f);
+    load_glGetUniformIndices(&mut f);
+    load_glIsEnabled(&mut f);
+    load_glDrawArrays(&mut f);
+    load_glIsSampler(&mut f);
+    load_glTexSubImage2D(&mut f);
+    load_glStencilOpSeparate(&mut f);
+    load_glVertexAttrib2d(&mut f);
+    load_glVertexAttribP2uiv(&mut f);
+    load_glDrawBuffers(&mut f);
+    load_glEndConditionalRender(&mut f);
+    load_glViewport(&mut f);
+    load_glTexParameteri(&mut f);
+    load_glVertexAttribI1uiv(&mut f);
+    load_glBlendEquationSeparate(&mut f);
+    load_glTexParameteriv(&mut f);
     load_glVertexAttrib4d(&mut f);
-    load_glEnableVertexAttribArray(&mut f);
-    load_glVertexAttrib1d(&mut f);
-    load_glTexImage3DMultisample(&mut f);
-    load_glColorMask(&mut f);
+    load_glUniformMatrix3fv(&mut f);
+    load_glPointSize(&mut f);
+    load_glClear(&mut f);
+    load_glCopyTexSubImage3D(&mut f);
+    load_glGetInteger64i_v(&mut f);
+    load_glUniformMatrix3x4fv(&mut f);
+    load_glVertexAttrib2s(&mut f);
+    load_glGetQueryiv(&mut f);
+    load_glGetBooleanv(&mut f);
+    load_glVertexAttribI2i(&mut f);
+    load_glGetUniformLocation(&mut f);
+    load_glPrimitiveRestartIndex(&mut f);
+    load_glVertexAttrib1sv(&mut f);
+    load_glGetQueryObjecti64v(&mut f);
+    load_glUniformMatrix4x3fv(&mut f);
+    load_glVertexAttribI4ui(&mut f);
+    load_glUnmapBuffer(&mut f);
+    load_glVertexAttribI2iv(&mut f);
+    load_glBindAttribLocation(&mut f);
+    load_glCompressedTexSubImage3D(&mut f);
+    load_glDrawRangeElements(&mut f);
+    load_glColorMaski(&mut f);
+    load_glTexParameterf(&mut f);
+    load_glVertexAttribI4uiv(&mut f);
+    load_glFrontFace(&mut f);
+    load_glGetProgramInfoLog(&mut f);
+    load_glStencilFuncSeparate(&mut f);
+    load_glEnable(&mut f);
+    load_glGetVertexAttribdv(&mut f);
+    load_glUniformMatrix2fv(&mut f);
+    load_glVertexAttribP3uiv(&mut f);
+    load_glStencilMaskSeparate(&mut f);
+    load_glUniform2f(&mut f);
+    load_glGenerateMipmap(&mut f);
+    load_glVertexAttribI3ui(&mut f);
+    load_glSamplerParameterfv(&mut f);
+    load_glGetShaderSource(&mut f);
+    load_glUseProgram(&mut f);
+    load_glVertexAttribI4usv(&mut f);
+    load_glUniform4fv(&mut f);
+    load_glDrawRangeElementsBaseVertex(&mut f);
+    load_glVertexAttrib2f(&mut f);
+    load_glTexParameterIiv(&mut f);
+    load_glBindRenderbuffer(&mut f);
+    load_glGetQueryObjectuiv(&mut f);
+    load_glIsFramebuffer(&mut f);
+    load_glGetIntegeri_v(&mut f);
+    load_glCompileShader(&mut f);
+    load_glTexImage2DMultisample(&mut f);
+    load_glUniform2iv(&mut f);
+    load_glGetBooleani_v(&mut f);
+    load_glGetFramebufferAttachmentParameteriv(&mut f);
+    load_glUniform4ui(&mut f);
+    load_glDrawElementsInstancedBaseVertex(&mut f);
+    load_glUniformBlockBinding(&mut f);
+    load_glFramebufferTexture(&mut f);
+    load_glPolygonMode(&mut f);
+    load_glVertexAttrib3dv(&mut f);
+    load_glDrawElementsInstanced(&mut f);
+    load_glGetStringi(&mut f);
+    load_glUniform2fv(&mut f);
+    load_glDisablei(&mut f);
+    load_glIsBuffer(&mut f);
+    load_glGetShaderInfoLog(&mut f);
+    load_glGetVertexAttribfv(&mut f);
+    load_glVertexAttribDivisor(&mut f);
+    load_glIsTexture(&mut f);
+    load_glVertexAttrib4Nbv(&mut f);
+    load_glRenderbufferStorageMultisample(&mut f);
+    load_glBindBufferBase(&mut f);
+    load_glBeginConditionalRender(&mut f);
+    load_glPointParameterfv(&mut f);
+    load_glFramebufferTexture2D(&mut f);
+    load_glGetAttachedShaders(&mut f);
+    load_glCopyTexImage1D(&mut f);
+    load_glGetActiveUniformBlockiv(&mut f);
+    load_glPixelStoref(&mut f);
+    load_glGetBufferParameteri64v(&mut f);
+    load_glUniform4f(&mut f);
+    load_glEndQuery(&mut f);
+    load_glUniform1i(&mut f);
+    load_glVertexAttrib1fv(&mut f);
+    load_glBlendEquation(&mut f);
+    load_glGetActiveUniform(&mut f);
+    load_glGetTexParameterfv(&mut f);
+    load_glVertexAttrib4ubv(&mut f);
+    load_glVertexAttrib4Nsv(&mut f);
+    load_glVertexAttribIPointer(&mut f);
+    load_glDetachShader(&mut f);
+    load_glVertexAttrib1dv(&mut f);
+    load_glVertexAttribP2ui(&mut f);
+    load_glUniformMatrix4x2fv(&mut f);
+    load_glVertexAttribI4bv(&mut f);
+    load_glFinish(&mut f);
+    load_glSamplerParameterIiv(&mut f);
+    load_glTexParameterIuiv(&mut f);
     load_glSamplerParameterIuiv(&mut f);
-    load_glDeleteQueries(&mut f);
-    load_glCopyTexImage2D(&mut f);
-    load_glIsShader(&mut f);
-    load_glDeleteProgram(&mut f);
+    load_glPolygonOffset(&mut f);
+    load_glVertexAttrib4f(&mut f);
+    load_glCullFace(&mut f);
+    load_glGetVertexAttribIuiv(&mut f);
+    load_glCompressedTexSubImage2D(&mut f);
+    load_glVertexAttrib4uiv(&mut f);
+    load_glDeleteTextures(&mut f);
+    load_glVertexAttrib4Nubv(&mut f);
+    load_glDeleteBuffers(&mut f);
   }
 
   type glActiveTexture_t = unsafe extern "system" fn(TextureUnit);
