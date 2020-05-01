@@ -406,6 +406,7 @@ fn parse_remove<'s>(
 #[derive(Debug, Clone, Default)]
 pub struct Extensions {
   extensions: Vec<Extension>,
+  requirements: Vec<Requirements>,
 }
 
 fn parse_extensions<'s>(
@@ -415,10 +416,29 @@ fn parse_extensions<'s>(
   loop {
     match iter.next().unwrap() {
       EndTag { name: "extensions" } => return extensions,
+      StartTag { name: "extension", attrs } => {
+        parse_extension(iter, attrs);
+      }
       unknown => println!("parse_extensions:{:?}", unknown),
     }
   }
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Extension;
+pub struct Extension {
+  attrs: HashMap<String, String>,
+}
+
+fn parse_extension<'s>(
+  iter: &mut impl Iterator<Item = XmlElement<'s>>,
+  attrs: &str,
+) -> Extension {
+  let mut extension = Extension::default();
+  extension.attrs = hashmap_from_attrs(attrs);
+  loop {
+    match iter.next().unwrap() {
+      EndTag { name: "extension" } => return extension,
+      unknown => println!("parse_extension:{:?}", unknown),
+    }
+  }
+}
