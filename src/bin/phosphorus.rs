@@ -8,6 +8,24 @@ use std::collections::HashMap;
 
 use magnesium::{XmlElement::*, *};
 
+fn main() {
+  let gl_xml =
+    std::fs::read_to_string("target/gl.xml").expect("Couldn't read gl.xml");
+  let mut iter = &mut ElementIterator::new(&gl_xml)
+    .filter_map(skip_comments)
+    .filter_map(skip_empty_text_elements);
+  assert!(matches!(
+    iter.next().unwrap(),
+    StartTag { name: "registry", attrs: "" }
+  ));
+  let registry = GlRegistry::from_iter(iter);
+  let command = registry.gl_commands.first().unwrap();
+  println!("{}", command);
+  println!();
+  println!("// debug'd command");
+  println!("{:#?}", command);
+}
+
 fn revert_xml_encoding(text: String) -> String {
   let mut out = String::with_capacity(text.as_bytes().len());
   let mut chars = text.chars();
@@ -77,23 +95,6 @@ fn grab_out_ptype_text<'s>(
   };
   assert!(matches!(iter.next().unwrap(), EndTag { name: "ptype" }));
   t
-}
-
-fn main() {
-  let gl_xml =
-    std::fs::read_to_string("target/gl.xml").expect("Couldn't read gl.xml");
-  let mut iter = &mut ElementIterator::new(&gl_xml)
-    .filter_map(skip_comments)
-    .filter_map(skip_empty_text_elements);
-  assert!(matches!(
-    iter.next().unwrap(),
-    StartTag { name: "registry", attrs: "" }
-  ));
-  let registry = GlRegistry::from_iter(iter);
-  //println!("{:#?}", registry);
-  for gl_enum in registry.gl_enums.iter() {
-    println!("{}", GlEnumDisplayer { gl_enum, api: ApiGroup::Gl });
-  }
 }
 
 /// Holds all the info accumulated from `gl.xml`.
@@ -460,6 +461,125 @@ pub struct GlCommand {
   alias_of: Option<String>,
   /// "call this instead if you want to pass via pointer"
   vec_equivalent: Option<String>,
+}
+impl core::fmt::Display for GlCommand {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    let name = &self.name;
+    let rust_return_type = {
+      let c_return_type =
+        &self.proto[..self.proto.len() - (self.name.len() + 1)];
+      if c_return_type == "void" {
+        ""
+      } else {
+        panic!()
+      }
+    };
+    let atomic_ptr_name = format!("{name}_atomic_ptr", name = name);
+    let mut arg_name_and_type_list = String::new();
+    let mut arg_name_list = String::new();
+    let mut arg_debug_list = String::new();
+    let mut fn_type_list = String::new();
+    let mut docs_notes_list = String::new();
+    //
+    for gl_command_param in self.params.iter() {
+      let mut words_iter = gl_command_param.text.split_whitespace();
+      let arg_type = words_iter.next().unwrap();
+      let arg_name = words_iter.next().unwrap();
+      assert!(words_iter.next().is_none());
+      //
+      if !arg_name_and_type_list.is_empty() {
+        arg_name_and_type_list.push_str(", ")
+      }
+      if !arg_name_list.is_empty() {
+        arg_name_list.push_str(", ")
+      }
+      if !fn_type_list.is_empty() {
+        fn_type_list.push_str(", ")
+      }
+      if !arg_debug_list.is_empty() {
+        arg_debug_list.push_str(", ")
+      }
+      //
+      arg_name_and_type_list.push_str(arg_name);
+      arg_name_list.push_str(arg_name);
+      arg_name_and_type_list.push_str(": ");
+      arg_name_and_type_list.push_str(arg_type);
+      fn_type_list.push_str(arg_type);
+      arg_debug_list.push_str("{:?}");
+      if let Some(group_text) = gl_command_param.group.as_ref() {
+        if group_text != "Boolean" {
+          docs_notes_list.push_str(&format!(
+            "/// * `{arg_name}` group: {group_text}\n",
+            arg_name = arg_name,
+            group_text = group_text,
+          ));
+        }
+      }
+      if let Some(len_text) = gl_command_param.len.as_ref() {
+        docs_notes_list.push_str(&format!(
+          "/// * `{arg_name}` len: {len_text}\n",
+          arg_name = arg_name,
+          len_text = len_text,
+        ));
+      }
+    }
+    if let Some(proto_group_text) = self.proto_group.as_ref() {
+      if proto_group_text != "Boolean" {
+        docs_notes_list.push_str(&format!(
+          "/// * return value group: {proto_group_text}\n",
+          proto_group_text = proto_group_text,
+        ));
+      }
+    }
+    docs_notes_list.pop(); // remove the final newline, if any
+    let mut docs = format!(
+      "/// {name}({arg_name_list}){newline_if_notes}{docs_notes_list}",
+      name = name,
+      arg_name_list = arg_name_list,
+      newline_if_notes = if docs_notes_list.is_empty() { "" } else { "\n" },
+      docs_notes_list = docs_notes_list,
+    );
+    let fn_type = format!(
+      "fn({fn_type_list}){rust_return_type}",
+      fn_type_list = fn_type_list,
+      rust_return_type = rust_return_type
+    );
+    write!(
+      f,
+      "{docs}
+pub unsafe fn {name}({arg_name_and_type_list}){rust_return_type} {{
+  #[cfg(feature = \"automatic_call_logger\")]
+  {{
+    println!(\"calling {name}({arg_debug_list});\", {arg_name_list});
+  }}
+  let p = {atomic_ptr_name}.load(Ordering::Relaxed);
+  let out = match transmute::<_, Option<{fn_type}>>(p) {{
+    Some(f) => f({arg_name_list}),
+    None => go_panic_because_fn_not_loaded(\"{name}\"),
+  }}
+  #[cfg(feature = \"automatic_glGetError\")]
+  {{
+    check_the_glGetError_from_a_call_to(\"{name}\")
+  }}
+  out
+}}
+#[allow(bad_style)]
+static {atomic_ptr_name}: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
+#[doc(hidden)]
+pub fn load_{name}(get_proc_address: &mut FnMut(*const c_char) -> c_void) -> bool {{
+  // TODO: atomic_ptr_loader
+  false
+}}",
+      name = name,
+      arg_name_and_type_list = arg_name_and_type_list,
+      rust_return_type = rust_return_type,
+      atomic_ptr_name = atomic_ptr_name,
+      arg_name_list = arg_name_list,
+      fn_type = fn_type,
+      docs = docs,
+      arg_debug_list = arg_debug_list,
+    )
+  }
 }
 impl GlCommand {
   fn from_iter_and_attrs<'s>(
