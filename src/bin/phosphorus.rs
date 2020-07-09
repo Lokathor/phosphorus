@@ -19,9 +19,177 @@ fn main() {
     StartTag { name: "registry", attrs: "" }
   ));
   let registry = GlRegistry::from_iter(iter);
-  for gl_command in registry.gl_commands.iter().skip(20).take(2) {
-    println!("{}", GlobalGlCommand(&gl_command));
-    println!();
+  let selection = GlApiSelection::new_from_registry_api_extensions(
+    &registry,
+    ApiGroup::Gl,
+    (4, 6),
+    GlProfile::Core,
+    &[
+      "GL_EXT_texture_filter_anisotropic",
+      "GL_ARB_draw_buffers_blend",
+      "GL_ARB_program_interface_query",
+    ],
+  );
+  //println!("{:#?}", selection);
+  println!("Final selection has {type_count} types, {enum_count} enums, and {command_count} commands.", type_count = selection.gl_types.len(), enum_count = selection.gl_enums.len(), command_count = selection.gl_commands.len());
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GlProfile {
+  Core,
+  Compatibility,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct GlApiSelection {
+  gl_types: Vec<GlType>,
+  gl_enums: HashMap<String, GlEnum>,
+  gl_commands: HashMap<String, GlCommand>,
+}
+impl GlApiSelection {
+  fn new_from_registry_api_extensions(
+    reg: &GlRegistry,
+    api: ApiGroup,
+    level: (i32, i32),
+    target_profile: GlProfile,
+    extensions: &[&str],
+  ) -> Self {
+    let gl_types: Vec<GlType> = reg.gl_types.clone();
+    let mut gl_enums: HashMap<String, GlEnum> = HashMap::new();
+    let mut gl_commands: HashMap<String, GlCommand> = HashMap::new();
+    let target_number = format!("{}.{}", level.0, level.1);
+    //
+    for gl_feature in reg.gl_features.iter() {
+      if gl_feature.api != api || gl_feature.number > target_number {
+        continue;
+      }
+      println!("FEATURE {}:", gl_feature.name);
+      for GlRequirement { profile, api, adjustment } in
+        gl_feature.required.iter()
+      {
+        if let Some(p) = profile {
+          match p.as_str() {
+            "core" => {
+              if target_profile != GlProfile::Core {
+                continue;
+              }
+            }
+            "compatibility" => {
+              if target_profile != GlProfile::Compatibility {
+                continue;
+              }
+            }
+            unknown => panic!("unknown: {}", unknown),
+          }
+        }
+        assert!(api.is_none());
+        match adjustment {
+          ReqRem::Type(_req_type) => (),
+          ReqRem::Command(req_command) => drop(
+            gl_commands.insert(
+              req_command.clone(),
+              reg
+                .gl_commands
+                .iter()
+                .find(|glc| glc.name.as_str() == req_command)
+                .unwrap()
+                .clone(),
+            ),
+          ),
+          ReqRem::Enum(req_enum) => drop(
+            gl_enums.insert(
+              req_enum.clone(),
+              reg
+                .gl_enums
+                .iter()
+                .find(|gle| gle.name.as_str() == req_enum)
+                .unwrap()
+                .clone(),
+            ),
+          ),
+        }
+      }
+      //
+      for GlRemoval { profile, adjustment } in gl_feature.remove.iter() {
+        if let Some(p) = profile {
+          match p.as_str() {
+            "core" => {
+              if target_profile != GlProfile::Core {
+                continue;
+              }
+            }
+            "compatibility" => {
+              if target_profile != GlProfile::Compatibility {
+                continue;
+              }
+            }
+            unknown => panic!("unknown: {}", unknown),
+          }
+        }
+        match adjustment {
+          ReqRem::Type(_rem_type) => (),
+          ReqRem::Command(rem_command) => drop(gl_commands.remove(rem_command)),
+          ReqRem::Enum(rem_enum) => drop(gl_enums.remove(rem_enum)),
+        }
+      }
+    }
+    //
+    for extension_name in extensions {
+      println!("extension {}", extension_name);
+      let the_extension = reg
+        .gl_extensions
+        .iter()
+        .find(|gl_ext| gl_ext.name.as_str() == *extension_name)
+        .unwrap();
+      assert!(the_extension.supported.contains(api.supported()), "Requested {extension_name} with api {api:?}, but it is not supported by that API.", extension_name = extension_name, api = api);
+      for GlRequirement { profile, api, adjustment } in
+        the_extension.required.iter()
+      {
+        if let Some(p) = profile {
+          match p.as_str() {
+            "core" => {
+              if target_profile != GlProfile::Core {
+                continue;
+              }
+            }
+            "compatibility" => {
+              if target_profile != GlProfile::Compatibility {
+                continue;
+              }
+            }
+            unknown => panic!("unknown: {}", unknown),
+          }
+        }
+        assert!(api.is_none());
+        match adjustment {
+          ReqRem::Type(_req_type) => (),
+          ReqRem::Command(req_command) => drop(
+            gl_commands.insert(
+              req_command.clone(),
+              reg
+                .gl_commands
+                .iter()
+                .find(|glc| glc.name.as_str() == req_command)
+                .unwrap()
+                .clone(),
+            ),
+          ),
+          ReqRem::Enum(req_enum) => drop(
+            gl_enums.insert(
+              req_enum.clone(),
+              reg
+                .gl_enums
+                .iter()
+                .find(|gle| gle.name.as_str() == req_enum)
+                .unwrap()
+                .clone(),
+            ),
+          ),
+        }
+      }
+    }
+    //
+    Self { gl_types, gl_enums, gl_commands }
   }
 }
 
@@ -97,7 +265,7 @@ fn grab_out_ptype_text<'s>(
 }
 
 /// Holds all the info accumulated from `gl.xml`.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GlRegistry {
   /// The special types we need to support.
   pub gl_types: Vec<GlType>,
@@ -180,7 +348,7 @@ impl GlRegistry {
 }
 
 /// Some sort of additional type we need to declare.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GlType {
   /// A type alias for an existing type.
   Typedef(String),
@@ -338,7 +506,7 @@ fn gather_enum_entries_to<'s>(
 }
 
 /// A constant we need to declare.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GlEnum {
   /// The name
   pub name: String,
@@ -450,7 +618,7 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
 }
 
 /// A GL function we have to bind to.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GlCommand {
   name: String,
   proto: String,
@@ -680,7 +848,7 @@ pub fn load_{name}(get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_voi
 }
 
 /// An argument to a GL function.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GlCommandParam {
   text: String,
   group: Option<String>,
@@ -720,7 +888,7 @@ impl GlCommandParam {
 }
 
 /// A given GL API you can target.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GlFeature {
   /// What API group this feature is part of.
   pub api: ApiGroup,
@@ -880,7 +1048,7 @@ impl GlFeature {
 /// Something that's new to a given API level.
 ///
 /// These stack as you advance through the API levels.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GlRequirement {
   /// Some requirements are limited to a specific profile.
   pub profile: Option<String>,
@@ -891,14 +1059,14 @@ pub struct GlRequirement {
 }
 
 /// Something to remove compared to the previous API level.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GlRemoval {
   profile: Option<String>,
   adjustment: ReqRem,
 }
 
 /// Tags a requirement or removal as being a Type / Enum / Command.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ReqRem {
   /// A required type.
   Type(String),
@@ -909,7 +1077,7 @@ pub enum ReqRem {
 }
 
 /// A vendor-specific API extension you might want to use.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GlExtension {
   /// The extension's name.
   pub name: String,
@@ -1016,6 +1184,17 @@ pub enum ApiGroup {
   Gles2,
   /// OpenGL SC
   Glsc2,
+}
+impl ApiGroup {
+  /// The "supported" string for this api group, as used by extension entries.
+  pub fn supported(&self) -> &'static str {
+    match self {
+      ApiGroup::Gl => "gl",
+      ApiGroup::Gles1 => "gles1",
+      ApiGroup::Gles2 => "gles2",
+      ApiGroup::Glsc2 => "glsc2",
+    }
+  }
 }
 impl Default for ApiGroup {
   fn default() -> Self {
