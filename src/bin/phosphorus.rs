@@ -86,7 +86,7 @@ impl core::fmt::Display for GlApiSelection {
     show!(f, "mod types {{");
     show!(f, "  use super::*;");
     for gl_type in self.gl_types.iter() {
-      //show!(f, "  {}", gl_type);
+      show!(f, "  {}", gl_type);
     }
     show!(f, "}}");
 
@@ -97,16 +97,14 @@ impl core::fmt::Display for GlApiSelection {
     let mut enum_list: Vec<GlEnum> = self.gl_enums.values().cloned().collect();
     enum_list.sort_by_key(|gl_enum| gl_enum.name.clone());
     for gl_enum in enum_list.iter() {
-      //show!(f, "  {}", GlEnumDisplayer { gl_enum, api });
+      show!(f, "  {}", GlEnumDisplayer { gl_enum, api });
     }
     show!(f, "}}");
 
-    // ready the command list (used for both global and struct).
+    // ready the common elements.
     let mut command_list: Vec<GlCommand> =
       self.gl_commands.values().cloned().collect();
     command_list.sort_by_key(|gl_command| gl_command.name.clone());
-
-    // do global commands
     show!(
       f,
       "
@@ -146,28 +144,55 @@ fn do_the_load(
   }}
 }}"
     );
-    show!(f, "pub use global_commands::*;");
-    show!(f, "mod global_commands {{");
+
+    // do global commands
+    show!(f);
+    show!(f, "#[cfg(feature=\"global_loader\")] pub use global_commands::*;");
+    show!(f, "#[cfg(feature=\"global_loader\")] mod global_commands {{");
     show!(f, "  use super::*;");
     show!(f, "  use core::sync::atomic::Ordering;");
+
+    show!(f, "  #[inline(never)]
+    unsafe fn check_the_glGetError_from_a_global_call_to(name: &str) {{
+      match glGetError() {{
+        GL_NO_ERROR => (),
+        GL_INVALID_ENUM => error!(\"Invalid Enum to {{name}}.\", name = name),
+        GL_INVALID_VALUE => error!(\"Invalid Value to {{name}}.\", name = name),
+        GL_INVALID_OPERATION => error!(\"Invalid Operation to {{name}}.\", name = name),
+        GL_INVALID_FRAMEBUFFER_OPERATION => error!(\"Invalid Framebuffer Operation to {{name}}.\", name = name),
+        GL_OUT_OF_MEMORY => error!(\"Out of Memory in {{name}}.\", name = name),
+        GL_STACK_UNDERFLOW => error!(\"Stack Underflow in {{name}}.\", name = name),
+        GL_STACK_OVERFLOW => error!(\"Stack Overflow in {{name}}.\", name = name),
+        unknown => error!(\"Unknown error code {{unknown}} to {{name}}.\", name = name, unknown = unknown),
+      }}
+    }}");
     show!(
       f,
       "
-#[inline(never)]
-pub fn global_load_with(
-  get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void,
-) -> usize {{
-  let mut count = 0;"
+  /// Loads all global functions using the `get_proc_address` given.
+  ///
+  /// The closure should, when given a null-terminated name of a function,
+  /// return a pointer to that function. If the function isn't available, then
+  /// a null pointer should be returned instead.
+  ///
+  /// This allows you to call [SDL_GL_GetProcAddress](https://wiki.libsdl.org/SDL_GL_GetProcAddress),
+  /// [wglGetProcAddress](https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-wglgetprocaddress),
+  /// or similar function, depending on your OS.
+  #[inline(never)]
+  pub fn global_load_with(
+    get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void,
+  ) -> usize {{
+    let mut count = 0;"
     );
     for gl_command in command_list.iter() {
       show!(
         f,
-        "  count += {name}_load_with(get_proc_address) as usize;",
+        "    count += {name}_load_with(get_proc_address) as usize;",
         name = gl_command.name
       );
     }
     //
-    show!(f, "  count\n}}");
+    show!(f, "    count\n  }}");
     for gl_command in command_list.iter() {
       show!(f);
       show!(f, "{}", GlobalGlCommand { gl_command, api, major_version_number });
@@ -175,7 +200,20 @@ pub fn global_load_with(
     show!(f, "}}");
 
     // do struct commands
-    // TODO
+    show!(f);
+    show!(f, "#[cfg(feature=\"struct_loader\")] pub use struct_commands::*;");
+    show!(f, "#[cfg(feature=\"struct_loader\")] mod struct_commands {{");
+    show!(f, "  use super::*;");
+    show!(
+      f,
+      "  {}",
+      StructLoaderDisplayer {
+        gl_commands: &command_list,
+        api,
+        major_version_number
+      }
+    );
+    show!(f, "}}");
     show!(f, "// end of module");
     Ok(())
   }
@@ -319,6 +357,30 @@ impl GlApiSelection {
           ),
         }
       }
+    }
+    // force include all the error enumerations
+    for error_enum_name in [
+      "GL_NO_ERROR",
+      "GL_INVALID_ENUM",
+      "GL_INVALID_VALUE",
+      "GL_INVALID_OPERATION",
+      "GL_INVALID_FRAMEBUFFER_OPERATION",
+      "GL_OUT_OF_MEMORY",
+      "GL_STACK_UNDERFLOW",
+      "GL_STACK_OVERFLOW",
+    ]
+    .iter()
+    .copied()
+    {
+      gl_enums.insert(
+        error_enum_name.to_string(),
+        reg
+          .gl_enums
+          .iter()
+          .find(|gle| gle.name.as_str() == error_enum_name)
+          .unwrap()
+          .clone(),
+      );
     }
     //
     Self { gl_types, gl_enums, gl_commands, api, version: level }
@@ -837,6 +899,30 @@ impl GlCommand {
   }
 }
 
+fn c_type_to_rust_type(text: &str) -> String {
+  if text.contains("*") {
+    match text {
+      "const GLchar *const*" => String::from("*const *const GLchar"),
+      "const void *const*" => String::from("*const *const c_void"),
+      "const void *" => String::from("*const c_void"),
+      "void *" => String::from("*mut c_void"),
+      "void **" => String::from("*mut *mut c_void"),
+      _otherwise => {
+        let mut t = if text.starts_with("const") {
+          format!("*{}", text)
+        } else {
+          format!("*mut {}", text)
+        };
+        t.pop();
+        t.pop();
+        t
+      }
+    }
+  } else {
+    String::from(text)
+  }
+}
+
 struct GlobalGlCommand<'a> {
   gl_command: &'a GlCommand,
   api: ApiGroup,
@@ -846,13 +932,12 @@ impl core::fmt::Display for GlobalGlCommand<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let name = &self.gl_command.name;
     let rust_return_type = {
-      let c_return_type = self.gl_command.proto
-        [..self.gl_command.proto.len() - self.gl_command.name.len()]
-        .trim();
-      if c_return_type == "void" {
+      let c_return_type = &self.gl_command.proto
+        [..self.gl_command.proto.len() - self.gl_command.name.len()];
+      if c_return_type.trim() == "void" {
         String::new()
       } else {
-        format!(" -> {}", c_return_type)
+        format!(" -> {}", c_type_to_rust_type(c_return_type))
       }
     };
     let atomic_ptr_name = format!("{name}_atomic_ptr", name = name);
@@ -864,31 +949,20 @@ impl core::fmt::Display for GlobalGlCommand<'_> {
     //
     for gl_command_param in self.gl_command.params.iter() {
       let mut words_iter = gl_command_param.text.split_whitespace();
-      let arg_name = words_iter.next_back().unwrap();
+      let arg_name = {
+        let temp_name = words_iter.next_back().unwrap();
+        if temp_name == "type" {
+          "type_"
+        } else if temp_name == "ref" {
+          "ref_"
+        } else {
+          temp_name
+        }
+      };
       let arg_type_text = gl_command_param.text
         [..gl_command_param.text.len() - arg_name.len()]
         .trim();
-      let arg_type = if arg_type_text.contains("*") {
-        match arg_type_text {
-          "const GLchar *const*" => String::from("*const *const GLchar"),
-          "const void *const*" => String::from("*const *const c_void"),
-          "const void *" => String::from("*const c_void"),
-          "void *" => String::from("*mut c_void"),
-          "void **" => String::from("*mut *mut c_void"),
-          _otherwise => {
-            let mut t = if arg_type_text.starts_with("const") {
-              format!("*{}", arg_type_text)
-            } else {
-              format!("*mut {}", arg_type_text)
-            };
-            t.pop();
-            t.pop();
-            t
-          }
-        }
-      } else {
-        String::from(arg_type_text)
-      };
+      let arg_type = c_type_to_rust_type(arg_type_text);
       //
       if !arg_name_and_type_list.is_empty() {
         arg_name_and_type_list.push_str(", ")
@@ -908,7 +982,13 @@ impl core::fmt::Display for GlobalGlCommand<'_> {
       arg_name_and_type_list.push_str(": ");
       arg_name_and_type_list.push_str(&arg_type);
       fn_type_list.push_str(&arg_type);
-      arg_debug_list.push_str("{:?}");
+      if arg_type.contains("*") {
+        arg_debug_list.push_str("{:p}");
+      } else if arg_type == "GLenum" {
+        arg_debug_list.push_str("{:#X}");
+      } else {
+        arg_debug_list.push_str("{}");
+      };
       if let Some(group_text) = gl_command_param.group.as_ref() {
         if group_text == "Boolean" && arg_type.contains("GLboolean") {
           // we don't need to remind you that bools are bools
@@ -949,7 +1029,7 @@ impl core::fmt::Display for GlobalGlCommand<'_> {
       ));
     }
     docs_notes_list.pop(); // remove the final newline, if any
-    let mut docs = match self.api {
+    let docs = match self.api {
       ApiGroup::Gl if self.major_version_number >= 2 => format!(
         "/// [{name}](http://docs.gl/gl{major_version_number}/{name})({arg_name_list}){newline_if_notes}{docs_notes_list}",
         name = name,
@@ -977,7 +1057,7 @@ impl core::fmt::Display for GlobalGlCommand<'_> {
       }
     };
     let fn_type = format!(
-      "fn({fn_type_list}){rust_return_type}",
+      "extern \"system\" fn({fn_type_list}){rust_return_type}",
       fn_type_list = fn_type_list,
       rust_return_type = rust_return_type
     );
@@ -996,16 +1076,17 @@ pub unsafe fn {name}({arg_name_and_type_list}){rust_return_type} {{
     Some(f) => f({arg_name_list}),
     None => go_panic_because_fn_not_loaded(\"{name}\"),
   }};
-  #[cfg(all(debug_assertions, feature = \"debug_glGetError\"))]
+  #[cfg(all(debug_assertions, feature = \"debug_automatic_glGetError\"))]
   {{
-    check_the_glGetError_from_a_call_to(\"{name}\")
+    // obviously `glGetError` must not recursively call itself.
+    if \"{name}\" != \"glGetError\" {{ check_the_glGetError_from_a_global_call_to(\"{name}\") }}
   }}
   out
 }}
 static {atomic_ptr_name}: AtomicPtr<c_void> = AtomicPtr::new(null_mut());
-/// tries to load {name}, returns if a non-null pointer was obtained.
+/// Tries to load [`{name}`], returns if a non-null pointer was obtained.
 /// # Safety
-/// * this function promises to always pass a null terminated pointer to your closure.
+/// * This function promises to always pass a null terminated pointer to your closure.
 #[doc(hidden)]
 pub fn {name}_load_with(get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void) -> bool {{
   const FN_NAME: &[u8] = b\"{name}\\0\";
@@ -1013,7 +1094,8 @@ pub fn {name}_load_with(get_proc_address: &mut dyn FnMut(*const c_char) -> *mut 
   {atomic_ptr_name}.store(p, Ordering::Relaxed);
   !p.is_null()
 }}
-/// Checks that this function is loaded (non-null).
+/// Checks if the pointer for [`{name}`] is loaded (non-null).
+#[inline]
 #[doc(hidden)]
 pub fn {name}_is_loaded() -> bool {{
   !{atomic_ptr_name}.load(Ordering::Relaxed).is_null()
@@ -1027,6 +1109,188 @@ pub fn {name}_is_loaded() -> bool {{
       docs = docs,
       arg_debug_list = arg_debug_list,
     )
+  }
+}
+
+struct StructLoaderDisplayer<'a> {
+  gl_commands: &'a [GlCommand],
+  api: ApiGroup,
+  major_version_number: i32,
+}
+impl core::fmt::Display for StructLoaderDisplayer<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    // Here we will need some per-command stuff but it will be in two places.
+    // First we need it in methods of the struct, and then also we need it in
+    // the fields of the struct. So we will iterate the commands and print all
+    // _method_ data while saving the field text for later, then we will print
+    // out the struct's fields at the end.
+    let mut struct_fields: Vec<String> = Vec::new();
+    show!(f, "  impl GlFns {{");
+    for gl_command in self.gl_commands.iter() {
+      let name = &gl_command.name;
+      let rust_return_type = {
+        let c_return_type =
+          &gl_command.proto[..gl_command.proto.len() - gl_command.name.len()];
+        if c_return_type.trim() == "void" {
+          String::new()
+        } else {
+          format!(" -> {}", c_type_to_rust_type(c_return_type))
+        }
+      };
+      let mut arg_name_and_type_list = String::new();
+      let mut arg_name_list = String::new();
+      let mut arg_debug_list = String::new();
+      let mut fn_type_list = String::new();
+      let mut docs_notes_list = String::new();
+      for gl_command_param in gl_command.params.iter() {
+        let mut words_iter = gl_command_param.text.split_whitespace();
+        let arg_name = {
+          let temp_name = words_iter.next_back().unwrap();
+          if temp_name == "type" {
+            "type_"
+          } else if temp_name == "ref" {
+            "ref_"
+          } else {
+            temp_name
+          }
+        };
+        let arg_type_text = gl_command_param.text
+          [..gl_command_param.text.len() - arg_name.len()]
+          .trim();
+        let arg_type = c_type_to_rust_type(arg_type_text);
+        //
+        if !arg_name_and_type_list.is_empty() {
+          arg_name_and_type_list.push_str(", ")
+        }
+        if !arg_name_list.is_empty() {
+          arg_name_list.push_str(", ")
+        }
+        if !fn_type_list.is_empty() {
+          fn_type_list.push_str(", ")
+        }
+        if !arg_debug_list.is_empty() {
+          arg_debug_list.push_str(", ")
+        }
+        //
+        arg_name_and_type_list.push_str(arg_name);
+        arg_name_list.push_str(arg_name);
+        arg_name_and_type_list.push_str(": ");
+        arg_name_and_type_list.push_str(&arg_type);
+        fn_type_list.push_str(&arg_type);
+        if arg_type.contains("*") {
+          arg_debug_list.push_str("{:p}");
+        } else if arg_type == "GLenum" {
+          arg_debug_list.push_str("{:#X}");
+        } else {
+          arg_debug_list.push_str("{}");
+        };
+        if let Some(group_text) = gl_command_param.group.as_ref() {
+          if group_text == "Boolean" && arg_type.contains("GLboolean") {
+            // we don't need to remind you that bools are bools
+          } else {
+            docs_notes_list.push_str(&format!(
+              "  /// * `{arg_name}` group: {group_text}\n",
+              arg_name = arg_name,
+              group_text = group_text,
+            ));
+          }
+        }
+        if let Some(len_text) = gl_command_param.len.as_ref() {
+          docs_notes_list.push_str(&format!(
+            "  /// * `{arg_name}` len: {len_text}\n",
+            arg_name = arg_name,
+            len_text = len_text,
+          ));
+        }
+      }
+      if let Some(proto_group_text) = gl_command.proto_group.as_ref() {
+        if proto_group_text != "Boolean" {
+          docs_notes_list.push_str(&format!(
+            "  /// * return value group: {proto_group_text}\n",
+            proto_group_text = proto_group_text,
+          ));
+        }
+      }
+      if let Some(alias_of_text) = gl_command.alias_of.as_ref() {
+        docs_notes_list.push_str(&format!(
+          "  /// * alias of: [`{alias_of_text}`]\n",
+          alias_of_text = alias_of_text,
+        ));
+      }
+      if let Some(vec_equivalent_text) = gl_command.vec_equivalent.as_ref() {
+        docs_notes_list.push_str(&format!(
+          "  /// * vector equivalent: [`{vec_equivalent_text}`]\n",
+          vec_equivalent_text = vec_equivalent_text,
+        ));
+      }
+      docs_notes_list.pop(); // remove the final newline, if any
+      let docs = match self.api {
+        ApiGroup::Gl if self.major_version_number >= 2 => format!(
+          "  /// [{name}](http://docs.gl/gl{major_version_number}/{name})({arg_name_list}){newline_if_notes}{docs_notes_list}",
+          name = name,
+          arg_name_list = arg_name_list,
+          newline_if_notes = if docs_notes_list.is_empty() { "" } else { "\n" },
+          docs_notes_list = docs_notes_list,
+          major_version_number = self.major_version_number,
+        ),
+        ApiGroup::Gles2 => format!(
+          "  /// [{name}](http://docs.gl/es{major_version_number}/{name})({arg_name_list}){newline_if_notes}{docs_notes_list}",
+          name = name,
+          arg_name_list = arg_name_list,
+          newline_if_notes = if docs_notes_list.is_empty() { "" } else { "\n" },
+          docs_notes_list = docs_notes_list,
+          major_version_number = self.major_version_number,
+        ),
+        _ => {
+          format!(
+            "  /// {name}({arg_name_list}){newline_if_notes}{docs_notes_list}",
+            name = name,
+            arg_name_list = arg_name_list,
+            newline_if_notes = if docs_notes_list.is_empty() { "" } else { "\n" },
+            docs_notes_list = docs_notes_list,
+          )
+        }
+      };
+      let fn_type = format!(
+        "extern \"system\" fn({fn_type_list}){rust_return_type}",
+        fn_type_list = fn_type_list,
+        rust_return_type = rust_return_type
+      );
+      //
+      struct_fields.push(format!(
+        "{short_name}_ptr: Option<{fn_type}>",
+        short_name = &gl_command.name[2..],
+        fn_type = fn_type,
+      ));
+      show!(
+        f,
+        "{docs}
+  #[cfg_attr(feature=\"inline\", inline)]
+  #[cfg_attr(feature=\"inline_always\", inline(always))]
+  pub fn {short_name}(&self, {arg_name_and_type_list}){rust_return_type} {{
+    // TODO: fill in the call body
+  }}
+  #[doc(hidden)]
+  pub fn {short_name}_load_with(&mut self, get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void) -> bool {{
+    // TODO: fill in the load body
+  }}
+  #[inline]
+  #[doc(hidden)]
+  pub fn {short_name}_is_loaded(&self) -> bool {{
+    !{short_name}_ptr.is_none()
+  }}",
+        short_name = &gl_command.name[2..],
+        arg_name_and_type_list = arg_name_and_type_list,
+        rust_return_type = rust_return_type,
+        docs = docs,
+      );
+    }
+    show!(f, "  }} #[repr(C)] pub struct GlFns {{");
+    for struct_field in struct_fields.iter() {
+      show!(f, "    {},", struct_field);
+    }
+    show!(f, "  }} // TODO: trait impls for GlFns");
+    Ok(())
   }
 }
 
