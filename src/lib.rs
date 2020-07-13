@@ -1,11 +1,38 @@
-//#![warn(missing_docs)]
+#![warn(missing_docs)]
 
 //! A crate that can generate GL bindings.
-//! 
+//!
 //! Example Usage:
 //! ```no_run
-//! 
+//! let gl_xml = std::fs::read_to_string("gl.xml").unwrap();
+//! let registry = GlRegistry::from_gl_xml_str(&gl_xml);
+//! let selection = GlApiSelection::new_from_registry_api_extensions(
+//!   &registry,
+//!   ApiGroup::Gl,
+//!   (4, 6),
+//!   GlProfile::Core,
+//!   &[
+//!     "GL_EXT_texture_filter_anisotropic",
+//!     "GL_ARB_draw_buffers_blend",
+//!     "GL_ARB_program_interface_query",
+//!   ],
+//! );
+//! println!("{}", selection);
 //! ```
+//!
+//! If you `cargo install phosphorus` you'll get a binary that will do
+//! approximately this if you give it some CLI args.
+//!
+//! Note that the generated output is very ugly (run `rustfmt` on it) and also
+//! relatively large for a single source file (~2mb). The output is primarily
+//! intended to be put as its own crate data, though you could easily edit a few
+//! parts and have it work as a single module within a larger crate if you like.
+//!
+//! You are **highly encouraged** to not run this as part of your `build.rs`
+//! process. You should run this once, put the output into your project or
+//! whatever, and then just use that. You don't need to build it fresh every
+//! build. That's insane, stop doing that. Stop having `build.rs` files at all.
+//! Yes, you, whoever you are. All of you. Just stop.
 
 use magnesium::{XmlElement::*, *};
 
@@ -46,7 +73,7 @@ impl core::fmt::Display for GlApiSelection {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let api = self.api;
     let major_version_number = self.version.0;
-    const EXAMPLE_MODE: bool = true;
+    const EXAMPLE_MODE: bool = false;
     if !EXAMPLE_MODE {
       show!(f, "#![no_std]");
     }
@@ -289,7 +316,9 @@ fn report_error_as_necessary_from(name: &str, err: GLenum) {{
   }
 }
 impl GlApiSelection {
-  fn new_from_registry_api_extensions(
+  /// This is how you select a specific API level and profile and all that out
+  /// of a GlRegistry.
+  pub fn new_from_registry_api_extensions(
     reg: &GlRegistry,
     api: ApiGroup,
     level: (i32, i32),
@@ -548,6 +577,7 @@ pub struct GlRegistry {
   pub gl_extensions: Vec<GlExtension>,
 }
 impl GlRegistry {
+  /// This is how you parse the contents of `gl.xml` into a `GlRegistry`.
   pub fn from_gl_xml_str(gl_xml: &str) -> Self {
     let iter = &mut ElementIterator::new(&gl_xml)
       .filter_map(skip_comments)
@@ -560,8 +590,9 @@ impl GlRegistry {
   }
 
   /// Build a `GlRegistry` from the XML iterator.
-  /// 
+  ///
   /// Must have `skip_comments` and `skip_empty_text_elements` applied.
+  #[doc(hidden)]
   pub fn from_iter<'s>(
     iter: &mut impl Iterator<Item = XmlElement<'s>>,
   ) -> Self {
@@ -763,7 +794,6 @@ fn gather_enum_entries_to<'s>(
   iter: &mut impl Iterator<Item = XmlElement<'s>>,
   attrs: &str,
 ) {
-  use magnesium::TagAttribute;
   let mut is_bitmask = false;
   for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
     match key {
@@ -1488,7 +1518,6 @@ impl GlFeature {
         EndTag { name: "feature" } => return feature,
         StartTag { name: "require", attrs } => {
           let mut profile = None;
-          let mut api = None;
           for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
             match key {
               "comment" => (),
@@ -1506,7 +1535,7 @@ impl GlFeature {
                   match key {
                     "name" => feature.required.push(GlRequirement {
                       profile: profile.clone(),
-                      api: api.clone(),
+                      api: None,
                       adjustment: ReqRem::Type(String::from(value)),
                     }),
                     "comment" => (),
@@ -1521,7 +1550,7 @@ impl GlFeature {
                   match key {
                     "name" => feature.required.push(GlRequirement {
                       profile: profile.clone(),
-                      api: api.clone(),
+                      api: None,
                       adjustment: ReqRem::Enum(String::from(value)),
                     }),
                     "comment" => (),
@@ -1536,7 +1565,7 @@ impl GlFeature {
                   match key {
                     "name" => feature.required.push(GlRequirement {
                       profile: profile.clone(),
-                      api: api.clone(),
+                      api: None,
                       adjustment: ReqRem::Command(String::from(value)),
                     }),
                     "comment" => (),
