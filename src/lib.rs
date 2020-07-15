@@ -11,7 +11,11 @@
 //!   ApiGroup::Gl,
 //!   (4, 6),
 //!   GlProfile::Core,
-//!   &["GL_EXT_texture_filter_anisotropic", "GL_ARB_draw_buffers_blend", "GL_ARB_program_interface_query"],
+//!   &[
+//!     "GL_EXT_texture_filter_anisotropic",
+//!     "GL_ARB_draw_buffers_blend",
+//!     "GL_ARB_program_interface_query",
+//!   ],
 //! );
 //! println!("{}", selection);
 //! ```
@@ -32,7 +36,10 @@
 
 use magnesium::{XmlElement::*, *};
 
-use std::collections::HashMap;
+use std::{
+  collections::{HashMap, HashSet},
+  fmt::Write,
+};
 
 /// The two GL profile styles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -150,7 +157,13 @@ impl core::fmt::Display for GlApiSelection {
     show!(f, "#![deny(missing_docs)]");
     show!(f, "#![deny(missing_debug_implementations)]");
     show!(f);
-    show!(f, "//! Bindings to {:?} {}.{}", self.api, self.version.0, self.version.1);
+    show!(
+      f,
+      "//! Bindings to {:?} {}.{}",
+      self.api,
+      self.version.0,
+      self.version.1
+    );
     show!(f, "{}", STANDARD_CRATE_DOCS);
     if EXAMPLE_MODE {
       show!(f, "fn main() {{ }} // TODO: disable EXAMPLE_MODE.");
@@ -203,13 +216,12 @@ impl core::fmt::Display for GlApiSelection {
       "
     use core::{{
       sync::atomic::{{AtomicPtr, Ordering}},
-      mem::transmute as t_,
+      mem::transmute,
       ptr::null_mut,
     }};
     const RELAX: Ordering = Ordering::Relaxed;
     type APcv = AtomicPtr<c_void>;
-    type O<T> = Option<T>;
-    const fn ap_null() -> APcv {{ AtomicPtr::new(null_mut()) }}"
+    #[cfg(feature=\"global_loader\")]const fn ap_null() -> APcv {{ AtomicPtr::new(null_mut()) }}"
     );
 
     // do types
@@ -235,7 +247,8 @@ impl core::fmt::Display for GlApiSelection {
     show!(f, "}}");
 
     // ready the common elements.
-    let mut command_list: Vec<GlCommand> = self.gl_commands.values().cloned().collect();
+    let mut command_list: Vec<GlCommand> =
+      self.gl_commands.values().cloned().collect();
     command_list.sort_by_key(|gl_command| gl_command.name.clone());
     show!(
       f,
@@ -252,14 +265,15 @@ fn go_panic_because_fn_not_loaded(name: &str) -> ! {{
 
 /// Loads a function pointer.
 /// Rejects suggested pointer addresses which are likely to be lies.
-/// Returns the loaded pointer, or null if we rejected the proposed pointers.
 /// This function is used by both the global loader and struct loader.
 /// We mark it as `inline(never)` to favor a small binary over initialization speed.
+/// Returns if there's now a non-null value in the atomic pointer.
 #[inline(never)]
-fn do_the_load_dyn(
+fn load_dyn_name_atomic_ptr(
   get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void,
   fn_name: &[u8],
-) -> *mut c_void {{
+  ptr: &APcv,
+) -> bool {{
   // if this fails the code generator itself royally screwed up somehow,
   // and so it's only a debug assert.
   debug_assert_eq!(*fn_name.last().unwrap(), 0);
@@ -270,9 +284,11 @@ fn do_the_load_dyn(
   // To help guard against this silliness, we consider these values to also
   // just be a result of null.
   if p_usize == usize::MAX || p_usize < 8 {{
-    null_mut()
+    ptr.store(null_mut(), RELAX);
+    false
   }} else {{
-    p
+    ptr.store(p, RELAX);
+    true
   }}
 }}
 
@@ -296,6 +312,54 @@ fn report_error_as_necessary_from(name: &str, err: GLenum) {{
 pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
       count = command_list.len()
     );
+
+    // add generic fn callers
+    let arity_set: HashSet<_> =
+      command_list.iter().map(|glc| glc.params.len()).collect();
+    let mut arity_list: Vec<_> = arity_set.iter().copied().collect();
+    arity_list.sort();
+    for arity in arity_list.iter().copied() {
+      let mut param_generics = String::new();
+      let mut param_names_and_types = String::new();
+      let mut param_names = String::new();
+      for n in 0..arity {
+        let n8 = n as u8;
+        if !param_generics.is_empty() {
+          param_generics.push(',');
+        }
+        let _cant_fail = write!(param_generics, "{}", (b'A' + n8) as char);
+        if !param_names_and_types.is_empty() {
+          param_names_and_types.push(',');
+        }
+        let _cant_fail = write!(
+          param_names_and_types,
+          "{}:{}",
+          (b'a' + n8) as char,
+          (b'A' + n8) as char
+        );
+        if !param_names.is_empty() {
+          param_names.push(',');
+        }
+        let _cant_fail = write!(param_names, "{}", (b'a' + n8) as char);
+      }
+      show!(
+        f,
+        "
+  #[inline(always)]
+  unsafe fn call_atomic_ptr_{arity}arg<Ret{ret_comma}{param_generics}>(name: &str, ptr: &APcv, {param_names_and_types}) -> Ret {{
+    let p = ptr.load(RELAX);
+    match transmute::<*mut c_void, Option<extern \"system\" fn({param_generics})->Ret>>(p) {{
+      Some(fn_p) => fn_p({param_names}),
+      None => go_panic_because_fn_not_loaded(name),
+    }}
+  }}",
+        arity = arity,
+        param_generics = param_generics,
+        param_names_and_types = param_names_and_types,
+        param_names = param_names,
+        ret_comma = if arity > 0 { "," } else { "" },
+      );
+    }
 
     // do global commands
     show!(f);
@@ -325,7 +389,11 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
     let mut count = 0;"
     );
     for gl_command in command_list.iter() {
-      show!(f, "    count += {name}_load_with_dyn(&mut get_proc_address) as usize;", name = gl_command.name);
+      show!(
+        f,
+        "    count += {name}_load_with_dyn(&mut get_proc_address) as usize;",
+        name = gl_command.name
+      );
     }
     //
     show!(f, "    count\n  }}");
@@ -340,7 +408,15 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
     show!(f, "#[cfg(feature=\"struct_loader\")] pub use struct_commands::*;");
     show!(f, "#[cfg(feature=\"struct_loader\")] mod struct_commands {{");
     show!(f, "  use super::*;");
-    show!(f, "  {}", StructLoaderDisplayer { gl_commands: &command_list, api, major_version_number });
+    show!(
+      f,
+      "  {}",
+      StructLoaderDisplayer {
+        gl_commands: &command_list,
+        api,
+        major_version_number
+      }
+    );
     show!(f, "}}");
     show!(f, "// end of module");
     Ok(())
@@ -349,7 +425,13 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
 impl GlApiSelection {
   /// This is how you select a specific API level and profile and all that out
   /// of a GlRegistry.
-  pub fn new_from_registry_api_extensions(reg: &GlRegistry, api: ApiGroup, level: (i32, i32), target_profile: GlProfile, extensions: &[&str]) -> Self {
+  pub fn new_from_registry_api_extensions(
+    reg: &GlRegistry,
+    api: ApiGroup,
+    level: (i32, i32),
+    target_profile: GlProfile,
+    extensions: &[&str],
+  ) -> Self {
     let gl_types: Vec<GlType> = reg.gl_types.clone();
     let mut gl_enums: HashMap<String, GlEnum> = HashMap::new();
     let mut gl_commands: HashMap<String, GlCommand> = HashMap::new();
@@ -359,7 +441,9 @@ impl GlApiSelection {
       if gl_feature.api != api || gl_feature.number > target_number {
         continue;
       }
-      for GlRequirement { profile, api, adjustment } in gl_feature.required.iter() {
+      for GlRequirement { profile, api, adjustment } in
+        gl_feature.required.iter()
+      {
         if let Some(p) = profile {
           match p.as_str() {
             "core" => {
@@ -378,8 +462,28 @@ impl GlApiSelection {
         assert!(api.is_none());
         match adjustment {
           ReqRem::Type(_req_type) => (),
-          ReqRem::Command(req_command) => drop(gl_commands.insert(req_command.clone(), reg.gl_commands.iter().find(|glc| glc.name.as_str() == req_command).unwrap().clone())),
-          ReqRem::Enum(req_enum) => drop(gl_enums.insert(req_enum.clone(), reg.gl_enums.iter().find(|gle| gle.name.as_str() == req_enum).unwrap().clone())),
+          ReqRem::Command(req_command) => drop(
+            gl_commands.insert(
+              req_command.clone(),
+              reg
+                .gl_commands
+                .iter()
+                .find(|glc| glc.name.as_str() == req_command)
+                .unwrap()
+                .clone(),
+            ),
+          ),
+          ReqRem::Enum(req_enum) => drop(
+            gl_enums.insert(
+              req_enum.clone(),
+              reg
+                .gl_enums
+                .iter()
+                .find(|gle| gle.name.as_str() == req_enum)
+                .unwrap()
+                .clone(),
+            ),
+          ),
         }
       }
       //
@@ -408,9 +512,15 @@ impl GlApiSelection {
     }
     //
     for extension_name in extensions {
-      let the_extension = reg.gl_extensions.iter().find(|gl_ext| gl_ext.name.as_str() == *extension_name).unwrap();
+      let the_extension = reg
+        .gl_extensions
+        .iter()
+        .find(|gl_ext| gl_ext.name.as_str() == *extension_name)
+        .unwrap();
       assert!(the_extension.supported.contains(api.supported()), "Requested {extension_name} with api {api:?}, but it is not supported by that API.", extension_name = extension_name, api = api);
-      for GlRequirement { profile, api, adjustment } in the_extension.required.iter() {
+      for GlRequirement { profile, api, adjustment } in
+        the_extension.required.iter()
+      {
         if let Some(p) = profile {
           match p.as_str() {
             "core" => {
@@ -429,16 +539,54 @@ impl GlApiSelection {
         assert!(api.is_none());
         match adjustment {
           ReqRem::Type(_req_type) => (),
-          ReqRem::Command(req_command) => drop(gl_commands.insert(req_command.clone(), reg.gl_commands.iter().find(|glc| glc.name.as_str() == req_command).unwrap().clone())),
-          ReqRem::Enum(req_enum) => drop(gl_enums.insert(req_enum.clone(), reg.gl_enums.iter().find(|gle| gle.name.as_str() == req_enum).unwrap().clone())),
+          ReqRem::Command(req_command) => drop(
+            gl_commands.insert(
+              req_command.clone(),
+              reg
+                .gl_commands
+                .iter()
+                .find(|glc| glc.name.as_str() == req_command)
+                .unwrap()
+                .clone(),
+            ),
+          ),
+          ReqRem::Enum(req_enum) => drop(
+            gl_enums.insert(
+              req_enum.clone(),
+              reg
+                .gl_enums
+                .iter()
+                .find(|gle| gle.name.as_str() == req_enum)
+                .unwrap()
+                .clone(),
+            ),
+          ),
         }
       }
     }
     // force include all the error enumerations
-    for error_enum_name in
-      ["GL_NO_ERROR", "GL_INVALID_ENUM", "GL_INVALID_VALUE", "GL_INVALID_OPERATION", "GL_INVALID_FRAMEBUFFER_OPERATION", "GL_OUT_OF_MEMORY", "GL_STACK_UNDERFLOW", "GL_STACK_OVERFLOW"].iter().copied()
+    for error_enum_name in [
+      "GL_NO_ERROR",
+      "GL_INVALID_ENUM",
+      "GL_INVALID_VALUE",
+      "GL_INVALID_OPERATION",
+      "GL_INVALID_FRAMEBUFFER_OPERATION",
+      "GL_OUT_OF_MEMORY",
+      "GL_STACK_UNDERFLOW",
+      "GL_STACK_OVERFLOW",
+    ]
+    .iter()
+    .copied()
     {
-      gl_enums.insert(error_enum_name.to_string(), reg.gl_enums.iter().find(|gle| gle.name.as_str() == error_enum_name).unwrap().clone());
+      gl_enums.insert(
+        error_enum_name.to_string(),
+        reg
+          .gl_enums
+          .iter()
+          .find(|gle| gle.name.as_str() == error_enum_name)
+          .unwrap()
+          .clone(),
+      );
     }
     //
     Self { gl_types, gl_enums, gl_commands, api, version: level }
@@ -494,7 +642,9 @@ fn eat_to_groups_close<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>) {
   }
 }
 
-fn grab_out_name_text<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>) -> &'s str {
+fn grab_out_name_text<'s>(
+  iter: &mut impl Iterator<Item = XmlElement<'s>>,
+) -> &'s str {
   let t = match iter.next().unwrap() {
     Text(t) => t,
     unknown => panic!("grab_out_name_text err:{:?}", unknown),
@@ -503,7 +653,9 @@ fn grab_out_name_text<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>) -> &'
   t
 }
 
-fn grab_out_ptype_text<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>) -> &'s str {
+fn grab_out_ptype_text<'s>(
+  iter: &mut impl Iterator<Item = XmlElement<'s>>,
+) -> &'s str {
   let t = match iter.next().unwrap() {
     Text(t) => t,
     unknown => panic!("grab_out_ptype_text err:{:?}", unknown),
@@ -529,8 +681,13 @@ pub struct GlRegistry {
 impl GlRegistry {
   /// This is how you parse the contents of `gl.xml` into a `GlRegistry`.
   pub fn from_gl_xml_str(gl_xml: &str) -> Self {
-    let iter = &mut ElementIterator::new(&gl_xml).filter_map(skip_comments).filter_map(skip_empty_text_elements);
-    assert!(matches!(iter.next().unwrap(), StartTag { name: "registry", attrs: "" }));
+    let iter = &mut ElementIterator::new(&gl_xml)
+      .filter_map(skip_comments)
+      .filter_map(skip_empty_text_elements);
+    assert!(matches!(
+      iter.next().unwrap(),
+      StartTag { name: "registry", attrs: "" }
+    ));
     Self::from_iter(iter)
   }
 
@@ -538,7 +695,9 @@ impl GlRegistry {
   ///
   /// Must have `skip_comments` and `skip_empty_text_elements` applied.
   #[doc(hidden)]
-  pub fn from_iter<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>) -> Self {
+  pub fn from_iter<'s>(
+    iter: &mut impl Iterator<Item = XmlElement<'s>>,
+  ) -> Self {
     let mut registry = Self::default();
     loop {
       match iter.next().unwrap() {
@@ -556,7 +715,9 @@ impl GlRegistry {
             unknown => panic!("unexpected 'type' tag content:{:?}", unknown),
           }
         },
-        StartTag { name: "enums", attrs } => gather_enum_entries_to(&mut registry.gl_enums, iter, attrs),
+        StartTag { name: "enums", attrs } => {
+          gather_enum_entries_to(&mut registry.gl_enums, iter, attrs)
+        }
         EmptyTag { name: "enums", attrs: _ } => {
           // Note(Lokathor): An empty enums tag is just like a start/end pair
           // except we define no enum entries, so we naturally just skip it.
@@ -564,18 +725,26 @@ impl GlRegistry {
         StartTag { name: "commands", attrs: r#"namespace="GL""# } => loop {
           match iter.next().unwrap() {
             EndTag { name: "commands" } => break,
-            StartTag { name: "command", attrs } => registry.gl_commands.push(GlCommand::from_iter_and_attrs(iter, attrs)),
+            StartTag { name: "command", attrs } => registry
+              .gl_commands
+              .push(GlCommand::from_iter_and_attrs(iter, attrs)),
             unknown => panic!("unknown 'commands' content:{:?}", unknown),
           }
         },
-        StartTag { name: "feature", attrs } => registry.gl_features.push(GlFeature::from_iter_and_attrs(iter, attrs)),
+        StartTag { name: "feature", attrs } => {
+          registry.gl_features.push(GlFeature::from_iter_and_attrs(iter, attrs))
+        }
         StartTag { name: "extensions", attrs: "" } => loop {
           match iter.next().unwrap() {
             EndTag { name: "extensions" } => break,
-            StartTag { name: "extension", attrs } => registry.gl_extensions.push(GlExtension::from_iter_and_attrs(iter, attrs)),
+            StartTag { name: "extension", attrs } => registry
+              .gl_extensions
+              .push(GlExtension::from_iter_and_attrs(iter, attrs)),
             EmptyTag { name: "extension", attrs } => {
               let mut extension = GlExtension::default();
-              for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+              for TagAttribute { key, value } in
+                TagAttributeIterator::new(attrs)
+              {
                 match key {
                   "name" => extension.name.push_str(value),
                   "supported" => extension.supported.push_str(value),
@@ -624,23 +793,23 @@ impl core::fmt::Display for GlType {
             Some("(*") => match s.as_str() {
               "typedef void (* GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => {
                 new = "GLDEBUGPROC";
-                r#"O<unsafe extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+                r#"Option<unsafe extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
               }
               "typedef void (* GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => {
                 new = "GLDEBUGPROCARB";
-                r#"O<extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+                r#"Option<extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
               }
               "typedef void (* GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => {
                 new = "GLDEBUGPROCKHR";
-                r#"O<extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+                r#"Option<extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
               }
               "typedef void (* GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);" => {
                 new = "GLDEBUGPROCAMD";
-                r#"O<extern "system" fn(id: GLuint, category: GLenum, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+                r#"Option<extern "system" fn(id: GLuint, category: GLenum, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
               }
               "typedef void (* GLVULKANPROCNV)(void);" => {
                 new = "GLVULKANPROCNV";
-                r#"O<extern "system" fn()>"#
+                r#"Option<extern "system" fn()>"#
               }
               unknown => panic!("unknown fn ptr:{:?}", unknown),
             },
@@ -681,13 +850,19 @@ impl core::fmt::Display for GlType {
       }
       GlType::IfDef(s) => {
         assert_eq!(s, "#ifdef __APPLE__\r\ntypedef void *GLhandleARB;\r\n#else\r\ntypedef unsigned int GLhandleARB;\r\n#endif");
-        write!(f, r#"#[cfg(any(target_os="macos", target_os="ios"))]pub type GLhandleARB = *mut c_void;#[cfg(not(any(target_os="macos", target_os="ios")))]pub type GLhandleARB = c_uint;"#)
+        write!(
+          f,
+          r#"#[cfg(any(target_os="macos", target_os="ios"))]pub type GLhandleARB = *mut c_void;#[cfg(not(any(target_os="macos", target_os="ios")))]pub type GLhandleARB = c_uint;"#
+        )
       }
     }
   }
 }
 impl GlType {
-  fn try_from_iter_and_attrs<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>, _attrs: &str) -> Option<Self> {
+  fn try_from_iter_and_attrs<'s>(
+    iter: &mut impl Iterator<Item = XmlElement<'s>>,
+    _attrs: &str,
+  ) -> Option<Self> {
     let mut out = String::new();
     loop {
       match iter.next().unwrap() {
@@ -718,7 +893,11 @@ impl GlType {
   }
 }
 
-fn gather_enum_entries_to<'s>(list: &mut Vec<GlEnum>, iter: &mut impl Iterator<Item = XmlElement<'s>>, attrs: &str) {
+fn gather_enum_entries_to<'s>(
+  list: &mut Vec<GlEnum>,
+  iter: &mut impl Iterator<Item = XmlElement<'s>>,
+  attrs: &str,
+) {
   let mut is_bitmask = false;
   for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
     match key {
@@ -819,10 +998,22 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
     } else {
       "GLenum"
     };
-    let val = if self.gl_enum.value.starts_with("-") { format!("{} as GLenum", self.gl_enum.value) } else { self.gl_enum.value.clone() };
-    let mut doc = format!("`{name}: {ty} = {value_text}`", ty = ty, name = name, value_text = self.gl_enum.value,);
+    let val = if self.gl_enum.value.starts_with("-") {
+      format!("{} as GLenum", self.gl_enum.value)
+    } else {
+      self.gl_enum.value.clone()
+    };
+    let mut doc = format!(
+      "`{name}: {ty} = {value_text}`",
+      ty = ty,
+      name = name,
+      value_text = self.gl_enum.value,
+    );
     if let Some(g) = self.gl_enum.group.as_ref() {
-      doc.push_str(&format!("\\n* **Group{}:** ", if g.split(',').count() > 1 { "s" } else { "" }));
+      doc.push_str(&format!(
+        "\\n* **Group{}:** ",
+        if g.split(',').count() > 1 { "s" } else { "" }
+      ));
       for (i, group) in g.split(',').enumerate() {
         if i != 0 {
           doc.push_str(", ");
@@ -836,7 +1027,14 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
       doc.push('`');
     }
     //
-    write!(f, "#[doc = \"{doc}\"]\npub const {name}: {ty} = {val};", name = name, ty = ty, val = val, doc = doc)
+    write!(
+      f,
+      "#[doc = \"{doc}\"]\npub const {name}: {ty} = {val};",
+      name = name,
+      ty = ty,
+      val = val,
+      doc = doc
+    )
   }
 }
 
@@ -853,7 +1051,10 @@ pub struct GlCommand {
   vec_equivalent: Option<String>,
 }
 impl GlCommand {
-  fn from_iter_and_attrs<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>, attrs: &str) -> Self {
+  fn from_iter_and_attrs<'s>(
+    iter: &mut impl Iterator<Item = XmlElement<'s>>,
+    attrs: &str,
+  ) -> Self {
     for TagAttribute { key, value: _ } in TagAttributeIterator::new(attrs) {
       match key {
         "comment" => (),
@@ -866,7 +1067,8 @@ impl GlCommand {
         EndTag { name: "command" } => break,
         StartTag { name: "proto", attrs } => {
           if !attrs.is_empty() {
-            for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+            for TagAttribute { key, value } in TagAttributeIterator::new(attrs)
+            {
               match key {
                 "group" => command.proto_group = Some(String::from(value)),
                 unknown => panic!("unknown proto attr: {:?}", unknown),
@@ -890,7 +1092,9 @@ impl GlCommand {
             }
           }
         }
-        StartTag { name: "param", attrs } => command.params.push(GlCommandParam::from_iter_and_attrs(iter, attrs)),
+        StartTag { name: "param", attrs } => {
+          command.params.push(GlCommandParam::from_iter_and_attrs(iter, attrs))
+        }
         EmptyTag { name: "glx", attrs } => {
           command.glx_attrs = Some(String::from(attrs));
         }
@@ -926,7 +1130,11 @@ fn c_type_to_rust_type(text: &str) -> String {
       "void *" => String::from("*mut c_void"),
       "void **" => String::from("*mut *mut c_void"),
       _otherwise => {
-        let mut t = if text.starts_with("const") { format!("*{}", text) } else { format!("*mut {}", text) };
+        let mut t = if text.starts_with("const") {
+          format!("*{}", text)
+        } else {
+          format!("*mut {}", text)
+        };
         t.pop();
         t.pop();
         t
@@ -944,8 +1152,22 @@ struct GlobalGlCommand<'a> {
 }
 impl core::fmt::Display for GlobalGlCommand<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    let InfoForGlCommandPrinting { name, rust_return_type, arg_name_and_type_list, arg_name_list, trace_fmt, trace_args, docs, fn_type, atomic_ptr_name, error_check } =
-      InfoForGlCommandPrinting::from_command_and_api(self.gl_command, self.api, self.major_version_number);
+    let InfoForGlCommandPrinting {
+      name,
+      rust_return_type,
+      arg_name_and_type_list,
+      arg_name_list,
+      trace_fmt,
+      trace_args,
+      docs,
+      atomic_ptr_name,
+      error_check,
+      arity,
+    } = InfoForGlCommandPrinting::from_command_and_api(
+      self.gl_command,
+      self.api,
+      self.major_version_number,
+    );
     //
     write!(
       f,
@@ -957,11 +1179,7 @@ pub unsafe fn {name}({arg_name_and_type_list}){rust_return_type} {{
   {{
     trace!(\"calling {name}({trace_fmt});\", {trace_args});
   }}
-  let p = {atomic_ptr_name}.load(RELAX);
-  let out = match t_::<_, O<{fn_type}>>(p) {{
-    Some(fn_p) => fn_p({arg_name_list}),
-    None => go_panic_because_fn_not_loaded(\"{name}\"),
-  }};
+  let out = call_atomic_ptr_{arity}arg(\"{name}\", &{atomic_ptr_name}, {arg_name_list});
   {error_check}
   out
 }}
@@ -974,9 +1192,7 @@ static {atomic_ptr_name}: APcv = ap_null();
 pub fn {name}_load_with_dyn(
   get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void
 ) -> bool {{
-  let p = do_the_load_dyn(get_proc_address, b\"{name}\\0\");
-  {atomic_ptr_name}.store(p, RELAX);
-  !p.is_null()
+  load_dyn_name_atomic_ptr(get_proc_address, b\"{name}\\0\", &{atomic_ptr_name})
 }}
 /// Checks if the pointer for [`{name}`] is loaded (non-null).
 #[inline]
@@ -989,11 +1205,11 @@ pub fn {name}_is_loaded() -> bool {{
       rust_return_type = rust_return_type,
       atomic_ptr_name = atomic_ptr_name,
       arg_name_list = arg_name_list,
-      fn_type = fn_type,
       docs = docs,
       trace_fmt = trace_fmt,
       trace_args = trace_args,
       error_check = error_check,
+      arity = arity,
     )
   }
 }
@@ -1037,15 +1253,36 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
     ) {{"
     );
     for gl_command in self.gl_commands.iter() {
-      show!(f, "  self.{short_name}_load_with_dyn(get_proc_address);", short_name = &gl_command.name[2..]);
+      show!(
+        f,
+        "  self.{short_name}_load_with_dyn(get_proc_address);",
+        short_name = &gl_command.name[2..]
+      );
     }
     show!(f, "  }}");
     for gl_command in self.gl_commands.iter() {
-      let InfoForGlCommandPrinting { name, rust_return_type, arg_name_and_type_list, arg_name_list, docs, fn_type, atomic_ptr_name, trace_fmt, trace_args, error_check } =
-        InfoForGlCommandPrinting::from_command_and_api(gl_command, self.api, self.major_version_number);
+      let InfoForGlCommandPrinting {
+        name,
+        rust_return_type,
+        arg_name_and_type_list,
+        arg_name_list,
+        docs,
+        atomic_ptr_name,
+        trace_fmt,
+        trace_args,
+        error_check,
+        arity,
+      } = InfoForGlCommandPrinting::from_command_and_api(
+        gl_command,
+        self.api,
+        self.major_version_number,
+      );
       let short_name = &name[2..];
       //
-      struct_fields.push(format!("{atomic_ptr_name}: APcv", atomic_ptr_name = atomic_ptr_name,));
+      struct_fields.push(format!(
+        "{atomic_ptr_name}: APcv",
+        atomic_ptr_name = atomic_ptr_name,
+      ));
       show!(
         f,
         "{docs}
@@ -1056,11 +1293,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
     {{
       trace!(\"calling gl.{short_name}({trace_fmt});\", {trace_args});
     }}
-    let p = self.{atomic_ptr_name}.load(RELAX);
-    let out = match t_::<_, O<{fn_type}>>(p) {{
-      Some(fn_p) => fn_p({arg_name_list}),
-      None => go_panic_because_fn_not_loaded(\"{name}\"),
-    }};
+    let out = call_atomic_ptr_{arity}arg(\"{name}\", &self.{atomic_ptr_name}, {arg_name_list});
     {error_check}
     out
   }}
@@ -1069,9 +1302,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
     &self,
     get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void
   ) -> bool {{
-    let p = do_the_load_dyn(get_proc_address, b\"{name}\\0\");
-    self.{atomic_ptr_name}.store(p, RELAX);
-    !p.is_null()
+    load_dyn_name_atomic_ptr(get_proc_address, b\"{name}\\0\", &self.{atomic_ptr_name})
   }}
   #[inline]
   #[doc(hidden)]
@@ -1085,10 +1316,10 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
         docs = docs,
         atomic_ptr_name = atomic_ptr_name,
         arg_name_list = arg_name_list,
-        fn_type = fn_type,
         trace_fmt = trace_fmt,
         trace_args = trace_args,
         error_check = error_check,
+        arity = arity,
       );
     }
     show!(
@@ -1119,19 +1350,24 @@ struct InfoForGlCommandPrinting {
   atomic_ptr_name: String,
   arg_name_and_type_list: String,
   arg_name_list: String,
-  fn_type: String,
   rust_return_type: String,
   docs: String,
   trace_fmt: String,
   trace_args: String,
   error_check: String,
+  arity: usize,
 }
 impl InfoForGlCommandPrinting {
-  fn from_command_and_api(gl_command: &GlCommand, api: ApiGroup, major_version_number: i32) -> Self {
+  fn from_command_and_api(
+    gl_command: &GlCommand,
+    api: ApiGroup,
+    major_version_number: i32,
+  ) -> Self {
     let name = gl_command.name.clone();
     let atomic_ptr_name = format!("{name}_p", name = name);
     let rust_return_type = {
-      let c_return_type = &gl_command.proto[..gl_command.proto.len() - gl_command.name.len()];
+      let c_return_type =
+        &gl_command.proto[..gl_command.proto.len() - gl_command.name.len()];
       if c_return_type.trim() == "void" {
         String::new()
       } else {
@@ -1144,6 +1380,7 @@ impl InfoForGlCommandPrinting {
     let mut docs_notes_list = String::new();
     let mut trace_fmt = String::new();
     let mut trace_args = String::new();
+    let arity = gl_command.params.len();
     for gl_command_param in gl_command.params.iter() {
       let mut words_iter = gl_command_param.text.split_whitespace();
       let arg_name = {
@@ -1156,7 +1393,9 @@ impl InfoForGlCommandPrinting {
           temp_name
         }
       };
-      let arg_type_text = gl_command_param.text[..gl_command_param.text.len() - arg_name.len()].trim();
+      let arg_type_text = gl_command_param.text
+        [..gl_command_param.text.len() - arg_name.len()]
+        .trim();
       let arg_type = c_type_to_rust_type(arg_type_text);
       //
       if !arg_name_and_type_list.is_empty() {
@@ -1189,10 +1428,18 @@ impl InfoForGlCommandPrinting {
         // the docs.
         trace_fmt.push_str("{:#X}");
         trace_args.push_str(arg_name);
-      } else if ["GLDEBUGPROC", "GLDEBUGPROCARB", "GLDEBUGPROCKHR", "GLDEBUGPROCAMD", "GLVULKANPROCNV"].contains(&arg_type.as_str()) {
+      } else if [
+        "GLDEBUGPROC",
+        "GLDEBUGPROCARB",
+        "GLDEBUGPROCKHR",
+        "GLDEBUGPROCAMD",
+        "GLVULKANPROCNV",
+      ]
+      .contains(&arg_type.as_str())
+      {
         // pointers but make it weird
         trace_fmt.push_str("{:?}");
-        trace_args.push_str("t_::<_, O<fn()>>(");
+        trace_args.push_str("transmute::<_, Option<fn()>>(");
         trace_args.push_str(arg_name);
         trace_args.push_str(")");
       } else {
@@ -1204,27 +1451,47 @@ impl InfoForGlCommandPrinting {
         if group_text == "Boolean" && arg_type.contains("GLboolean") {
           // we don't need to remind you that bools are bools
         } else {
-          docs_notes_list.push_str(&format!("/// * `{arg_name}` group: {group_text}\n", arg_name = arg_name, group_text = group_text,));
+          docs_notes_list.push_str(&format!(
+            "/// * `{arg_name}` group: {group_text}\n",
+            arg_name = arg_name,
+            group_text = group_text,
+          ));
         }
       }
       if let Some(len_text) = gl_command_param.len.as_ref() {
-        docs_notes_list.push_str(&format!("/// * `{arg_name}` len: {len_text}\n", arg_name = arg_name, len_text = len_text,));
+        docs_notes_list.push_str(&format!(
+          "/// * `{arg_name}` len: {len_text}\n",
+          arg_name = arg_name,
+          len_text = len_text,
+        ));
       }
     }
     if let Some(proto_group_text) = gl_command.proto_group.as_ref() {
       if proto_group_text != "Boolean" {
-        docs_notes_list.push_str(&format!("/// * return value group: {proto_group_text}\n", proto_group_text = proto_group_text,));
+        docs_notes_list.push_str(&format!(
+          "/// * return value group: {proto_group_text}\n",
+          proto_group_text = proto_group_text,
+        ));
       }
     }
     if let Some(alias_of_text) = gl_command.alias_of.as_ref() {
-      docs_notes_list.push_str(&format!("/// * alias of: [`{alias_of_text}`]\n", alias_of_text = alias_of_text,));
+      docs_notes_list.push_str(&format!(
+        "/// * alias of: [`{alias_of_text}`]\n",
+        alias_of_text = alias_of_text,
+      ));
     }
     if let Some(vec_equivalent_text) = gl_command.vec_equivalent.as_ref() {
-      docs_notes_list.push_str(&format!("/// * vector equivalent: [`{vec_equivalent_text}`]\n", vec_equivalent_text = vec_equivalent_text,));
+      docs_notes_list.push_str(&format!(
+        "/// * vector equivalent: [`{vec_equivalent_text}`]\n",
+        vec_equivalent_text = vec_equivalent_text,
+      ));
     }
     docs_notes_list.pop(); // remove the final newline, if any
     let docs_name: String = match name.as_str() {
-      "glGetBufferParameteriv" | "glGetBufferParameteri64v" | "glGetNamedBufferParameteriv" | "glGetNamedBufferParameteri64v" => "glGetBufferParameter".to_string(),
+      "glGetBufferParameteriv"
+      | "glGetBufferParameteri64v"
+      | "glGetNamedBufferParameteriv"
+      | "glGetNamedBufferParameteri64v" => "glGetBufferParameter".to_string(),
       // TODO: find more of the functions that have alternate-named docs.
       otherwise => String::from(otherwise),
     };
@@ -1266,8 +1533,18 @@ impl InfoForGlCommandPrinting {
     } else {
       String::from("")
     };
-    let fn_type = format!("extern \"system\" fn({fn_type_list}){rust_return_type}", fn_type_list = fn_type_list, rust_return_type = rust_return_type);
-    Self { name, arg_name_and_type_list, arg_name_list, fn_type, rust_return_type, docs, atomic_ptr_name, trace_fmt, trace_args, error_check }
+    Self {
+      name,
+      arg_name_and_type_list,
+      arg_name_list,
+      rust_return_type,
+      docs,
+      atomic_ptr_name,
+      trace_fmt,
+      trace_args,
+      error_check,
+      arity,
+    }
   }
 }
 
@@ -1279,7 +1556,10 @@ pub struct GlCommandParam {
   len: Option<String>,
 }
 impl GlCommandParam {
-  fn from_iter_and_attrs<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>, attrs: &str) -> Self {
+  fn from_iter_and_attrs<'s>(
+    iter: &mut impl Iterator<Item = XmlElement<'s>>,
+    attrs: &str,
+  ) -> Self {
     let mut text = String::new();
     let mut group = None;
     let mut len = None;
@@ -1293,7 +1573,9 @@ impl GlCommandParam {
     loop {
       match iter.next().unwrap() {
         EndTag { name: "param" } => break,
-        StartTag { name: "ptype", attrs: "" } => text.push_str(grab_out_ptype_text(iter)),
+        StartTag { name: "ptype", attrs: "" } => {
+          text.push_str(grab_out_ptype_text(iter))
+        }
         StartTag { name: "name", attrs: "" } => {
           text.push(' ');
           text.push_str(grab_out_name_text(iter))
@@ -1321,7 +1603,10 @@ pub struct GlFeature {
   pub remove: Vec<GlRemoval>,
 }
 impl GlFeature {
-  fn from_iter_and_attrs<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>, attrs: &str) -> Self {
+  fn from_iter_and_attrs<'s>(
+    iter: &mut impl Iterator<Item = XmlElement<'s>>,
+    attrs: &str,
+  ) -> Self {
     let mut feature = Self::default();
     for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
       match key {
@@ -1347,27 +1632,45 @@ impl GlFeature {
             match iter.next().unwrap() {
               EndTag { name: "require" } => break,
               EmptyTag { name: "type", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => feature.required.push(GlRequirement { profile: profile.clone(), api: None, adjustment: ReqRem::Type(String::from(value)) }),
+                    "name" => feature.required.push(GlRequirement {
+                      profile: profile.clone(),
+                      api: None,
+                      adjustment: ReqRem::Type(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
                 }
               }
               EmptyTag { name: "enum", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => feature.required.push(GlRequirement { profile: profile.clone(), api: None, adjustment: ReqRem::Enum(String::from(value)) }),
+                    "name" => feature.required.push(GlRequirement {
+                      profile: profile.clone(),
+                      api: None,
+                      adjustment: ReqRem::Enum(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
                 }
               }
               EmptyTag { name: "command", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => feature.required.push(GlRequirement { profile: profile.clone(), api: None, adjustment: ReqRem::Command(String::from(value)) }),
+                    "name" => feature.required.push(GlRequirement {
+                      profile: profile.clone(),
+                      api: None,
+                      adjustment: ReqRem::Command(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
@@ -1391,27 +1694,42 @@ impl GlFeature {
             match iter.next().unwrap() {
               EndTag { name: "remove" } => break,
               EmptyTag { name: "type", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => feature.remove.push(GlRemoval { profile: profile.clone(), adjustment: ReqRem::Type(String::from(value)) }),
+                    "name" => feature.remove.push(GlRemoval {
+                      profile: profile.clone(),
+                      adjustment: ReqRem::Type(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
                 }
               }
               EmptyTag { name: "enum", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => feature.remove.push(GlRemoval { profile: profile.clone(), adjustment: ReqRem::Enum(String::from(value)) }),
+                    "name" => feature.remove.push(GlRemoval {
+                      profile: profile.clone(),
+                      adjustment: ReqRem::Enum(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
                 }
               }
               EmptyTag { name: "command", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => feature.remove.push(GlRemoval { profile: profile.clone(), adjustment: ReqRem::Command(String::from(value)) }),
+                    "name" => feature.remove.push(GlRemoval {
+                      profile: profile.clone(),
+                      adjustment: ReqRem::Command(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
@@ -1470,7 +1788,10 @@ pub struct GlExtension {
   pub required: Vec<GlRequirement>,
 }
 impl GlExtension {
-  fn from_iter_and_attrs<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>, attrs: &str) -> Self {
+  fn from_iter_and_attrs<'s>(
+    iter: &mut impl Iterator<Item = XmlElement<'s>>,
+    attrs: &str,
+  ) -> Self {
     let mut extension = Self::default();
     for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
       match key {
@@ -1498,27 +1819,45 @@ impl GlExtension {
             match iter.next().unwrap() {
               EndTag { name: "require" } => break,
               EmptyTag { name: "type", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => extension.required.push(GlRequirement { profile: profile.clone(), api: api.clone(), adjustment: ReqRem::Type(String::from(value)) }),
+                    "name" => extension.required.push(GlRequirement {
+                      profile: profile.clone(),
+                      api: api.clone(),
+                      adjustment: ReqRem::Type(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
                 }
               }
               EmptyTag { name: "enum", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => extension.required.push(GlRequirement { profile: profile.clone(), api: api.clone(), adjustment: ReqRem::Enum(String::from(value)) }),
+                    "name" => extension.required.push(GlRequirement {
+                      profile: profile.clone(),
+                      api: api.clone(),
+                      adjustment: ReqRem::Enum(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
                 }
               }
               EmptyTag { name: "command", attrs } => {
-                for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
+                for TagAttribute { key, value } in
+                  TagAttributeIterator::new(attrs)
+                {
                   match key {
-                    "name" => extension.required.push(GlRequirement { profile: profile.clone(), api: api.clone(), adjustment: ReqRem::Command(String::from(value)) }),
+                    "name" => extension.required.push(GlRequirement {
+                      profile: profile.clone(),
+                      api: api.clone(),
+                      adjustment: ReqRem::Command(String::from(value)),
+                    }),
                     "comment" => (),
                     unknown => panic!("unknown: {:?}", unknown),
                   }
