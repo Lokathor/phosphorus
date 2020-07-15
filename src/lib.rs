@@ -283,7 +283,7 @@ fn load_dyn_name_atomic_ptr(
   // reported to give \"error code\" values such as -1 or small non-null values.
   // To help guard against this silliness, we consider these values to also
   // just be a result of null.
-  if p_usize == usize::MAX || p_usize < 8 {{
+  if p_usize == core::usize::MAX || p_usize < 8 {{
     ptr.store(null_mut(), RELAX);
     false
   }} else {{
