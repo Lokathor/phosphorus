@@ -680,7 +680,10 @@ pub struct GlRegistry {
 }
 impl GlRegistry {
   /// This is how you parse the contents of `gl.xml` into a `GlRegistry`.
-  pub fn from_gl_xml_str(gl_xml: &str) -> Self {
+  pub fn from_gl_xml_str(mut gl_xml: &str) -> Self {
+    if gl_xml.chars().nth(0).unwrap() == '\u{feff}' {
+      gl_xml = &gl_xml['\u{feff}'.len_utf8()..];
+    }
     let iter = &mut ElementIterator::new(&gl_xml)
       .filter_map(skip_comments)
       .filter_map(skip_empty_text_elements);
@@ -695,6 +698,7 @@ impl GlRegistry {
   ///
   /// Must have `skip_comments` and `skip_empty_text_elements` applied.
   #[doc(hidden)]
+  #[allow(clippy::should_implement_trait)]
   pub fn from_iter<'s>(
     iter: &mut impl Iterator<Item = XmlElement<'s>>,
   ) -> Self {
@@ -849,11 +853,15 @@ impl core::fmt::Display for GlType {
         write!(f, "pub struct {name}{{ _priv: u8 }} impl core::fmt::Debug for {name} {{ fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {{ write!(f, \"{name}\") }} }}", name = name)
       }
       GlType::IfDef(s) => {
-        assert_eq!(s, "#ifdef __APPLE__\r\ntypedef void *GLhandleARB;\r\n#else\r\ntypedef unsigned int GLhandleARB;\r\n#endif");
-        write!(
-          f,
-          r#"#[cfg(any(target_os="macos", target_os="ios"))]pub type GLhandleARB = *mut c_void;#[cfg(not(any(target_os="macos", target_os="ios")))]pub type GLhandleARB = c_uint;"#
-        )
+        const GL_HANDLE_ARB_RN: &str = "#ifdef __APPLE__\r\ntypedef void *GLhandleARB;\r\n#else\r\ntypedef unsigned int GLhandleARB;\r\n#endif";
+        const GL_HANDLE_ARB_N: &str = "#ifdef __APPLE__\ntypedef void *GLhandleARB;\n#else\ntypedef unsigned int GLhandleARB;\n#endif";
+        match s.as_str() {
+          GL_HANDLE_ARB_RN | GL_HANDLE_ARB_N => write!(
+            f,
+            r#"#[cfg(any(target_os="macos", target_os="ios"))]pub type GLhandleARB = *mut c_void;#[cfg(not(any(target_os="macos", target_os="ios")))]pub type GLhandleARB = c_uint;"#
+          ),
+          unknown => panic!("unknown ifdef: {}", unknown),
+        }
       }
     }
   }
@@ -998,7 +1006,7 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
     } else {
       "GLenum"
     };
-    let val = if self.gl_enum.value.starts_with("-") {
+    let val = if self.gl_enum.value.starts_with('-') {
       format!("{} as GLenum", self.gl_enum.value)
     } else {
       self.gl_enum.value.clone()
@@ -1122,7 +1130,7 @@ impl GlCommand {
 }
 
 fn c_type_to_rust_type(text: &str) -> String {
-  if text.contains("*") {
+  if text.contains('*') {
     match text {
       "const GLchar *const*" => String::from("*const *const GLchar"),
       "const void *const*" => String::from("*const *const c_void"),
@@ -1419,7 +1427,7 @@ impl InfoForGlCommandPrinting {
       arg_name_and_type_list.push_str(": ");
       arg_name_and_type_list.push_str(&arg_type);
       fn_type_list.push_str(&arg_type);
-      if arg_type.contains("*") || arg_type.as_str() == "GLsync" {
+      if arg_type.contains('*') || arg_type.as_str() == "GLsync" {
         // pointers
         trace_fmt.push_str("{:p}");
         trace_args.push_str(arg_name);
@@ -1825,7 +1833,7 @@ impl GlExtension {
                   match key {
                     "name" => extension.required.push(GlRequirement {
                       profile: profile.clone(),
-                      api: api.clone(),
+                      api,
                       adjustment: ReqRem::Type(String::from(value)),
                     }),
                     "comment" => (),
@@ -1840,7 +1848,7 @@ impl GlExtension {
                   match key {
                     "name" => extension.required.push(GlRequirement {
                       profile: profile.clone(),
-                      api: api.clone(),
+                      api,
                       adjustment: ReqRem::Enum(String::from(value)),
                     }),
                     "comment" => (),
@@ -1855,7 +1863,7 @@ impl GlExtension {
                   match key {
                     "name" => extension.required.push(GlRequirement {
                       profile: profile.clone(),
-                      api: api.clone(),
+                      api,
                       adjustment: ReqRem::Command(String::from(value)),
                     }),
                     "comment" => (),
