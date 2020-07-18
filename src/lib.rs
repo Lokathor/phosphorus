@@ -273,7 +273,7 @@ fn load_dyn_name_atomic_ptr(
   // if this fails the code generator itself royally screwed up somehow,
   // and so it's only a debug assert.
   debug_assert_eq!(*fn_name.last().unwrap(), 0);
-  let p: *mut c_void = get_proc_address(fn_name.as_ptr().cast());
+  let p: *mut c_void = get_proc_address(fn_name.as_ptr() as *const c_char);
   let p_usize = p as usize;
   // You *should* get null for failed lookups, but some systems have been
   // reported to give \"error code\" values such as -1 or small non-null values.
