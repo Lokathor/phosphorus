@@ -215,8 +215,8 @@ impl core::fmt::Display for GlApiSelection {
       mem::transmute,
       ptr::null_mut,
     }};
-    const RELAX: Ordering = Ordering::Relaxed;
-    type APcv = AtomicPtr<c_void>;
+    #[allow(dead_code)]const RELAX: Ordering = Ordering::Relaxed;
+    #[allow(dead_code)]type APcv = AtomicPtr<c_void>;
     #[cfg(feature=\"global_loader\")]const fn ap_null() -> APcv {{ AtomicPtr::new(null_mut()) }}"
     );
 
@@ -254,7 +254,7 @@ impl core::fmt::Display for GlApiSelection {
 /// Placing the panic mechanism in this cold function generally helps code generation for the hot path.
 /// Or so the sages say, at least.
 #[cold]
-#[inline(never)]
+#[inline(never)]#[allow(dead_code)]
 fn go_panic_because_fn_not_loaded(name: &str) -> ! {{
   panic!(\"called {{name}} but it was not loaded.\", name = name)
 }}
@@ -264,7 +264,7 @@ fn go_panic_because_fn_not_loaded(name: &str) -> ! {{
 /// This function is used by both the global loader and struct loader.
 /// We mark it as `inline(never)` to favor a small binary over initialization speed.
 /// Returns if there's now a non-null value in the atomic pointer.
-#[inline(never)]
+#[inline(never)]#[allow(dead_code)]
 fn load_dyn_name_atomic_ptr(
   get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void,
   fn_name: &[u8],
@@ -341,7 +341,7 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
       show!(
         f,
         "
-  #[inline(always)]
+  #[inline(always)]#[allow(dead_code)]
   unsafe fn call_atomic_ptr_{arity}arg<Ret{ret_comma}{param_generics}>(name: &str, ptr: &APcv, {param_names_and_types}) -> Ret {{
     let p = ptr.load(RELAX);
     match transmute::<*mut c_void, Option<extern \"system\" fn({param_generics})->Ret>>(p) {{
