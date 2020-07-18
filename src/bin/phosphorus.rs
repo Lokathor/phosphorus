@@ -23,9 +23,41 @@ fn main() {
     "compatibility" => GlProfile::Compatibility,
     _ => panic!("illegal profile name, pick from {{core,compatibility}}"),
   };
-  let extensions: Vec<&str> = if args.len() == 7 { args[6].to_str().unwrap().split(",").map(str::trim).filter(|s| !s.is_empty()).collect() } else { Vec::new() };
+  let extensions: Vec<&str> = if args.len() == 7 {
+    args[6]
+      .to_str()
+      .unwrap()
+      .split(',')
+      .map(str::trim)
+      .filter(|s| !s.is_empty())
+      .collect()
+  } else {
+    Vec::new()
+  };
+  
+  if cfg!(debug_assertions) {
+    eprintln!("Reading `{}`", filename.to_str().unwrap());
+  }
   let gl_xml = std::fs::read_to_string(&filename).unwrap();
+  
+  if cfg!(debug_assertions) {
+    eprintln!("Parsing the registry.");
+  }
   let registry = GlRegistry::from_gl_xml_str(&gl_xml);
-  let selection = GlApiSelection::new_from_registry_api_extensions(&registry, api, (major, minor), profile, &extensions);
+  
+  if cfg!(debug_assertions) {
+    eprintln!("Selecting the correct API.");
+  }
+  let selection = GlApiSelection::new_from_registry_api_extensions(
+    &registry,
+    api,
+    (major, minor),
+    profile,
+    &extensions,
+  );
+  
+  if cfg!(debug_assertions) {
+    eprintln!("Printing.");
+  }
   println!("{}", selection);
 }
