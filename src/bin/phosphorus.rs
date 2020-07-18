@@ -5,6 +5,10 @@ use phosphorus::{ApiGroup, GlApiSelection, GlProfile, GlRegistry};
 fn main() {
   const USAGE: &str = "Illegal Arg Count. Usage: phosphorus <filename> <api> <major> <minor> <profile> [comma,separated,extensions,if,any]";
   let args: Vec<_> = std::env::args_os().collect();
+  if args.len() == 2 && args[1].to_str() == Some("--version") {
+    println!("phosphorus-{}", env!("CARGO_PKG_VERSION"));
+    return;
+  }
   if args.len() != 6 && args.len() != 7 {
     panic!("Should be either 6 or 7 args. {}", USAGE);
   }
@@ -34,17 +38,17 @@ fn main() {
   } else {
     Vec::new()
   };
-  
+
   if cfg!(debug_assertions) {
     eprintln!("Reading `{}`", filename.to_str().unwrap());
   }
   let gl_xml = std::fs::read_to_string(&filename).unwrap();
-  
+
   if cfg!(debug_assertions) {
     eprintln!("Parsing the registry.");
   }
   let registry = GlRegistry::from_gl_xml_str(&gl_xml);
-  
+
   if cfg!(debug_assertions) {
     eprintln!("Selecting the correct API.");
   }
@@ -55,7 +59,7 @@ fn main() {
     profile,
     &extensions,
   );
-  
+
   if cfg!(debug_assertions) {
     eprintln!("Printing.");
   }
