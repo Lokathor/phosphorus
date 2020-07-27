@@ -134,12 +134,13 @@ const STANDARD_CRATE_DOCS: &str = concat!(
 /// println!("{}", GlApiSelection::default());
 /// ```
 #[derive(Debug, Clone, Default)]
+#[allow(missing_docs)]
 pub struct GlApiSelection {
-  gl_types: Vec<GlType>,
-  gl_enums: HashMap<String, GlEnum>,
-  gl_commands: HashMap<String, GlCommand>,
-  api: ApiGroup,
-  version: (i32, i32),
+  pub gl_types: Vec<GlType>,
+  pub gl_enums: HashMap<String, GlEnum>,
+  pub gl_commands: HashMap<String, GlCommand>,
+  pub api: ApiGroup,
+  pub version: (i32, i32),
 }
 impl core::fmt::Display for GlApiSelection {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -763,7 +764,7 @@ impl GlRegistry {
 }
 
 /// Some sort of additional type we need to declare.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GlType {
   /// A type alias for an existing type.
   Typedef(String),
@@ -1044,15 +1045,16 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
 
 /// A GL function we have to bind to.
 #[derive(Debug, Default, Clone)]
+#[allow(missing_docs)]
 pub struct GlCommand {
-  name: String,
-  proto: String,
-  proto_group: Option<String>,
-  params: Vec<GlCommandParam>,
-  glx_attrs: Option<String>,
-  alias_of: Option<String>,
+  pub name: String,
+  pub proto: String,
+  pub proto_group: Option<String>,
+  pub params: Vec<GlCommandParam>,
+  pub glx_attrs: Option<String>,
+  pub alias_of: Option<String>,
   /// "call this instead if you want to pass via pointer"
-  vec_equivalent: Option<String>,
+  pub vec_equivalent: Option<String>,
 }
 impl GlCommand {
   fn from_iter_and_attrs<'s>(
