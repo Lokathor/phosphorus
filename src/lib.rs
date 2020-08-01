@@ -392,7 +392,7 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
   ///
   /// This allows you to call [SDL_GL_GetProcAddress](https://wiki.libsdl.org/SDL_GL_GetProcAddress),
   /// [wglGetProcAddress](https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-wglgetprocaddress),
-  /// or similar function, depending on your OS.
+  /// or some similar function, depending on your OS.
   ///
   /// This returns the number of functions it loaded. You can compare it to the [`NUMBER_OF_GENERATED_GL_COMMANDS`] value, if you want.
   pub unsafe fn load_global_gl_with<F>(
