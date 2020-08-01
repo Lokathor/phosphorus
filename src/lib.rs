@@ -201,14 +201,14 @@ impl core::fmt::Display for GlApiSelection {
     show!(
       f,
       "
-    #[cfg(feature = \"log\")] use log::{{error, trace}};
+    #[cfg(feature = \"log\")] #[allow(unused)] use log::{{error, trace}};
     #[cfg(all(
       not(feature = \"log\"),
       any(
         feature = \"debug_trace_calls\",
         feature = \"debug_automatic_glGetError\"
       )
-    ))]
+    ))] #[allow(unused)]
     use std::{{println, eprintln}};
     #[cfg(all(
       not(feature = \"log\"),
