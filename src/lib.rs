@@ -83,7 +83,7 @@ const STANDARD_CRATE_DOCS: &str = concat!(
 //! The crate is `no_std` friendly by default, but features above can end up
 //! requiring `std` to be available.
 //!
-//! # Docs.rs
+//! # GL Loaders
 //! The docs for this crate hosted on docs.rs generate **both** the
 //! `global_loader` and `struct_loader` documentation for sake of completeness.
 //!
@@ -123,7 +123,20 @@ const STANDARD_CRATE_DOCS: &str = concat!(
 //! other words, `glGetError_is_loaded` to check if `glGetError` is globally
 //! loaded, and `gl.GetError_is_loaded` to check if it's loaded in a `GlFns`.
 //! All of the "`_is_loaded`" functions are hidden in the generated docs just
-//! to keep things tidy, but they're there."#
+//! to keep things tidy, but they're there.
+//!
+//! # Safety
+//! In general, there's many ways that GL can go wrong.
+//!
+//! For the purposes of this library, it's important to focus on the fact that:
+//! * Initially all functions are null pointers. If a function is called when it's in a null state then you'll get a panic (reminder: a panic is safe).
+//! * You can load pointers from the current GL context (described above).
+//!   * These pointers are technically context specific, though in practice different contexts for the same graphics driver often all share the same function pointers.
+//!   * The loader has no way to verify that pointers it gets are actually pointers to the correct functions, it just trusts what you tell it.
+//! * Since loading a function pointer transitions the world from "it will definitely (safely) panic to call that GL command" to "it might be UB to call that GL command (even with the correct arguments).", the act of _simply loading_ a function pointer is considered to be `unsafe`.
+//! * Individual GL commands are generally safe to use once they've been properly loaded for the current context, but this crate doesn't attempt to sort out what is safe and what's not. All GL commands are blanket marked as being `unsafe`.
+//! It's up to you to try and manage this unsafety! Sorry, but this crate just does what you tell it to.
+"#
 );
 
 /// A particular selection of GL items.
@@ -224,7 +237,7 @@ impl core::fmt::Display for GlApiSelection {
     // do types
     show!(f);
     show!(f, "pub use types::*;");
-    show!(f, "#[allow(missing_docs)] mod types {{");
+    show!(f, "#[allow(missing_docs)] pub mod types {{");
     show!(f, "  use super::*;");
     for gl_type in self.gl_types.iter() {
       show!(f, "  {}", gl_type);
@@ -234,7 +247,7 @@ impl core::fmt::Display for GlApiSelection {
     // do enums
     show!(f);
     show!(f, "pub use enums::*;");
-    show!(f, "mod enums {{");
+    show!(f, "pub mod enums {{");
     show!(f, "  use super::*;");
     let mut enum_list: Vec<GlEnum> = self.gl_enums.values().cloned().collect();
     enum_list.sort_by_key(|gl_enum| gl_enum.name.clone());
@@ -361,7 +374,7 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
     // do global commands
     show!(f);
     show!(f, "#[cfg(feature=\"global_loader\")] pub use global_commands::*;");
-    show!(f, "#[cfg(feature=\"global_loader\")] mod global_commands {{");
+    show!(f, "#[cfg(feature=\"global_loader\")] pub mod global_commands {{");
     show!(f, "  use super::*;");
     show!(
       f,
@@ -377,7 +390,9 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
   /// or similar function, depending on your OS.
   ///
   /// This returns the number of functions it loaded. You can compare it to the[`NUMBER_OF_GENERATED_GL_COMMANDS`] value, if you want.
-  pub fn load_global_gl_with<F>(
+  /// ## Safety
+  /// The outputs of your `get_proc_address` closure cannot be verified for accuracy, and so they must simply be trusted. Depending on platform, function pointers might only be valid for the current context.
+  pub unsafe fn load_global_gl_with<F>(
     mut get_proc_address: F,
   ) -> usize
   where
@@ -403,7 +418,7 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
     // do struct commands
     show!(f);
     show!(f, "#[cfg(feature=\"struct_loader\")] pub use struct_commands::*;");
-    show!(f, "#[cfg(feature=\"struct_loader\")] mod struct_commands {{");
+    show!(f, "#[cfg(feature=\"struct_loader\")] pub mod struct_commands {{");
     show!(f, "  use super::*;");
     show!(
       f,
@@ -818,7 +833,7 @@ impl core::fmt::Display for GlType {
           },
           "struct" => match words_iter.next().unwrap() {
             "__GLsync" => {
-              write!(f, "pub struct __GLsync{{ _priv: u8 }} impl core::fmt::Debug for __GLsync {{ fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {{ write!(f, \"__GLsync\") }} }}")?;
+              write!(f, "#[doc(hidden)]pub struct __GLsync{{ _priv: u8 }} impl core::fmt::Debug for __GLsync {{ fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {{ write!(f, \"__GLsync\") }} }}")?;
               assert_eq!(words_iter.next().unwrap(), "*");
               "*mut __GLsync"
             }
@@ -1191,11 +1206,8 @@ pub unsafe fn {name}({arg_name_and_type_list}){rust_return_type} {{
 }}
 static {atomic_ptr_name}: APcv = ap_null();
 /// Tries to load [`{name}`], returns if a non-null pointer was obtained.
-///
-/// # Safety
-/// * This function promises to always pass a null terminated pointer to your closure.
 #[doc(hidden)]
-pub fn {name}_load_with_dyn(
+pub unsafe fn {name}_load_with_dyn(
   get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void
 ) -> bool {{
   load_dyn_name_atomic_ptr(get_proc_address, b\"{name}\\0\", &{atomic_ptr_name})
@@ -1237,7 +1249,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
       f,
       "  impl GlFns {{
     /// Constructs a new struct with all pointers loaded by the `get_proc_address` given.
-    pub fn load_with<F>(
+    pub unsafe fn load_with<F>(
       mut get_proc_address: F,
     ) -> Self
     where
@@ -1253,7 +1265,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
     /// Loads all pointers using the `get_proc_address` given.
     #[doc(hidden)]
     #[inline(never)]
-    pub fn load_all_with_dyn(
+    pub unsafe fn load_all_with_dyn(
       &self,
       get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void,
     ) {{"
@@ -1304,7 +1316,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
     out
   }}
   #[doc(hidden)]
-  pub fn {short_name}_load_with_dyn(
+  pub unsafe fn {short_name}_load_with_dyn(
     &self,
     get_proc_address: &mut dyn FnMut(*const c_char) -> *mut c_void
   ) -> bool {{
