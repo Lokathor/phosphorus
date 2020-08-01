@@ -1263,7 +1263,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
     {{
       // Safety: The `GlFns` struct is nothing but `AtomicPtr` fields,
       // which can be safely constructed with `zeroed`.
-      let out: Self = unsafe {{ core::mem::zeroed() }};
+      let out: Self = core::mem::zeroed();
       out.load_all_with_dyn(&mut get_proc_address);
       out
     }}
