@@ -1547,7 +1547,11 @@ impl InfoForGlCommandPrinting {
       | "glUniformMatrix4x2fv"
       | "glUniformMatrix3x4fv"
       | "glUniformMatrix4x3fv" => "glUniform".to_string(),
-      // TODO: find more of the functions that have alternate-named docs.
+      "glGetShaderiv" => "glGetShader".to_string(),
+      "glGetProgramiv" => "glGetProgram".to_string(),
+      // TODO: find more of the functions that have alternate-named docs? Or
+      // like, make this more automatic by just checking off the end and
+      // stripping off any necessary suffix maybe.
       otherwise => String::from(otherwise),
     };
     let docs = match api {
