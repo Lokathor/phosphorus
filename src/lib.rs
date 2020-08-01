@@ -306,10 +306,11 @@ fn load_dyn_name_atomic_ptr(
   }}
 }}
 
+/// Returns if an error was printed.
 #[inline(never)]
 #[cfg(feature = \"debug_automatic_glGetError\")]
-fn report_error_as_necessary_from(name: &str, err: GLenum) {{
-  while {{ match err {{
+fn report_error_code_from(name: &str, err: GLenum) {{
+  match err {{
     GL_NO_ERROR => return,
     GL_INVALID_ENUM => error!(\"Invalid Enum to {{name}}.\", name = name),
     GL_INVALID_VALUE => error!(\"Invalid Value to {{name}}.\", name = name),
@@ -319,7 +320,7 @@ fn report_error_as_necessary_from(name: &str, err: GLenum) {{
     GL_STACK_UNDERFLOW => error!(\"Stack Underflow in {{name}}.\", name = name),
     GL_STACK_OVERFLOW => error!(\"Stack Overflow in {{name}}.\", name = name),
     unknown => error!(\"Unknown error code {{unknown}} to {{name}}.\", name = name, unknown = unknown),
-  }} }}
+  }}
 }}
 
 /// The number of GL commands that were output by the bindings generator.
@@ -1192,6 +1193,7 @@ impl core::fmt::Display for GlobalGlCommand<'_> {
       self.gl_command,
       self.api,
       self.major_version_number,
+      false,
     );
     //
     write!(
@@ -1298,6 +1300,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
         gl_command,
         self.api,
         self.major_version_number,
+        true,
       );
       let short_name = &name[2..];
       //
@@ -1384,6 +1387,7 @@ impl InfoForGlCommandPrinting {
     gl_command: &GlCommand,
     api: ApiGroup,
     major_version_number: i32,
+    struct_mode: bool,
   ) -> Self {
     let name = gl_command.name.clone();
     let atomic_ptr_name = format!("{name}_p", name = name);
@@ -1509,51 +1513,55 @@ impl InfoForGlCommandPrinting {
       ));
     }
     docs_notes_list.pop(); // remove the final newline, if any
-    let docs_name: String = match name.as_str() {
-      "glGetBufferParameteriv"
-      | "glGetBufferParameteri64v"
-      | "glGetNamedBufferParameteriv"
-      | "glGetNamedBufferParameteri64v" => "glGetBufferParameter".to_string(),
-      "glUniform1f"
-      | "glUniform2f"
-      | "glUniform3f"
-      | "glUniform4f"
-      | "glUniform1i"
-      | "glUniform2i"
-      | "glUniform3i"
-      | "glUniform4i"
-      | "glUniform1ui"
-      | "glUniform2ui"
-      | "glUniform3ui"
-      | "glUniform4ui"
-      | "glUniform1fv"
-      | "glUniform2fv"
-      | "glUniform3fv"
-      | "glUniform4fv"
-      | "glUniform1iv"
-      | "glUniform2iv"
-      | "glUniform3iv"
-      | "glUniform4iv"
-      | "glUniform1uiv"
-      | "glUniform2uiv"
-      | "glUniform3uiv"
-      | "glUniform4uiv"
-      | "glUniformMatrix2fv"
-      | "glUniformMatrix3fv"
-      | "glUniformMatrix4fv"
-      | "glUniformMatrix2x3fv"
-      | "glUniformMatrix3x2fv"
-      | "glUniformMatrix2x4fv"
-      | "glUniformMatrix4x2fv"
-      | "glUniformMatrix3x4fv"
-      | "glUniformMatrix4x3fv" => "glUniform".to_string(),
-      "glGetShaderiv" => "glGetShader".to_string(),
-      "glGetProgramiv" => "glGetProgram".to_string(),
-      // TODO: find more of the functions that have alternate-named docs? Or
-      // like, make this more automatic by just checking off the end and
-      // stripping off any necessary suffix maybe.
-      otherwise => String::from(otherwise),
-    };
+    let docs_name: String = (|| {
+      // Note(Lokathor): These should be sorted with the longest items first so
+      // that we capture and slice off the largest possible matching suffix.
+      const SUFFIX_LIST: &[&str] = &[
+        "Matrix2x3fv",
+        "Matrix3x2fv",
+        "Matrix2x4fv",
+        "Matrix4x2fv",
+        "Matrix3x4fv",
+        "Matrix4x3fv",
+        "Matrix2fv",
+        "Matrix3fv",
+        "Matrix4fv",
+        "i64v",
+        "1uiv",
+        "2uiv",
+        "3uiv",
+        "4uiv",
+        "1ui",
+        "2ui",
+        "3ui",
+        "4ui",
+        "1fv",
+        "2fv",
+        "3fv",
+        "4fv",
+        "1iv",
+        "2iv",
+        "3iv",
+        "4iv",
+        "iv",
+        "fv",
+        "1f",
+        "2f",
+        "3f",
+        "4f",
+        "1i",
+        "2i",
+        "3i",
+        "4i",
+      ];
+      let name = name.as_str();
+      for suffix in SUFFIX_LIST.iter().copied() {
+        if name.ends_with(suffix) {
+          return name[..name.len() - suffix.len()].to_string();
+        }
+      }
+      name.to_string()
+    })();
     let docs = match api {
       ApiGroup::Gl if major_version_number >= 2 => format!(
         "/// [{name}](http://docs.gl/gl{major_version_number}/{docs_name})({arg_name_list}){newline_if_notes}{docs_notes_list}",
@@ -1582,13 +1590,31 @@ impl InfoForGlCommandPrinting {
       ),
     };
     let error_check = if name != "glGetError" {
-      format!(
-        "#[cfg(all(debug_assertions, feature = \"debug_automatic_glGetError\"))]
-        {{
-          report_error_as_necessary_from(\"{name}\", glGetError());
-        }}",
-        name = name,
-      )
+      if struct_mode {
+        format!(
+          "#[cfg(all(debug_assertions, feature = \"debug_automatic_glGetError\"))]
+          {{
+            let mut err = self.GetError();
+            while err != GL_NO_ERROR {{
+              report_error_code_from(\"{name}\", err);
+              err = self.GetError();
+            }};
+          }}",
+          name = name,
+        )
+      } else {
+        format!(
+          "#[cfg(all(debug_assertions, feature = \"debug_automatic_glGetError\"))]
+          {{
+            let mut err = glGetError();
+            while err != GL_NO_ERROR {{
+              report_error_code_from(\"{name}\", err);
+              err = glGetError();
+            }};
+          }}",
+          name = name,
+        )
+      }
     } else {
       String::from("")
     };
