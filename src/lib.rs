@@ -133,7 +133,7 @@ const STANDARD_CRATE_DOCS: &str = concat!(
 //! * You can load pointers from the current GL context (described above).
 //!   * These pointers are technically context specific, though in practice different contexts for the same graphics driver often all share the same function pointers.
 //!   * The loader has no way to verify that pointers it gets are actually pointers to the correct functions, it just trusts what you tell it.
-//! * Since loading a function pointer transitions the world from "it will definitely (safely) panic to call that GL command" to "it might be UB to call that GL command (even with the correct arguments).", the act of _simply loading_ a function pointer is considered to be `unsafe`.
+//! * Since loading a function pointer transitions the world from "it will definitely (safely) panic to call that GL command" to "it might be UB to call that GL command (even with the correct arguments)", the act of simply loading a function pointer is itself considered to be `unsafe`.
 //! * Individual GL commands are generally safe to use once they've been properly loaded for the current context, but this crate doesn't attempt to sort out what is safe and what's not. All GL commands are blanket marked as being `unsafe`.
 //! It's up to you to try and manage this unsafety! Sorry, but this crate just does what you tell it to.
 "#
@@ -238,6 +238,7 @@ impl core::fmt::Display for GlApiSelection {
     show!(f);
     show!(f, "pub use types::*;");
     show!(f, "#[allow(missing_docs)] pub mod types {{");
+    show!(f, "//! Contains all the GL types.");
     show!(f, "  use super::*;");
     for gl_type in self.gl_types.iter() {
       show!(f, "  {}", gl_type);
@@ -248,6 +249,9 @@ impl core::fmt::Display for GlApiSelection {
     show!(f);
     show!(f, "pub use enums::*;");
     show!(f, "pub mod enums {{");
+    show!(f, "//! Contains all the GL enumerated values.");
+    show!(f, "//! ");
+    show!(f, "//! In C these are called 'enums', but in Rust we call them a 'const'. Whatever.");
     show!(f, "  use super::*;");
     let mut enum_list: Vec<GlEnum> = self.gl_enums.values().cloned().collect();
     enum_list.sort_by_key(|gl_enum| gl_enum.name.clone());
@@ -375,6 +379,7 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
     show!(f);
     show!(f, "#[cfg(feature=\"global_loader\")] pub use global_commands::*;");
     show!(f, "#[cfg(feature=\"global_loader\")] pub mod global_commands {{");
+    show!(f, "//! Contains functions for using the global GL loader.");
     show!(f, "  use super::*;");
     show!(
       f,
@@ -419,6 +424,7 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
     show!(f);
     show!(f, "#[cfg(feature=\"struct_loader\")] pub use struct_commands::*;");
     show!(f, "#[cfg(feature=\"struct_loader\")] pub mod struct_commands {{");
+    show!(f, "//! Contains the [`GlFns`] type for using the struct GL loader.");
     show!(f, "  use super::*;");
     show!(
       f,
