@@ -394,7 +394,7 @@ pub const NUMBER_OF_GENERATED_GL_COMMANDS: usize = {count};",
   /// [wglGetProcAddress](https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-wglgetprocaddress),
   /// or similar function, depending on your OS.
   ///
-  /// This returns the number of functions it loaded. You can compare it to the[`NUMBER_OF_GENERATED_GL_COMMANDS`] value, if you want.
+  /// This returns the number of functions it loaded. You can compare it to the [`NUMBER_OF_GENERATED_GL_COMMANDS`] value, if you want.
   pub unsafe fn load_global_gl_with<F>(
     mut get_proc_address: F,
   ) -> usize
