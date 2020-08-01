@@ -309,8 +309,8 @@ fn load_dyn_name_atomic_ptr(
 #[inline(never)]
 #[cfg(feature = \"debug_automatic_glGetError\")]
 fn report_error_as_necessary_from(name: &str, err: GLenum) {{
-  match err {{
-    GL_NO_ERROR => (),
+  while {{ match err {{
+    GL_NO_ERROR => return,
     GL_INVALID_ENUM => error!(\"Invalid Enum to {{name}}.\", name = name),
     GL_INVALID_VALUE => error!(\"Invalid Value to {{name}}.\", name = name),
     GL_INVALID_OPERATION => error!(\"Invalid Operation to {{name}}.\", name = name),
@@ -319,7 +319,7 @@ fn report_error_as_necessary_from(name: &str, err: GLenum) {{
     GL_STACK_UNDERFLOW => error!(\"Stack Underflow in {{name}}.\", name = name),
     GL_STACK_OVERFLOW => error!(\"Stack Overflow in {{name}}.\", name = name),
     unknown => error!(\"Unknown error code {{unknown}} to {{name}}.\", name = name, unknown = unknown),
-  }}
+  }} }}
 }}
 
 /// The number of GL commands that were output by the bindings generator.
@@ -1514,6 +1514,39 @@ impl InfoForGlCommandPrinting {
       | "glGetBufferParameteri64v"
       | "glGetNamedBufferParameteriv"
       | "glGetNamedBufferParameteri64v" => "glGetBufferParameter".to_string(),
+      "glUniform1f"
+      | "glUniform2f"
+      | "glUniform3f"
+      | "glUniform4f"
+      | "glUniform1i"
+      | "glUniform2i"
+      | "glUniform3i"
+      | "glUniform4i"
+      | "glUniform1ui"
+      | "glUniform2ui"
+      | "glUniform3ui"
+      | "glUniform4ui"
+      | "glUniform1fv"
+      | "glUniform2fv"
+      | "glUniform3fv"
+      | "glUniform4fv"
+      | "glUniform1iv"
+      | "glUniform2iv"
+      | "glUniform3iv"
+      | "glUniform4iv"
+      | "glUniform1uiv"
+      | "glUniform2uiv"
+      | "glUniform3uiv"
+      | "glUniform4uiv"
+      | "glUniformMatrix2fv"
+      | "glUniformMatrix3fv"
+      | "glUniformMatrix4fv"
+      | "glUniformMatrix2x3fv"
+      | "glUniformMatrix3x2fv"
+      | "glUniformMatrix2x4fv"
+      | "glUniformMatrix4x2fv"
+      | "glUniformMatrix3x4fv"
+      | "glUniformMatrix4x3fv" => "glUniform".to_string(),
       // TODO: find more of the functions that have alternate-named docs.
       otherwise => String::from(otherwise),
     };
