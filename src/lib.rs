@@ -315,8 +315,7 @@ fn load_dyn_name_atomic_ptr(
 }}
 
 /// Returns if an error was printed.
-#[inline(never)]
-#[cfg(feature = \"debug_automatic_glGetError\")]
+#[inline(never)]#[allow(dead_code)]
 fn report_error_code_from(name: &str, err: GLenum) {{
   match err {{
     GL_NO_ERROR => return,
@@ -394,7 +393,7 @@ fn report_error_code_from(name: &str, err: GLenum) {{
     show!(f, "  use super::*;");
     show!(
       f,
-      "#[inline(never)]
+      "#[inline(never)]#[allow(dead_code)]
       fn global_automatic_glGetError(name: &str) {{
         let mut err = glGetError();
         while err != GL_NO_ERROR {{
@@ -1456,7 +1455,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
       out
     }}
 
-    #[inline(never)]
+    #[inline(never)]#[allow(dead_code)]
     fn automatic_glGetError(&self, name: &str) {{
       let mut err = self.GetError();
       while err != GL_NO_ERROR {{
