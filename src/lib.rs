@@ -431,7 +431,8 @@ fn report_error_code_from(name: &str, err: GLenum) {{
         }
       }
     }
-    //
+    // close load_global_gl_with
+    show!(f, "}}");
     for gl_command in command_list.iter() {
       show!(f);
       show!(
