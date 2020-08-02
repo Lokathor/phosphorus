@@ -199,35 +199,23 @@ impl core::fmt::Display for GlApiSelection {
       ),
       not(feature = \"chlorine\"),
     ))]
-    extern crate std;"
-    );
-    show!(
-      f,
-      "#[cfg(feature=\"chlorine\")]use chlorine::*;
-      #[cfg(not(feature=\"chlorine\"))]use std::os::raw::*;"
-    );
-    show!(
-      f,
-      "
-    #[cfg(feature = \"log\")] #[allow(unused)] use log::{{error, trace}};
-    #[cfg(all(
-      not(feature = \"log\"),
-      any(
-        feature = \"debug_trace_calls\",
-        feature = \"debug_automatic_glGetError\"
-      )
-    ))] #[allow(unused)]
-    use std::{{println, eprintln}};
+    extern crate std;
+    
+    #[cfg(feature=\"chlorine\")]use chlorine::*;
+    #[cfg(not(feature=\"chlorine\"))]use std::os::raw::*;
+
+    #[cfg(feature = \"log\")] #[allow(unused)]
+    use log::{{error, trace}};
     #[cfg(all(
       not(feature = \"log\"),
       feature = \"debug_trace_calls\"
     ))]
-    macro_rules! trace {{ ($($arg:tt)*) => {{ println!($($arg)*) }} }}
+    macro_rules! trace {{ ($($arg:tt)*) => {{ std::println!($($arg)*) }} }}
     #[cfg(all(
       not(feature = \"log\"),
       feature = \"debug_automatic_glGetError\"
     ))]
-    macro_rules! error {{ ($($arg:tt)*) => {{ eprintln!($($arg)*) }} }}"
+    macro_rules! error {{ ($($arg:tt)*) => {{ std::eprintln!($($arg)*) }} }}"
     );
     show!(
       f,
@@ -315,7 +303,8 @@ fn load_dyn_name_atomic_ptr(
 }}
 
 /// Returns if an error was printed.
-#[inline(never)]#[allow(dead_code)]
+#[cfg(feature = \"debug_automatic_glGetError\")]
+#[inline(never)]
 fn report_error_code_from(name: &str, err: GLenum) {{
   match err {{
     GL_NO_ERROR => return,
@@ -393,7 +382,7 @@ fn report_error_code_from(name: &str, err: GLenum) {{
     show!(f, "  use super::*;");
     show!(
       f,
-      "#[inline(never)]#[allow(dead_code)]
+      "#[cfg(feature = \"debug_automatic_glGetError\")]#[inline(never)]
       fn global_automatic_glGetError(name: &str) {{
         let mut err = glGetError();
         while err != GL_NO_ERROR {{
@@ -1455,7 +1444,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
       out
     }}
 
-    #[inline(never)]#[allow(dead_code)]
+    #[cfg(feature = \"debug_automatic_glGetError\")]#[inline(never)]
     fn automatic_glGetError(&self, name: &str) {{
       let mut err = self.GetError();
       while err != GL_NO_ERROR {{
