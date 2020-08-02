@@ -383,7 +383,7 @@ fn report_error_code_from(name: &str, err: GLenum) {{
     show!(
       f,
       "#[cfg(feature = \"debug_automatic_glGetError\")]#[inline(never)]
-      fn global_automatic_glGetError(name: &str) {{
+      unsafe fn global_automatic_glGetError(name: &str) {{
         let mut err = glGetError();
         while err != GL_NO_ERROR {{
           report_error_code_from(name, err);
@@ -1445,7 +1445,7 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
     }}
 
     #[cfg(feature = \"debug_automatic_glGetError\")]#[inline(never)]
-    fn automatic_glGetError(&self, name: &str) {{
+    unsafe fn automatic_glGetError(&self, name: &str) {{
       let mut err = self.GetError();
       while err != GL_NO_ERROR {{
         report_error_code_from(name, err);
