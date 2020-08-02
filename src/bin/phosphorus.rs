@@ -3,14 +3,18 @@
 use phosphorus::{ApiGroup, GlApiSelection, GlProfile, GlRegistry};
 
 fn main() {
-  const USAGE: &str = "Illegal Arg Count. Usage: phosphorus <filename> <api> <major> <minor> <profile> [comma,separated,extensions,if,any]";
+  const USAGE: &str = "Usage: phosphorus <filename> <api> <major> <minor> <profile> [comma,separated,extensions,if,any]";
   let args: Vec<_> = std::env::args_os().collect();
   if args.len() == 2 && args[1].to_str() == Some("--version") {
     println!("phosphorus-{}", env!("CARGO_PKG_VERSION"));
     return;
   }
   if args.len() != 6 && args.len() != 7 {
-    panic!("Should be either 6 or 7 args. {}", USAGE);
+    panic!(
+      "Illegal Arg Count: Should be either 6 or 7 args, got {count}.\n{usage}",
+      count = args.len(),
+      usage = USAGE
+    );
   }
   let filename = &args[1];
   let api = match args[2].to_str().unwrap() {
