@@ -432,7 +432,6 @@ fn report_error_code_from(name: &str, err: GLenum) {{
       }
     }
     //
-    show!(f, "    count\n  }}");
     for gl_command in command_list.iter() {
       show!(f);
       show!(
