@@ -395,7 +395,7 @@ fn report_error_code_from(name: &str, err: GLenum) {{
     show!(
       f,
       "#[inline(never)]
-      fn global_automatic_glGetError(&self, name: &str) {{
+      fn global_automatic_glGetError(name: &str) {{
         let mut err = glGetError();
         while err != GL_NO_ERROR {{
           report_error_code_from(name, err);
