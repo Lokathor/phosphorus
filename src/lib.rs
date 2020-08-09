@@ -1603,20 +1603,32 @@ impl InfoForGlCommandPrinting {
       // Note(Lokathor): These should be sorted with the longest items first so
       // that we capture and slice off the largest possible matching suffix.
       const SUFFIX_LIST: &[&str] = &[
+        "Integer64i_v",
         "Matrix2x3fv",
         "Matrix3x2fv",
         "Matrix2x4fv",
         "Matrix4x2fv",
         "Matrix3x4fv",
         "Matrix4x3fv",
+        "Integer64v",
+        "Booleani_v",
+        "Integeri_v",
         "Matrix2fv",
         "Matrix3fv",
         "Matrix4fv",
+        "Booleanv",
+        "Integerv",
+        "Floatv",
+        "I4uiv",
+        "I4iv",
+        "I4ui",
         "i64v",
         "1uiv",
         "2uiv",
         "3uiv",
         "4uiv",
+        "Iuiv",
+        "Iiv",
         "1ui",
         "2ui",
         "3ui",
@@ -1629,6 +1641,7 @@ impl InfoForGlCommandPrinting {
         "2iv",
         "3iv",
         "4iv",
+        "uiv",
         "iv",
         "fv",
         "1f",
@@ -1639,8 +1652,27 @@ impl InfoForGlCommandPrinting {
         "2i",
         "3i",
         "4i",
+        "fi",
+        "fv",
+        "iv",
+        "i",
+        "f",
+      ];
+      const LEAVE_IT: &[&str] = &[
+        "glGetActiveUniformBlockiv",
+        "glGetActiveUniformsiv",
+        "glGetInternalformativ",
+        "glGetShaderiv",
+        "glProgramParameteri",
       ];
       let name = name.as_str();
+      if name == "glVertexAttribIPointer" {
+        // the change is in the middle of the string, `I`
+        return "glVertexAttribPointer".to_string()
+      }
+      if LEAVE_IT.contains(name) {
+        return name.to_string()
+      }
       for suffix in SUFFIX_LIST.iter().copied() {
         if name.ends_with(suffix) {
           return name[..name.len() - suffix.len()].to_string();
