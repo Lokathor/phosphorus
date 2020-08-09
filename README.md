@@ -1,8 +1,6 @@
 # phosphorus
 
-The next generation in GL bindings generation for Rust.
-
-Well, some day.
+The next generation in GL bindings generation system for Rust.
 
 ## Project Logo
 

@@ -370,14 +370,8 @@ fn report_error_code_from(name: &str, err: GLenum) {{
 
     // do global commands
     show!(f);
-    show!(
-      f,
-      "#[cfg(feature=\"global_loader\")] pub use global_commands::*;"
-    );
-    show!(
-      f,
-      "#[cfg(feature=\"global_loader\")] pub mod global_commands {{"
-    );
+    show!(f, "#[cfg(feature=\"global_loader\")] pub use global_commands::*;");
+    show!(f, "#[cfg(feature=\"global_loader\")] pub mod global_commands {{");
     show!(f, "//! Contains functions for using the global GL loader.");
     show!(f, "  use super::*;");
     show!(
@@ -435,32 +429,15 @@ fn report_error_code_from(name: &str, err: GLenum) {{
     show!(f, "}}");
     for gl_command in command_list.iter() {
       show!(f);
-      show!(
-        f,
-        "{}",
-        GlobalGlCommand {
-          gl_command,
-          api,
-          major_version_number
-        }
-      );
+      show!(f, "{}", GlobalGlCommand { gl_command, api, major_version_number });
     }
     show!(f, "}}");
 
     // do struct commands
     show!(f);
-    show!(
-      f,
-      "#[cfg(feature=\"struct_loader\")] pub use struct_commands::*;"
-    );
-    show!(
-      f,
-      "#[cfg(feature=\"struct_loader\")] pub mod struct_commands {{"
-    );
-    show!(
-      f,
-      "//! Contains the [`GlFns`] type for using the struct GL loader."
-    );
+    show!(f, "#[cfg(feature=\"struct_loader\")] pub use struct_commands::*;");
+    show!(f, "#[cfg(feature=\"struct_loader\")] pub mod struct_commands {{");
+    show!(f, "//! Contains the [`GlFns`] type for using the struct GL loader.");
     show!(f, "  use super::*;");
     show!(
       f,
@@ -492,11 +469,8 @@ impl GlApiSelection {
       if gl_feature.api != api || gl_feature.number > target_number {
         continue;
       }
-      for GlRequirement {
-        profile,
-        api,
-        adjustment,
-      } in gl_feature.required.iter()
+      for GlRequirement { profile, api, adjustment } in
+        gl_feature.required.iter()
       {
         if let Some(p) = profile {
           match p.as_str() {
@@ -541,11 +515,7 @@ impl GlApiSelection {
         }
       }
       //
-      for GlRemoval {
-        profile,
-        adjustment,
-      } in gl_feature.remove.iter()
-      {
+      for GlRemoval { profile, adjustment } in gl_feature.remove.iter() {
         if let Some(p) = profile {
           match p.as_str() {
             "core" => {
@@ -579,11 +549,8 @@ impl GlApiSelection {
         .find(|gl_ext| gl_ext.name.as_str() == extension_name.as_str())
         .unwrap();
       assert!(the_extension.supported.contains(api.supported()), "Requested {extension_name} with api {api:?}, but it is not supported by that API.", extension_name = extension_name, api = api);
-      for GlRequirement {
-        profile,
-        api: req_api,
-        adjustment,
-      } in the_extension.required.iter()
+      for GlRequirement { profile, api: req_api, adjustment } in
+        the_extension.required.iter()
       {
         // skip wrong-profile requirements
         if let Some(p) = profile {
@@ -611,11 +578,8 @@ impl GlApiSelection {
           ReqRem::Type(_req_type) => (),
           ReqRem::Command(req_command) => {
             if gl_commands.contains_key(req_command) {
-              if let Some(ext) = gl_commands
-                .get_mut(req_command)
-                .unwrap()
-                .extensions
-                .as_mut()
+              if let Some(ext) =
+                gl_commands.get_mut(req_command).unwrap().extensions.as_mut()
               {
                 ext.push(extension_name.clone())
               }
@@ -676,14 +640,7 @@ impl GlApiSelection {
       );
     }
     //
-    Self {
-      gl_types,
-      gl_enums,
-      gl_commands,
-      api,
-      version: level,
-      extensions,
-    }
+    Self { gl_types, gl_enums, gl_commands, api, version: level, extensions }
   }
 }
 
@@ -783,10 +740,7 @@ impl GlRegistry {
       .filter_map(skip_empty_text_elements);
     assert!(matches!(
       iter.next().unwrap(),
-      StartTag {
-        name: "registry",
-        attrs: ""
-      }
+      StartTag { name: "registry", attrs: "" }
     ));
     Self::from_iter(iter)
   }
@@ -803,24 +757,12 @@ impl GlRegistry {
     loop {
       match iter.next().unwrap() {
         EndTag { name: "registry" } => return registry,
-        StartTag {
-          name: "comment",
-          attrs: "",
-        } => eat_to_comment_close(iter),
-        StartTag {
-          name: "groups",
-          attrs: "",
-        } => eat_to_groups_close(iter),
-        StartTag {
-          name: "types",
-          attrs: "",
-        } => loop {
+        StartTag { name: "comment", attrs: "" } => eat_to_comment_close(iter),
+        StartTag { name: "groups", attrs: "" } => eat_to_groups_close(iter),
+        StartTag { name: "types", attrs: "" } => loop {
           match iter.next().unwrap() {
             EndTag { name: "types" } => break,
-            StartTag {
-              name: "type",
-              attrs,
-            } => {
+            StartTag { name: "type", attrs } => {
               if let Some(t) = GlType::try_from_iter_and_attrs(iter, attrs) {
                 registry.gl_types.push(t)
               }
@@ -828,54 +770,32 @@ impl GlRegistry {
             unknown => panic!("unexpected 'type' tag content:{:?}", unknown),
           }
         },
-        StartTag {
-          name: "enums",
-          attrs,
-        } => gather_enum_entries_to(&mut registry.gl_enums, iter, attrs),
-        EmptyTag {
-          name: "enums",
-          attrs: _,
-        } => {
+        StartTag { name: "enums", attrs } => {
+          gather_enum_entries_to(&mut registry.gl_enums, iter, attrs)
+        }
+        EmptyTag { name: "enums", attrs: _ } => {
           // Note(Lokathor): An empty enums tag is just like a start/end pair
           // except we define no enum entries, so we naturally just skip it.
         }
-        StartTag {
-          name: "commands",
-          attrs: r#"namespace="GL""#,
-        } => loop {
+        StartTag { name: "commands", attrs: r#"namespace="GL""# } => loop {
           match iter.next().unwrap() {
             EndTag { name: "commands" } => break,
-            StartTag {
-              name: "command",
-              attrs,
-            } => registry
+            StartTag { name: "command", attrs } => registry
               .gl_commands
               .push(GlCommand::from_iter_and_attrs(iter, attrs)),
             unknown => panic!("unknown 'commands' content:{:?}", unknown),
           }
         },
-        StartTag {
-          name: "feature",
-          attrs,
-        } => registry
-          .gl_features
-          .push(GlFeature::from_iter_and_attrs(iter, attrs)),
-        StartTag {
-          name: "extensions",
-          attrs: "",
-        } => loop {
+        StartTag { name: "feature", attrs } => {
+          registry.gl_features.push(GlFeature::from_iter_and_attrs(iter, attrs))
+        }
+        StartTag { name: "extensions", attrs: "" } => loop {
           match iter.next().unwrap() {
             EndTag { name: "extensions" } => break,
-            StartTag {
-              name: "extension",
-              attrs,
-            } => registry
+            StartTag { name: "extension", attrs } => registry
               .gl_extensions
               .push(GlExtension::from_iter_and_attrs(iter, attrs)),
-            EmptyTag {
-              name: "extension",
-              attrs,
-            } => {
+            EmptyTag { name: "extension", attrs } => {
               let mut extension = GlExtension::default();
               for TagAttribute { key, value } in
                 TagAttributeIterator::new(attrs)
@@ -1005,20 +925,14 @@ impl GlType {
     loop {
       match iter.next().unwrap() {
         EndTag { name: "type" } => break,
-        StartTag {
-          name: "name",
-          attrs: "",
-        } => {
+        StartTag { name: "name", attrs: "" } => {
           if !out.is_empty() {
             out.push(' ');
           }
           out.push_str(grab_out_name_text(iter))
         }
         Text(t) => out.push_str(t.trim()),
-        EmptyTag {
-          name: "apientry",
-          attrs: "",
-        } => (),
+        EmptyTag { name: "apientry", attrs: "" } => (),
         unknown => panic!("unknown: {:?}", unknown),
       }
     }
@@ -1053,14 +967,8 @@ fn gather_enum_entries_to<'s>(
   loop {
     match iter.next().unwrap() {
       EndTag { name: "enums" } => break,
-      EmptyTag {
-        name: "unused",
-        attrs: _,
-      } => (),
-      EmptyTag {
-        name: "enum",
-        attrs,
-      } => {
+      EmptyTag { name: "unused", attrs: _ } => (),
+      EmptyTag { name: "enum", attrs } => {
         list.push(GlEnum::from_attrs(attrs, is_bitmask));
       }
       unknown => panic!("unknown: {:?}", unknown),
@@ -1115,15 +1023,7 @@ impl GlEnum {
     let value = the_value;
     assert!(!name.is_empty());
     assert!(!value.is_empty());
-    GlEnum {
-      name,
-      value,
-      group,
-      alias_of,
-      api,
-      is_bitmask,
-      extensions: None,
-    }
+    GlEnum { name, value, group, alias_of, api, is_bitmask, extensions: None }
   }
 }
 
@@ -1163,14 +1063,14 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
       self.gl_enum.value.clone()
     };
     let mut doc = format!(
-      "`{name}: {ty} = {value_text}`",
+      "#[doc = \"`{name}: {ty} = {value_text}`\"]",
       ty = ty,
       name = name,
       value_text = self.gl_enum.value,
     );
     if let Some(g) = self.gl_enum.group.as_ref() {
       doc.push_str(&format!(
-        "\\n* **Group{}:** ",
+        "#[doc = \"* **Group{}:** ",
         if g.split(',').count() > 1 { "s" } else { "" }
       ));
       for (i, group) in g.split(',').enumerate() {
@@ -1179,11 +1079,12 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
         }
         doc.push_str(group);
       }
+      doc.push_str("\"]");
     }
     if let Some(a) = self.gl_enum.alias_of.as_ref() {
-      doc.push_str("\\n* **Alias Of:** `");
+      doc.push_str("#[doc = \"* **Alias Of:** `");
       doc.push_str(a);
-      doc.push('`');
+      doc.push_str("`\"]");
     }
     let mut extensions = String::from("");
     if let Some(list) = self.gl_enum.extensions.as_ref() {
@@ -1208,7 +1109,7 @@ impl<'e> core::fmt::Display for GlEnumDisplayer<'e> {
     //
     write!(
       f,
-      "#[doc = \"{doc}\"]{extensions}pub const {name}: {ty} = {val};",
+      "{doc}{extensions}pub const {name}: {ty} = {val};",
       name = name,
       ty = ty,
       val = val,
@@ -1247,10 +1148,7 @@ impl GlCommand {
     loop {
       match iter.next().unwrap() {
         EndTag { name: "command" } => break,
-        StartTag {
-          name: "proto",
-          attrs,
-        } => {
+        StartTag { name: "proto", attrs } => {
           if !attrs.is_empty() {
             for TagAttribute { key, value } in TagAttributeIterator::new(attrs)
             {
@@ -1264,18 +1162,12 @@ impl GlCommand {
             match iter.next().unwrap() {
               EndTag { name: "proto" } => break,
               Text(t) => command.proto.push_str(t),
-              StartTag {
-                name: "name",
-                attrs: "",
-              } => {
+              StartTag { name: "name", attrs: "" } => {
                 let n = grab_out_name_text(iter);
                 command.name.push_str(n);
                 command.proto.push_str(n);
               }
-              StartTag {
-                name: "ptype",
-                attrs: "",
-              } => {
+              StartTag { name: "ptype", attrs: "" } => {
                 let n = grab_out_ptype_text(iter);
                 command.proto.push_str(n);
               }
@@ -1283,19 +1175,13 @@ impl GlCommand {
             }
           }
         }
-        StartTag {
-          name: "param",
-          attrs,
-        } => command
-          .params
-          .push(GlCommandParam::from_iter_and_attrs(iter, attrs)),
+        StartTag { name: "param", attrs } => {
+          command.params.push(GlCommandParam::from_iter_and_attrs(iter, attrs))
+        }
         EmptyTag { name: "glx", attrs } => {
           command.glx_attrs = Some(String::from(attrs));
         }
-        EmptyTag {
-          name: "alias",
-          attrs,
-        } => {
+        EmptyTag { name: "alias", attrs } => {
           for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
             match key {
               "name" => command.alias_of = Some(String::from(value)),
@@ -1303,10 +1189,7 @@ impl GlCommand {
             }
           }
         }
-        EmptyTag {
-          name: "vecequiv",
-          attrs,
-        } => {
+        EmptyTag { name: "vecequiv", attrs } => {
           for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
             match key {
               "name" => command.vec_equivalent = Some(String::from(value)),
@@ -1873,14 +1756,10 @@ impl GlCommandParam {
     loop {
       match iter.next().unwrap() {
         EndTag { name: "param" } => break,
-        StartTag {
-          name: "ptype",
-          attrs: "",
-        } => text.push_str(grab_out_ptype_text(iter)),
-        StartTag {
-          name: "name",
-          attrs: "",
-        } => {
+        StartTag { name: "ptype", attrs: "" } => {
+          text.push_str(grab_out_ptype_text(iter))
+        }
+        StartTag { name: "name", attrs: "" } => {
           text.push(' ');
           text.push_str(grab_out_name_text(iter))
         }
@@ -1922,10 +1801,7 @@ impl GlFeature {
     loop {
       match iter.next().unwrap() {
         EndTag { name: "feature" } => return feature,
-        StartTag {
-          name: "require",
-          attrs,
-        } => {
+        StartTag { name: "require", attrs } => {
           let mut profile = None;
           for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
             match key {
@@ -1937,10 +1813,7 @@ impl GlFeature {
           loop {
             match iter.next().unwrap() {
               EndTag { name: "require" } => break,
-              EmptyTag {
-                name: "type",
-                attrs,
-              } => {
+              EmptyTag { name: "type", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -1955,10 +1828,7 @@ impl GlFeature {
                   }
                 }
               }
-              EmptyTag {
-                name: "enum",
-                attrs,
-              } => {
+              EmptyTag { name: "enum", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -1973,10 +1843,7 @@ impl GlFeature {
                   }
                 }
               }
-              EmptyTag {
-                name: "command",
-                attrs,
-              } => {
+              EmptyTag { name: "command", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -1995,14 +1862,8 @@ impl GlFeature {
             }
           }
         }
-        EmptyTag {
-          name: "require",
-          attrs: _,
-        } => (),
-        StartTag {
-          name: "remove",
-          attrs,
-        } => {
+        EmptyTag { name: "require", attrs: _ } => (),
+        StartTag { name: "remove", attrs } => {
           let mut profile = None;
           for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
             match key {
@@ -2014,10 +1875,7 @@ impl GlFeature {
           loop {
             match iter.next().unwrap() {
               EndTag { name: "remove" } => break,
-              EmptyTag {
-                name: "type",
-                attrs,
-              } => {
+              EmptyTag { name: "type", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -2031,10 +1889,7 @@ impl GlFeature {
                   }
                 }
               }
-              EmptyTag {
-                name: "enum",
-                attrs,
-              } => {
+              EmptyTag { name: "enum", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -2048,10 +1903,7 @@ impl GlFeature {
                   }
                 }
               }
-              EmptyTag {
-                name: "command",
-                attrs,
-              } => {
+              EmptyTag { name: "command", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -2133,10 +1985,7 @@ impl GlExtension {
     loop {
       match iter.next().unwrap() {
         EndTag { name: "extension" } => return extension,
-        StartTag {
-          name: "require",
-          attrs,
-        } => {
+        StartTag { name: "require", attrs } => {
           let mut profile = None;
           let mut api = None;
           for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
@@ -2150,10 +1999,7 @@ impl GlExtension {
           loop {
             match iter.next().unwrap() {
               EndTag { name: "require" } => break,
-              EmptyTag {
-                name: "type",
-                attrs,
-              } => {
+              EmptyTag { name: "type", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -2168,10 +2014,7 @@ impl GlExtension {
                   }
                 }
               }
-              EmptyTag {
-                name: "enum",
-                attrs,
-              } => {
+              EmptyTag { name: "enum", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
@@ -2186,10 +2029,7 @@ impl GlExtension {
                   }
                 }
               }
-              EmptyTag {
-                name: "command",
-                attrs,
-              } => {
+              EmptyTag { name: "command", attrs } => {
                 for TagAttribute { key, value } in
                   TagAttributeIterator::new(attrs)
                 {
