@@ -4,6 +4,7 @@
 //!
 //! Example Usage:
 //! ```no_run
+//! # use phosphorus::*;
 //! let gl_xml = std::fs::read_to_string("gl.xml").unwrap();
 //! let registry = GlRegistry::from_gl_xml_str(&gl_xml);
 //! let selection = GlApiSelection::new_from_registry_api_extensions(
@@ -146,6 +147,7 @@ const STANDARD_DOCS: &str = r#"//!
 /// Once you make one of these you can just use the `Display` impl to make it
 /// print out the appropriate bindings.
 /// ```rust
+/// # use phosphorus::*;
 /// println!("{}", GlApiSelection::default());
 /// ```
 #[derive(Debug, Clone, Default)]
@@ -1668,10 +1670,10 @@ impl InfoForGlCommandPrinting {
       let name = name.as_str();
       if name == "glVertexAttribIPointer" {
         // the change is in the middle of the string, `I`
-        return "glVertexAttribPointer".to_string()
+        return "glVertexAttribPointer".to_string();
       }
-      if LEAVE_IT.contains(name) {
-        return name.to_string()
+      if LEAVE_IT.contains(&name) {
+        return name.to_string();
       }
       for suffix in SUFFIX_LIST.iter().copied() {
         if name.ends_with(suffix) {
