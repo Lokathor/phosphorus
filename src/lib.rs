@@ -171,6 +171,7 @@ impl core::fmt::Display for GlApiSelection {
     show!(f, "#![allow(bad_style)]");
     show!(f, "#![deny(missing_docs)]");
     show!(f, "#![deny(missing_debug_implementations)]");
+    show!(f, "#![cfg_attr(docs_rs, feature(doc_cfg))]");
     show!(f);
     show!(
       f,
