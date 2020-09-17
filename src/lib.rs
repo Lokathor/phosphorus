@@ -420,7 +420,9 @@ fn report_error_code_from(name: &str, err: GLenum) {{
             );
           show!(
             f,
-            "    {extensions}{{{name}_load_with_dyn(&mut get_proc_address) as usize;}}",
+            "    {extensions}{{
+              {name}_load_with_dyn(&mut get_proc_address) as usize;
+            }}",
             name = gl_command.name,
             extensions = extensions,
           )
@@ -1362,11 +1364,14 @@ impl core::fmt::Display for StructLoaderDisplayer<'_> {
             true,
           );
         show!(
-        f,
-        "  {extensions}{{self.{short_name}_load_with_dyn(get_proc_address);}}",
-        short_name = &gl_command.name[2..],
-        extensions = extensions,
-      );
+          f,
+          "  {extensions}
+          {{
+            self.{short_name}_load_with_dyn(get_proc_address);
+          }}",
+          short_name = &gl_command.name[2..],
+          extensions = extensions,
+        );
       }
     }
     show!(f, "  }}");
