@@ -1131,6 +1131,7 @@ pub struct GlCommand {
   pub name: String,
   pub proto: String,
   pub proto_group: Option<String>,
+  pub proto_class: Option<String>,
   pub params: Vec<GlCommandParam>,
   pub glx_attrs: Option<String>,
   /// "this is an alias of some more common command"
@@ -1159,6 +1160,7 @@ impl GlCommand {
             {
               match key {
                 "group" => command.proto_group = Some(String::from(value)),
+                "class" => command.proto_class = Some(String::from(value)),
                 unknown => panic!("unknown proto attr: {:?}", unknown),
               }
             }
@@ -1585,6 +1587,13 @@ impl InfoForGlCommandPrinting {
           len_text = len_text,
         ));
       }
+      if let Some(class_text) = gl_command_param.class.as_ref() {
+        docs_notes_list.push_str(&format!(
+          "/// * `{arg_name}` class: {class_text}\n",
+          arg_name = arg_name,
+          class_text = class_text,
+        ));
+      }
     }
     if let Some(proto_group_text) = gl_command.proto_group.as_ref() {
       if proto_group_text != "Boolean" {
@@ -1593,6 +1602,12 @@ impl InfoForGlCommandPrinting {
           proto_group_text = proto_group_text,
         ));
       }
+    }
+    if let Some(proto_class_text) = gl_command.proto_class.as_ref() {
+      docs_notes_list.push_str(&format!(
+        "/// * return value class: {proto_class_text}\n",
+        proto_class_text = proto_class_text,
+      ));
     }
     if let Some(alias_of_text) = gl_command.alias_of.as_ref() {
       docs_notes_list.push_str(&format!(
@@ -1778,6 +1793,7 @@ pub struct GlCommandParam {
   text: String,
   group: Option<String>,
   len: Option<String>,
+  class: Option<String>,
 }
 impl GlCommandParam {
   fn from_iter_and_attrs<'s>(
@@ -1786,10 +1802,12 @@ impl GlCommandParam {
     let mut text = String::new();
     let mut group = None;
     let mut len = None;
+    let mut class = None;
     for TagAttribute { key, value } in TagAttributeIterator::new(attrs) {
       match key {
         "group" => group = Some(String::from(value)),
         "len" => len = Some(String::from(value)),
+        "class" => class = Some(String::from(value)),
         unknown => panic!("unknown: {:?}", unknown),
       }
     }
@@ -1807,7 +1825,7 @@ impl GlCommandParam {
         unknown => panic!("unknown: {:?}", unknown),
       }
     }
-    Self { text, group, len }
+    Self { text, group, len, class }
   }
 }
 
