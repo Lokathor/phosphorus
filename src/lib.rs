@@ -47,6 +47,16 @@ pub enum GlProfile {
   Compatibility,
 }
 
+impl<'a> From<&'a str> for GlProfile {
+  fn from(string: &'a str) -> Self {
+    match string {
+      "core" => GlProfile::Core,
+      "compatibility" => GlProfile::Compatibility,
+      _ => panic!("Unknown profile: {}", string),
+    }
+  }
+}
+
 /// Does `writeln!(args)?`
 macro_rules! show {
   ($dst:expr) => { writeln!($dst)? };
@@ -463,7 +473,7 @@ impl GlApiSelection {
   /// of a GlRegistry.
   pub fn new_from_registry_api_extensions(
     reg: &GlRegistry, api: ApiGroup, level: (i32, i32),
-    target_profile: GlProfile, extensions: &[&str],
+    target_profile: Option<GlProfile>, extensions: &[&str],
   ) -> Self {
     let gl_types: Vec<GlType> = reg.gl_types.clone();
     let mut gl_enums: HashMap<String, GlEnum> = HashMap::new();
@@ -478,18 +488,8 @@ impl GlApiSelection {
         gl_feature.required.iter()
       {
         if let Some(p) = profile {
-          match p.as_str() {
-            "core" => {
-              if target_profile != GlProfile::Core {
-                continue;
-              }
-            }
-            "compatibility" => {
-              if target_profile != GlProfile::Compatibility {
-                continue;
-              }
-            }
-            unknown => panic!("unknown: {}", unknown),
+          if target_profile != Some(GlProfile::from(p.as_str())) {
+            continue;
           }
         }
         assert!(api.is_none());
@@ -522,18 +522,8 @@ impl GlApiSelection {
       //
       for GlRemoval { profile, adjustment } in gl_feature.remove.iter() {
         if let Some(p) = profile {
-          match p.as_str() {
-            "core" => {
-              if target_profile != GlProfile::Core {
-                continue;
-              }
-            }
-            "compatibility" => {
-              if target_profile != GlProfile::Compatibility {
-                continue;
-              }
-            }
-            unknown => panic!("unknown: {}", unknown),
+          if target_profile != Some(GlProfile::from(p.as_str())) {
+            continue;
           }
         }
         match adjustment {
@@ -559,18 +549,8 @@ impl GlApiSelection {
       {
         // skip wrong-profile requirements
         if let Some(p) = profile {
-          match p.as_str() {
-            "core" => {
-              if target_profile != GlProfile::Core {
-                continue;
-              }
-            }
-            "compatibility" => {
-              if target_profile != GlProfile::Compatibility {
-                continue;
-              }
-            }
-            unknown => panic!("unknown: {}", unknown),
+          if target_profile != Some(GlProfile::from(p.as_str())) {
+            continue;
           }
         }
         // skip wrong-api requirements
@@ -2123,6 +2103,8 @@ pub enum ApiGroup {
   Gles2,
   /// OpenGL SC
   Glsc2,
+  /// Embedded OpenGL
+  Egl,
 }
 impl ApiGroup {
   /// The "supported" string for this api group, as used by extension entries.
@@ -2132,6 +2114,7 @@ impl ApiGroup {
       ApiGroup::Gles1 => "gles1",
       ApiGroup::Gles2 => "gles2",
       ApiGroup::Glsc2 => "glsc2",
+      ApiGroup::Egl => "egl",
     }
   }
 }
@@ -2147,6 +2130,7 @@ impl From<&str> for ApiGroup {
       "gles1" => ApiGroup::Gles1,
       "gles2" => ApiGroup::Gles2,
       "glsc2" => ApiGroup::Glsc2,
+      "egl" => ApiGroup::Egl,
       _ => panic!("illegal:{}", s),
     }
   }
