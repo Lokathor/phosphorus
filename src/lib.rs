@@ -47,6 +47,16 @@ pub enum GlProfile {
   Compatibility,
 }
 
+impl<'a> From<&'a str> for GlProfile {
+  fn from(string: &'a str) -> Self {
+    match string {
+      "core" => GlProfile::Core,
+      "compatibility" => GlProfile::Compatibility,
+      _ => panic!("Unknown profile: {}", string),
+    }
+  }
+}
+
 /// Does `writeln!(args)?`
 macro_rules! show {
   ($dst:expr) => { writeln!($dst)? };
@@ -463,7 +473,7 @@ impl GlApiSelection {
   /// of a GlRegistry.
   pub fn new_from_registry_api_extensions(
     reg: &GlRegistry, api: ApiGroup, level: (i32, i32),
-    target_profile: GlProfile, extensions: &[&str],
+    target_profile: Option<GlProfile>, extensions: &[&str],
   ) -> Self {
     let gl_types: Vec<GlType> = reg.gl_types.clone();
     let mut gl_enums: HashMap<String, GlEnum> = HashMap::new();
@@ -478,18 +488,8 @@ impl GlApiSelection {
         gl_feature.required.iter()
       {
         if let Some(p) = profile {
-          match p.as_str() {
-            "core" => {
-              if target_profile != GlProfile::Core {
-                continue;
-              }
-            }
-            "compatibility" => {
-              if target_profile != GlProfile::Compatibility {
-                continue;
-              }
-            }
-            unknown => panic!("unknown: {}", unknown),
+          if target_profile != Some(GlProfile::from(p.as_str())) {
+            continue;
           }
         }
         assert!(api.is_none());
@@ -522,18 +522,8 @@ impl GlApiSelection {
       //
       for GlRemoval { profile, adjustment } in gl_feature.remove.iter() {
         if let Some(p) = profile {
-          match p.as_str() {
-            "core" => {
-              if target_profile != GlProfile::Core {
-                continue;
-              }
-            }
-            "compatibility" => {
-              if target_profile != GlProfile::Compatibility {
-                continue;
-              }
-            }
-            unknown => panic!("unknown: {}", unknown),
+          if target_profile != Some(GlProfile::from(p.as_str())) {
+            continue;
           }
         }
         match adjustment {
@@ -559,18 +549,8 @@ impl GlApiSelection {
       {
         // skip wrong-profile requirements
         if let Some(p) = profile {
-          match p.as_str() {
-            "core" => {
-              if target_profile != GlProfile::Core {
-                continue;
-              }
-            }
-            "compatibility" => {
-              if target_profile != GlProfile::Compatibility {
-                continue;
-              }
-            }
-            unknown => panic!("unknown: {}", unknown),
+          if target_profile != Some(GlProfile::from(p.as_str())) {
+            continue;
           }
         }
         // skip wrong-api requirements
@@ -772,6 +752,11 @@ impl GlRegistry {
                 registry.gl_types.push(t)
               }
             }
+            EmptyTag { name: "type", attrs } => {
+              if let Some(t) = GlType::try_from_attrs(attrs) {
+                registry.gl_types.push(t)
+              }
+            }
             unknown => panic!("unexpected 'type' tag content:{:?}", unknown),
           }
         },
@@ -831,6 +816,8 @@ pub enum GlType {
   Struct(String),
   /// A type definition with conditional compilation in it.
   IfDef(String),
+  /// A new define.
+  Define(String),
 }
 impl core::fmt::Display for GlType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -919,10 +906,82 @@ impl core::fmt::Display for GlType {
           unknown => panic!("unknown ifdef: {}", unknown),
         }
       }
+      GlType::Define(s) => {
+        let mut words_iter = s.split_whitespace();
+        let mut old = words_iter.next_back().unwrap();
+        assert_eq!(words_iter.next().unwrap(), "#define");
+        let new: &'static str = match words_iter.next().unwrap() {
+          "unsigned" => match words_iter.next().unwrap() {
+            "int" => "c_uint",
+            "char" => "c_uchar",
+            "short" => "c_ushort",
+            unknown => panic!("unknown unsigned:{}", unknown),
+          },
+          "void" => match words_iter.next() {
+            None => "c_void",
+            Some("*") => "*mut c_void",
+            Some("(*") => match s.as_str() {
+              "typedef void (* GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => {
+                old = "GLDEBUGPROC";
+                r#"Option<unsafe extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+              }
+              "typedef void (* GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => {
+                old = "GLDEBUGPROCARB";
+                r#"Option<extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+              }
+              "typedef void (* GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);" => {
+                old = "GLDEBUGPROCKHR";
+                r#"Option<extern "system" fn(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+              }
+              "typedef void (* GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);" => {
+                old = "GLDEBUGPROCAMD";
+                r#"Option<extern "system" fn(id: GLuint, category: GLenum, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void)>"#
+              }
+              "typedef void (* GLVULKANPROCNV)(void);" => {
+                old = "GLVULKANPROCNV";
+                r#"Option<extern "system" fn()>"#
+              }
+              unknown => panic!("unknown fn ptr:{:?}", unknown),
+            },
+            unknown => panic!("unknown void:{:?}", unknown),
+          },
+          "struct" => match words_iter.next().unwrap() {
+            "__GLsync" => {
+              write!(f, "#[doc(hidden)]pub struct __GLsync{{ _priv: u8 }} impl core::fmt::Debug for __GLsync {{ fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {{ write!(f, \"__GLsync\") }} }}")?;
+              assert_eq!(words_iter.next().unwrap(), "*");
+              "*mut __GLsync"
+            }
+            unknown => panic!("unknown struct:{}", unknown),
+          },
+          "khronos_int8_t" => "i8",
+          "khronos_uint8_t" => "u8",
+          "khronos_int16_t" => "i16",
+          "khronos_uint16_t" => "u16",
+          "khronos_int32_t" => "i32",
+          "khronos_uint32_t" => "u32",
+          "khronos_int64_t" => "i64",
+          "khronos_uint64_t" => "u64",
+          "khronos_float_t" => "c_float",
+          "khronos_intptr_t" => "isize",
+          "khronos_ssize_t" => "isize",
+          "GLintptr" => "GLintptr",
+          "double" => "c_double",
+          "int" => "c_int",
+          "char" => "c_char",
+          unknown => panic!("unknown:{}", unknown),
+        };
+        write!(f, "pub type {new} = {old};", new = new, old = old)
+      }
     }
   }
 }
 impl GlType {
+  fn try_from_attrs(
+    _attrs: &str,
+  ) -> Option<Self> {
+    None
+  }
+
   fn try_from_iter_and_attrs<'s>(
     iter: &mut impl Iterator<Item = XmlElement<'s>>, _attrs: &str,
   ) -> Option<Self> {
@@ -936,7 +995,7 @@ impl GlType {
           }
           out.push_str(grab_out_name_text(iter))
         }
-        Text(t) => out.push_str(t.trim()),
+        Text(t) => out.push_str(t),
         EmptyTag { name: "apientry", attrs: "" } => (),
         unknown => panic!("unknown: {:?}", unknown),
       }
@@ -950,6 +1009,8 @@ impl GlType {
       Some(GlType::Struct(out))
     } else if out.starts_with("#ifdef") {
       Some(GlType::IfDef(out))
+    } else if out.starts_with("#define") {
+      Some(GlType::Define(out))
     } else {
       panic!("unknown GlType variant: {}", out);
     }
@@ -2123,6 +2184,8 @@ pub enum ApiGroup {
   Gles2,
   /// OpenGL SC
   Glsc2,
+  /// Embedded OpenGL
+  Egl,
 }
 impl ApiGroup {
   /// The "supported" string for this api group, as used by extension entries.
@@ -2132,6 +2195,7 @@ impl ApiGroup {
       ApiGroup::Gles1 => "gles1",
       ApiGroup::Gles2 => "gles2",
       ApiGroup::Glsc2 => "glsc2",
+      ApiGroup::Egl => "egl",
     }
   }
 }
@@ -2147,6 +2211,7 @@ impl From<&str> for ApiGroup {
       "gles1" => ApiGroup::Gles1,
       "gles2" => ApiGroup::Gles2,
       "glsc2" => ApiGroup::Glsc2,
+      "egl" => ApiGroup::Egl,
       _ => panic!("illegal:{}", s),
     }
   }
