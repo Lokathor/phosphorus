@@ -1,51 +1,36 @@
-//! Parses `gl.xml` and then prints out Rust source that can bind to it.
-
-use phosphorus::{ApiGroup, GlApiSelection, GlProfile, GlRegistry};
+use magnesium::*;
+use phosphorus::{fmt_core_types, Registry};
 
 fn main() {
-  const USAGE: &str = "Usage: phosphorus <filename> <api> <major> <minor> <profile> [comma,separated,extensions,if,any]";
-  let args: Vec<_> = std::env::args_os().collect();
-  if args.len() == 2 && args[1].to_str() == Some("--version") {
-    println!("phosphorus-{}", env!("CARGO_PKG_VERSION"));
-    return;
+  let args: Vec<String> = std::env::args().skip(1).collect();
+  let gl_xml_filename = &args[0];
+  if cfg!(debug_assertions) {
+    eprintln!("Reading `{}`", gl_xml_filename);
   }
-  if args.len() != 6 && args.len() != 7 {
-    panic!("Illegal Arg Count: Should be either 6 or 7 args, got {count}.\n{usage}", count = args.len(), usage = USAGE);
+  let gl_xml_string = std::fs::read_to_string(gl_xml_filename).expect("Couldn't read gl.xml file!");
+  if cfg!(debug_assertions) {
+    eprintln!("Read {} bytes.", gl_xml_string.len());
   }
-  let filename = &args[1];
-  let api = match args[2].to_str().unwrap() {
-    "gl" => ApiGroup::Gl,
-    "gles1" => ApiGroup::Gles1,
-    "gles2" => ApiGroup::Gles2,
-    "glsc2" => ApiGroup::Glsc2,
-    _ => panic!("{}", "illegal api name, pick from {{gl,gles1,gles2,glsc2}}"),
+  let gl_xml_str = if gl_xml_string.chars().nth(0).unwrap() == '\u{feff}' {
+    if cfg!(debug_assertions) {
+      eprintln!("Byte Order Mark detected, removing.");
+    }
+    &gl_xml_string['\u{feff}'.len_utf8()..]
+  } else {
+    &gl_xml_string
   };
-  let major: i32 = args[3].to_str().unwrap().parse().unwrap();
-  let minor: i32 = args[4].to_str().unwrap().parse().unwrap();
-  let profile = match args[5].to_str().unwrap() {
-    "core" => GlProfile::Core,
-    "compatibility" => GlProfile::Compatibility,
-    _ => panic!("{}", "illegal profile name, pick from {{core,compatibility}}"),
-  };
-  let extensions: Vec<&str> = if args.len() == 7 { args[6].to_str().unwrap().split(',').map(str::trim).filter(|s| !s.is_empty()).collect() } else { Vec::new() };
 
+  let mut iter = ElementIterator::new(&gl_xml_str).filter_map(skip_comments).filter_map(skip_empty_text_elements).map(trim_text);
+  let registry = Registry::from_element_iterator(&mut iter);
   if cfg!(debug_assertions) {
-    eprintln!("Reading `{}`", filename.to_str().unwrap());
+    eprintln!("Enumerations Count: {}", registry.enumerations.len());
+    eprintln!("Commands Count: {}", registry.commands.len());
+    eprintln!("Features Count: {}", registry.features.len());
+    eprintln!("Extensions Count: {}", registry.extensions.len());
   }
-  let gl_xml = std::fs::read_to_string(&filename).unwrap();
-
-  if cfg!(debug_assertions) {
-    eprintln!("Parsing the registry.");
-  }
-  let registry = GlRegistry::from_gl_xml_str(&gl_xml);
-
-  if cfg!(debug_assertions) {
-    eprintln!("Selecting the correct API.");
-  }
-  let selection = GlApiSelection::new_from_registry_api_extensions(&registry, api, (major, minor), profile, &extensions);
-
-  if cfg!(debug_assertions) {
-    eprintln!("Printing.");
-  }
-  println!("{}", selection);
+  let mut s = String::new();
+  fmt_core_types(&mut s);
+  registry.fmt_enumerations(&mut s).unwrap();
+  println!("{}", s);
+  //println!("{:#?}", registry);
 }
