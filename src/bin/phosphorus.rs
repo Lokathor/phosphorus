@@ -1,5 +1,7 @@
+#![allow(unused_mut)]
+
 use magnesium::*;
-use phosphorus::{fmt_core_types, Registry};
+use phosphorus::Registry;
 
 fn main() {
   let args: Vec<String> = std::env::args().skip(1).collect();
@@ -21,16 +23,15 @@ fn main() {
   };
 
   let mut iter = ElementIterator::new(&gl_xml_str).filter_map(skip_comments).filter_map(skip_empty_text_elements).map(trim_text);
-  let registry = Registry::from_element_iterator(&mut iter);
+  let mut registry = Registry::from_element_iterator(&mut iter);
+  registry.commands.sort();
   if cfg!(debug_assertions) {
     eprintln!("Enumerations Count: {}", registry.enumerations.len());
     eprintln!("Commands Count: {}", registry.commands.len());
     eprintln!("Features Count: {}", registry.features.len());
     eprintln!("Extensions Count: {}", registry.extensions.len());
   }
-  let mut s = String::new();
-  fmt_core_types(&mut s);
-  registry.fmt_enumerations(&mut s).unwrap();
+  let mut s = String::with_capacity(1024 * 1024 * 10);
+  registry.fmt_command_types(&mut s).unwrap();
   println!("{}", s);
-  //println!("{:#?}", registry);
 }

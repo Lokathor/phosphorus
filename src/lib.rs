@@ -1,172 +1,34 @@
+#![allow(bad_style)]
+#![allow(unused_imports)]
+
+use chlorine::*;
 use magnesium::{XmlElement::*, *};
+
+use core::fmt::Write;
+
+pub mod gl_core_types;
+pub(crate) use gl_core_types::*;
+
+pub mod gl_enumerations;
+pub(crate) use gl_enumerations::*;
+
+pub mod gl_groups;
+pub(crate) use gl_groups::*;
+
+pub mod gl_command_types;
+pub(crate) use gl_command_types::*;
+
+pub mod gl_feature_lists;
+pub(crate) use gl_feature_lists::*;
+
+pub mod gl_extension_lists;
+pub(crate) use gl_extension_lists::*;
 
 // TODO: format a struct loader
 
 // TODO: format a global loader
 
-/// Requires a source of C types to be in scope.
-pub const CORE_TYPES: &str = r#"
-#![allow(bad_style)]
-fn main() {}
-type c_int = i32;
-type c_uint = u32;
-type c_uchar = u8;
-type c_float = f32;
-type c_double = f64;
-type c_ushort = u16;
-
-// Note(Lokathor): Alias this internally, but the rest of the world can just see `c_void`.
-pub(crate) type void = core::ffi::c_void;
-
-/// A GL enumeration value.
-#[derive(PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct GlEnum(pub c_uint);
-impl core::fmt::Debug for GlEnum {
-  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "GlEnum(0x{:X})", self.0)
-  }
-}
-impl Clone for GlEnum {
-  fn clone(&self) -> Self {
-    *self
-  }
-}
-impl Copy for GlEnum { }
-
-/// A GL bitfield value.
-///
-/// You can mix around the bits of these values using standard bitwise ops.
-#[derive(PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct GlBitfield(pub c_uint);
-impl core::fmt::Debug for GlBitfield {
-  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "GlBitfield(0b{:b})", self.0)
-  }
-}
-impl Clone for GlBitfield {
-  fn clone(&self) -> Self {
-    *self
-  }
-}
-impl Copy for GlBitfield { }
-impl core::ops::BitAnd for GlBitfield {
-  type Output = Self;
-  fn bitand(self, rhs: Self) -> Self::Output {
-    Self(self.0 & rhs.0)
-  }
-}
-impl core::ops::BitAndAssign for GlBitfield {
-  fn bitand_assign(&mut self, rhs: Self) {
-    *self = *self & rhs;
-  }
-}
-impl core::ops::BitOr for GlBitfield {
-  type Output = Self;
-  fn bitor(self, rhs: Self) -> Self::Output {
-    Self(self.0 | rhs.0)
-  }
-}
-impl core::ops::BitOrAssign for GlBitfield {
-  fn bitor_assign(&mut self, rhs: Self) {
-    *self = *self | rhs;
-  }
-}
-impl core::ops::BitXor for GlBitfield {
-  type Output = Self;
-  fn bitxor(self, rhs: Self) -> Self::Output {
-    Self(self.0 ^ rhs.0)
-  }
-}
-impl core::ops::BitXorAssign for GlBitfield {
-  fn bitxor_assign(&mut self, rhs: Self) {
-    *self = *self ^ rhs;
-  }
-}
-impl core::ops::Not for GlBitfield {
-  type Output = Self;
-  fn not(self) -> Self::Output {
-    Self(!self.0)
-  }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct GLhandleARB(
-  #[cfg(any(target_os = "ios", target_os="macos"))]
-  pub *mut void,
-  #[cfg(not(any(target_os = "ios", target_os="macos")))]
-  pub c_uint
-);
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct GLeglClientBufferEXT(pub *mut void);
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct GLeglImageOES(pub *mut void);
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct GLsync(pub *mut void);
-
-#[repr(transparent)]
-pub struct _cl_context(pub void);
-
-#[repr(transparent)]
-pub struct _cl_event(pub void);
-
-pub type GLDEBUGPROC = Option<unsafe extern "system" fn(source: GLenum, type_: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *const void)>;
-pub type GLDEBUGPROCARB = GLDEBUGPROC;
-pub type GLDEBUGPROCKHR = GLDEBUGPROC;
-pub type GLDEBUGPROCAMD = Option<unsafe extern "system" fn(id: GLuint, category: GLenum, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut void)>;
-pub type GLVULKANPROCNV = Option<unsafe extern "system" fn()>;
-
-/// alias for `GlEnum` (rust style) to also be `GLenum` (GL style).
-pub type GLenum = GlEnum;
-
-/// alias for `GlBitfield` (rust style) to also be `GLbitfield` (GL style).
-pub type GLbitfield = GlBitfield;
-
-pub type GLboolean = c_uchar;
-pub type GLvoid = core::ffi::c_void;
-pub type GLbyte = i8;
-pub type GLubyte = u8;
-pub type GLshort = i16;
-pub type GLushort = u16;
-pub type GLint = c_int;
-pub type GLuint = c_uint;
-pub type GLclampx = i32;
-pub type GLsizei = c_int;
-pub type GLfloat = c_float;
-pub type GLclampf = c_float;
-pub type GLdouble = c_double;
-pub type GLclampd = c_double;
-pub type GLchar = u8;
-pub type GLcharARB = u8;
-pub type GLhalf = u16;
-pub type GLhalfARB = u16;
-pub type GLfixed = i32;
-pub type GLintptr = isize;
-pub type GLintptrARB = isize;
-pub type GLsizeiptr = isize;
-pub type GLsizeiptrARB = isize;
-pub type GLint64 = i64;
-pub type GLint64EXT = i64;
-pub type GLuint64 = u64;
-pub type GLuint64EXT = u64;
-pub type GLhalfNV = c_ushort;
-pub type GLvdpauSurfaceNV = GLintptr;
-
-"#;
-
-pub fn fmt_core_types(s: &mut String) {
-  s.push_str(CORE_TYPES)
-}
-
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Enumeration<'s> {
   pub name: &'s str,
   pub value: &'s str,
@@ -178,34 +40,30 @@ pub struct Enumeration<'s> {
   pub is_bitmask: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Command<'s> {
+  pub name: &'s str,
   pub ret_type: &'s str,
   pub ret_group: Option<&'s str>,
   pub ret_class: Option<&'s str>,
+  /// comment about XML content, not a useful comment to GL users.
   pub comment: Option<&'s str>,
-  pub name: &'s str,
   pub alias: Option<&'s str>,
   pub params: Vec<CommandParam<'s>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CommandParam<'s> {
+  pub name: &'s str,
   pub group: Option<&'s str>,
   pub class: Option<&'s str>,
   pub len: Option<&'s str>,
   pub ptype: &'s str,
-  pub name: &'s str,
   pub is_const: bool,
   pub is_ptr: bool,
 }
-impl<'s> CommandParam<'s> {
-  fn fmt_rust_type(&self, s: &mut String) -> core::fmt::Result {
-    todo!()
-  }
-}
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Feature<'s> {
   pub api: &'s str,
   pub name: &'s str,
@@ -214,7 +72,7 @@ pub struct Feature<'s> {
   pub commands_removed: Vec<&'s str>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Extension<'s> {
   pub name: &'s str,
   pub supported: &'s str,
@@ -612,6 +470,118 @@ impl<'s> Registry<'s> {
           writeln!(s, "pub const {name}: {e_ty} = {ctor}{o_paren}{max}{val}{c_paren};", name = enumeration.name, e_ty = e_ty, val = enumeration.value, max = max_str, ctor = ctor, o_paren = o_paren, c_paren = c_paren)?;
         }
       }
+      writeln!(s)?;
+    }
+    Ok(())
+  }
+
+  pub fn fmt_groups(&self, s: &mut String) -> core::fmt::Result {
+    use std::collections::HashMap;
+    let mut g: HashMap<&'s str, Vec<&'s str>> = HashMap::new();
+    //
+    for enumeration in self.enumerations.iter() {
+      for group in enumeration.group.as_ref().unwrap_or(&"").split(',') {
+        if group == "" {
+          continue;
+        }
+        g.entry(group).or_insert(Vec::new()).push(enumeration.name);
+      }
+    }
+    //
+    let mut group_list: Vec<&'s str> = g.keys().copied().collect();
+    group_list.sort();
+    for group in group_list.iter() {
+      g.entry(group).or_insert(Vec::new()).sort();
+      for group_entry in g.entry(group).or_insert(Vec::new()).iter() {
+        writeln!(s, "/// * [`{}`]", group_entry)?;
+      }
+      writeln!(s, "pub type {} = GlEnum;", group)?;
+      writeln!(s, "")?;
+    }
+    //
+    Ok(())
+  }
+
+  pub fn fmt_feature_lists(&self, s: &mut String) -> core::fmt::Result {
+    for feature in self.features.iter() {
+      writeln!(s, "pub const {name}_ADDED: &[&str] = &{list:#?};", name = feature.name, list = feature.commands_added)?;
+      writeln!(s, "pub const {name}_REMOVED: &[&str] = &{list:#?};", name = feature.name, list = feature.commands_removed)?;
+      writeln!(s)?;
+    }
+    Ok(())
+  }
+
+  pub fn fmt_extension_lists(&self, s: &mut String) -> core::fmt::Result {
+    for extension in self.extensions.iter() {
+      writeln!(s, "pub const {name}_COMMANDS: &[&str] = &{list:#?};", name = extension.name, list = extension.commands_added)?;
+      writeln!(s)?;
+    }
+    Ok(())
+  }
+
+  pub fn fmt_command_types(&self, s: &mut String) -> core::fmt::Result {
+    for command in self.commands.iter() {
+      for _param in command.params.iter() {
+        // TODO: generate comments
+      }
+      writeln!(s, "pub type {name}_t = unsafe extern \"system\" fn(", name = command.name)?;
+      for param in command.params.iter() {
+        write!(
+          s,
+          "  {param_name}: ",
+          param_name = match param.name {
+            "ref" => "ref_",
+            "type" => "type_",
+            "box" => "box_",
+            "in" => "in_",
+            "struct _cl_context" => "_cl_context",
+            "struct _cl_event" => "_cl_event",
+            other => other,
+          }
+        )?;
+        if param.is_ptr {
+          write!(s, "*{} ", if param.is_const { "const" } else { "mut" })?;
+        }
+        if let Some(len) = param.len.as_ref() {
+          match len.parse::<usize>() {
+            Ok(count) if count > 1 => write!(s, "[{base_ty}; {count}]", base_ty = param.ptype, count = count)?,
+            _ => {
+              if len.len() > 3 {
+                match len[1..len.len() - 1].parse::<usize>() {
+                  Ok(count) if count > 1 => write!(s, "[{base_ty}; {count}]", base_ty = param.ptype, count = count)?,
+                  _ => write!(s, "{base_ty}", base_ty = param.ptype)?,
+                }
+              } else {
+                write!(s, "{base_ty}", base_ty = param.ptype)?
+              }
+            }
+          }
+        } else {
+          write!(
+            s,
+            "{}",
+            match param.ptype {
+              "struct _cl_context" => "_cl_context",
+              "struct _cl_event" => "_cl_event",
+              other => other,
+            }
+          )?;
+        }
+        writeln!(s, ",")?;
+      }
+      write!(s, ")")?;
+      if command.ret_type != "void" {
+        write!(
+          s,
+          " -> {}",
+          match command.ret_type {
+            "void *" => "*mut void",
+            other => other,
+          }
+        )?;
+      }
+      writeln!(s, ";")?;
+      writeln!(s)?;
     }
     Ok(())
   }
