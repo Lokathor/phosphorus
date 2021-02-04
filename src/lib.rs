@@ -555,13 +555,13 @@ impl<'s> Registry<'s> {
       writeln!(s, "/// [{name}](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/{name}.xhtml)", name = command.name)?;
       for param in command.params.iter() {
         if let Some(group) = param.group.as_ref() {
-          writeln!(s, "/// * `{param}` Group: {group}", param = param.name, group = group)?;
+          writeln!(s, "/// * `{param}` group: {group}", param = param.name, group = group)?;
         }
         if let Some(class) = param.class.as_ref() {
-          writeln!(s, "/// * `{param}` Class: {class}", param = param.name, class = class)?;
+          writeln!(s, "/// * `{param}` class: {class}", param = param.name, class = class)?;
         }
         if let Some(len_str) = param.get_len_str() {
-          writeln!(s, "/// * `{param}` Len: {len_str}", param = param.name, len_str = len_str)?;
+          writeln!(s, "/// * `{param}` len: {len_str}", param = param.name, len_str = len_str)?;
         }
       }
       writeln!(s, "pub type {name}_t = unsafe extern \"system\" fn(", name = command.name)?;
