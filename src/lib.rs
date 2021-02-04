@@ -62,6 +62,37 @@ pub struct CommandParam<'s> {
   pub is_const: bool,
   pub is_ptr: bool,
 }
+impl<'s> CommandParam<'s> {
+  pub fn get_len_usize(&self) -> Option<usize> {
+    if let Some(len) = self.len.as_ref() {
+      match len.parse::<usize>() {
+        Ok(count) => Some(count),
+        Err(_) => {
+          if len.len() > 3 {
+            match len[1..len.len() - 1].parse::<usize>() {
+              Ok(count) => Some(count),
+              Err(_) => None,
+            }
+          } else {
+            None
+          }
+        }
+      }
+    } else {
+      None
+    }
+  }
+
+  pub fn get_len_str(&self) -> Option<&'s str> {
+    if self.get_len_usize().is_some() {
+      None
+    } else if let Some(len) = self.len.as_ref() {
+      Some(len)
+    } else {
+      None
+    }
+  }
+}
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Feature<'s> {
@@ -521,8 +552,17 @@ impl<'s> Registry<'s> {
 
   pub fn fmt_command_types(&self, s: &mut String) -> core::fmt::Result {
     for command in self.commands.iter() {
-      for _param in command.params.iter() {
-        // TODO: generate comments
+      writeln!(s, "/// [{name}](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/{name}.xhtml)", name = command.name)?;
+      for param in command.params.iter() {
+        if let Some(group) = param.group.as_ref() {
+          writeln!(s, "/// * `{param}` Group: {group}", param = param.name, group = group)?;
+        }
+        if let Some(class) = param.class.as_ref() {
+          writeln!(s, "/// * `{param}` Class: {class}", param = param.name, class = class)?;
+        }
+        if let Some(len_str) = param.get_len_str() {
+          writeln!(s, "/// * `{param}` Len: {len_str}", param = param.name, len_str = len_str)?;
+        }
       }
       writeln!(s, "pub type {name}_t = unsafe extern \"system\" fn(", name = command.name)?;
       for param in command.params.iter() {
@@ -542,30 +582,20 @@ impl<'s> Registry<'s> {
         if param.is_ptr {
           write!(s, "*{} ", if param.is_const { "const" } else { "mut" })?;
         }
-        if let Some(len) = param.len.as_ref() {
-          match len.parse::<usize>() {
-            Ok(count) if count > 1 => write!(s, "[{base_ty}; {count}]", base_ty = param.ptype, count = count)?,
-            _ => {
-              if len.len() > 3 {
-                match len[1..len.len() - 1].parse::<usize>() {
-                  Ok(count) if count > 1 => write!(s, "[{base_ty}; {count}]", base_ty = param.ptype, count = count)?,
-                  _ => write!(s, "{base_ty}", base_ty = param.ptype)?,
-                }
-              } else {
-                write!(s, "{base_ty}", base_ty = param.ptype)?
-              }
-            }
+        let base_ty = match param.ptype {
+          "struct _cl_context" => "_cl_context",
+          "struct _cl_event" => "_cl_event",
+          "GLenum" => param.group.unwrap_or("GLenum"),
+          other => other,
+        };
+        if let Some(len_usize) = param.get_len_usize() {
+          if len_usize > 1 {
+            write!(s, "[{base_ty}; {len_usize}]", base_ty = base_ty, len_usize = len_usize)?
+          } else {
+            write!(s, "{base_ty}", base_ty = base_ty)?
           }
         } else {
-          write!(
-            s,
-            "{}",
-            match param.ptype {
-              "struct _cl_context" => "_cl_context",
-              "struct _cl_event" => "_cl_event",
-              other => other,
-            }
-          )?;
+          write!(s, "{base_ty}", base_ty = base_ty)?;
         }
         writeln!(s, ",")?;
       }
@@ -576,6 +606,7 @@ impl<'s> Registry<'s> {
           " -> {}",
           match command.ret_type {
             "void *" => "*mut void",
+            "GLenum" => command.ret_group.unwrap_or("GLenum"),
             other => other,
           }
         )?;
