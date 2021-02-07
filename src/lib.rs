@@ -24,6 +24,9 @@ pub(crate) use gl_feature_lists::*;
 pub mod gl_extension_lists;
 pub(crate) use gl_extension_lists::*;
 
+pub mod gen_struct_loader;
+pub(crate) use gen_struct_loader::*;
+
 // TODO: format a struct loader
 
 // TODO: format a global loader
@@ -444,6 +447,17 @@ impl<'s> Registry<'s> {
       }
     }
 
+    registry.enumerations.sort();
+    registry.commands.sort();
+    registry.features.sort();
+    for feature in registry.features.iter_mut() {
+      feature.commands_added.sort();
+      feature.commands_removed.sort();
+    }
+    registry.extensions.sort();
+    for extension in registry.extensions.iter_mut() {
+      extension.commands_added.sort();
+    }
     registry
   }
 

@@ -1,17 +1,17 @@
 use super::*;
 
-/// [glAccum](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAccum.xhtml)
+/// [glAccum](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glAccum.xml)
 /// * `op` group: AccumOp
 /// * `value` group: CoordF
 pub type glAccum_t = unsafe extern "system" fn(op: AccumOp, value: GLfloat);
 
-/// [glAccumxOES](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAccumxOES.xhtml)
+/// [glAccumxOES](https://www.khronos.org/registry/OpenGL/extensions/OES/OES_fixed_point.txt)
 pub type glAccumxOES_t = unsafe extern "system" fn(op: GLenum, value: GLfixed);
 
-/// [glAcquireKeyedMutexWin32EXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAcquireKeyedMutexWin32EXT.xhtml)
+/// [glAcquireKeyedMutexWin32EXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_win32_keyed_mutex.txt)
 pub type glAcquireKeyedMutexWin32EXT_t = unsafe extern "system" fn(memory: GLuint, key: GLuint64, timeout: GLuint) -> GLboolean;
 
-/// [glActiveProgramEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glActiveProgramEXT.xhtml)
+/// [glActiveProgramEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gl.txt)
 /// * `program` class: program
 pub type glActiveProgramEXT_t = unsafe extern "system" fn(program: GLuint);
 
@@ -20,12 +20,12 @@ pub type glActiveProgramEXT_t = unsafe extern "system" fn(program: GLuint);
 /// * `program` class: program
 pub type glActiveShaderProgram_t = unsafe extern "system" fn(pipeline: GLuint, program: GLuint);
 
-/// [glActiveShaderProgramEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glActiveShaderProgramEXT.xhtml)
+/// [glActiveShaderProgramEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt)
 /// * `pipeline` class: program pipeline
 /// * `program` class: program
 pub type glActiveShaderProgramEXT_t = unsafe extern "system" fn(pipeline: GLuint, program: GLuint);
 
-/// [glActiveStencilFaceEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glActiveStencilFaceEXT.xhtml)
+/// [glActiveStencilFaceEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_stencil_two_side.txt)
 /// * `face` group: StencilFaceDirection
 pub type glActiveStencilFaceEXT_t = unsafe extern "system" fn(face: StencilFaceDirection);
 
@@ -33,28 +33,28 @@ pub type glActiveStencilFaceEXT_t = unsafe extern "system" fn(face: StencilFaceD
 /// * `texture` group: TextureUnit
 pub type glActiveTexture_t = unsafe extern "system" fn(texture: TextureUnit);
 
-/// [glActiveTextureARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glActiveTextureARB.xhtml)
+/// glActiveTextureARB
 /// * `texture` group: TextureUnit
 pub type glActiveTextureARB_t = unsafe extern "system" fn(texture: TextureUnit);
 
-/// [glActiveVaryingNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glActiveVaryingNV.xhtml)
+/// [glActiveVaryingNV](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_transform_feedback.txt)
 /// * `program` class: program
 /// * `name` len: COMPSIZE(name)
 pub type glActiveVaryingNV_t = unsafe extern "system" fn(program: GLuint, name: *const GLchar);
 
-/// [glAlphaFragmentOp1ATI](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaFragmentOp1ATI.xhtml)
+/// [glAlphaFragmentOp1ATI](https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_fragment_shader.txt)
 /// * `op` group: FragmentOpATI
 pub type glAlphaFragmentOp1ATI_t = unsafe extern "system" fn(op: FragmentOpATI, dst: GLuint, dstMod: GLuint, arg1: GLuint, arg1Rep: GLuint, arg1Mod: GLuint);
 
-/// [glAlphaFragmentOp2ATI](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaFragmentOp2ATI.xhtml)
+/// [glAlphaFragmentOp2ATI](https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_fragment_shader.txt)
 /// * `op` group: FragmentOpATI
 pub type glAlphaFragmentOp2ATI_t = unsafe extern "system" fn(op: FragmentOpATI, dst: GLuint, dstMod: GLuint, arg1: GLuint, arg1Rep: GLuint, arg1Mod: GLuint, arg2: GLuint, arg2Rep: GLuint, arg2Mod: GLuint);
 
-/// [glAlphaFragmentOp3ATI](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaFragmentOp3ATI.xhtml)
+/// [glAlphaFragmentOp3ATI](https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_fragment_shader.txt)
 /// * `op` group: FragmentOpATI
 pub type glAlphaFragmentOp3ATI_t = unsafe extern "system" fn(op: FragmentOpATI, dst: GLuint, dstMod: GLuint, arg1: GLuint, arg1Rep: GLuint, arg1Mod: GLuint, arg2: GLuint, arg2Rep: GLuint, arg2Mod: GLuint, arg3: GLuint, arg3Rep: GLuint, arg3Mod: GLuint);
 
-/// [glAlphaFunc](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaFunc.xhtml)
+/// [glAlphaFunc](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glAlphaFunc.xml)
 /// * `func` group: AlphaFunction
 pub type glAlphaFunc_t = unsafe extern "system" fn(func: AlphaFunction, ref_: GLfloat);
 

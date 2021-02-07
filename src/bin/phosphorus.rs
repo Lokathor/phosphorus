@@ -32,6 +32,6 @@ fn main() {
     eprintln!("Extensions Count: {}", registry.extensions.len());
   }
   let mut s = String::with_capacity(1024 * 1024 * 10);
-  registry.fmt_command_types(&mut s).unwrap();
+  registry.fmt_extension_lists(&mut s).unwrap();
   println!("{}", s);
 }

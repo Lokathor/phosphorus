@@ -107,13 +107,7 @@ pub type GLVULKANPROCNV = Option<unsafe extern "system" fn()>;
 
 // Note(Lokathor): These type aliases are *NOT* useful. Instead we will declare
 // them just for use within the crate. Since they aren't world-visible, the
-// generated documentation will show the base Rust type on function arguments.
-
-/// Note(Lokathor): Technically this should be `c_char` so that it's either `i8`
-/// or `u8` depending on the OS. In practice the signed-ness doesn't matter.
-/// Because Rust byte string literals (eg: `b"foo\0"`) are always `&[u8]`, we
-/// just always use `u8`, so that we can do `b"foo\0".as_ptr()`.
-pub(crate) type GLchar = u8;
+// outside world will show the base Rust type on function arguments.
 
 pub(crate) type GLboolean = c_uchar;
 pub(crate) type GLbyte = i8;
@@ -144,3 +138,9 @@ pub(crate) type GLushort = u16;
 pub(crate) type GLvdpauSurfaceNV = GLintptr;
 pub(crate) type GLvoid = void;
 pub(crate) type void = core::ffi::c_void;
+
+/// Note(Lokathor): Technically this should be `c_char` so that it's either `i8`
+/// or `u8` depending on the OS. In practice the signed-ness doesn't matter.
+/// Because Rust byte string literals (eg: `b"foo\0"`) are always `&[u8]`, we
+/// just always use `u8`, so that we can do `b"foo\0".as_ptr()`.
+pub(crate) type GLchar = u8;
