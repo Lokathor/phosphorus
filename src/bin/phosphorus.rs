@@ -1,7 +1,8 @@
 #![allow(unused_mut)]
+#![allow(unused_imports)]
 
 use magnesium::*;
-use phosphorus::Registry;
+use phosphorus::{Registry, *};
 
 fn main() {
   let args: Vec<String> = std::env::args().skip(1).collect();
@@ -32,6 +33,6 @@ fn main() {
     eprintln!("Extensions Count: {}", registry.extensions.len());
   }
   let mut s = String::with_capacity(1024 * 1024 * 10);
-  registry.fmt_extension_lists(&mut s).unwrap();
+  registry.fmt_feature_lists(&mut s).unwrap();
   println!("{}", s);
 }

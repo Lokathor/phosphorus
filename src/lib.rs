@@ -18,8 +18,8 @@ pub(crate) use gl_groups::*;
 pub mod gl_command_types;
 pub(crate) use gl_command_types::*;
 
-pub mod gl_feature_lists;
-pub(crate) use gl_feature_lists::*;
+// pub mod gl_feature_delta_lists;
+// pub(crate) use gl_feature_delta_lists::*;
 
 pub mod gl_extension_lists;
 pub(crate) use gl_extension_lists::*;
@@ -548,10 +548,21 @@ impl<'s> Registry<'s> {
   }
 
   pub fn fmt_feature_lists(&self, s: &mut String) -> core::fmt::Result {
-    for feature in self.features.iter() {
-      writeln!(s, "pub const {name}_ADDED: &[&str] = &{list:#?};", name = feature.name, list = feature.commands_added)?;
-      writeln!(s, "pub const {name}_REMOVED: &[&str] = &{list:#?};", name = feature.name, list = feature.commands_removed)?;
-      writeln!(s)?;
+    for api_prefix in ["GL_VERSION", "GL_VERSION_ES_CM", "GL_ES_VERSION", "GL_SC_VERSION"].iter() {
+      let mut out = Vec::new();
+      for feature in self.features.iter().filter(|f| f.name.starts_with(api_prefix)) {
+        if *api_prefix == "GL_VERSION" && feature.name.starts_with("GL_VERSION_ES_CM") {
+          continue;
+        }
+        out.extend(feature.commands_added.iter());
+        if feature.commands_removed.len() > 0 {
+          out.retain(|e| !feature.commands_removed.contains(e));
+        }
+        out.sort();
+        //
+        writeln!(s, "pub const {name}: &[&str] = {list:#?};", name = feature.name, list = out)?;
+        writeln!(s)?;
+      }
     }
     Ok(())
   }
