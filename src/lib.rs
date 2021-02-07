@@ -559,6 +559,7 @@ impl<'s> Registry<'s> {
           out.retain(|e| !feature.commands_removed.contains(e));
         }
         out.sort();
+        out.dedup();
         //
         writeln!(s, "pub const {name}: &[&str] = {list:#?};", name = feature.name, list = out)?;
         writeln!(s)?;
