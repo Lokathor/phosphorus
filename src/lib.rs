@@ -704,7 +704,7 @@ pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &
   writeln!(s, "impl {struct_name} {{", struct_name = struct_name)?;
   writeln!(s, "  fn ptr_filter(p: *const c_void) -> Option<core::ptr::NonNull<c_void>> {{")?;
   writeln!(s, "    match p as usize {{")?;
-  writeln!(s, "      // wgl is known to sometimes give phony non-null pointer values.")?;
+  writeln!(s, "      // Note(Lokathor): wgl is known to sometimes give phony non-null pointer values.")?;
   writeln!(s, "      0 | 1 | 2 | 3 | usize::MAX => None,")?;
   writeln!(s, "      _ => unsafe {{ core::mem::transmute(p) }},")?;
   writeln!(s, "    }}")?;
@@ -721,8 +721,9 @@ pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &
   writeln!(s, "  /// ## Failure")?;
   writeln!(s, "  /// This fails if any non-nullable function does not load.")?;
   writeln!(s, "  /// The error value will be the name of the first non-nullable function that doesn't load.")?;
+  writeln!(s, "  /// ")?;
   writeln!(s, "  /// ## Safety")?;
-  writeln!(s, "  /// * The \"Get Proc Address\" function will always be given a pointer to the start of a null-terminated string containing the name of a GL function to load.")?;
+  writeln!(s, "  /// * The \"Get Proc Address\" function you provide will always be given a pointer to the start of a null-terminated string containing the name of a GL function to load.")?;
   writeln!(s, "  /// * The \"Get Proc Address\" function given must always return accurate function pointer values, or null on failure.")?;
   writeln!(s, "  pub unsafe fn load_from<F:Fn(*const u8) -> *const c_void>(f: F) -> Result<Self, &'static str> {{")?;
   writeln!(s, "    use core::mem::transmute;")?;

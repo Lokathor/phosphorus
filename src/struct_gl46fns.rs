@@ -723,7 +723,7 @@ pub struct GlFns46 {
 impl GlFns46 {
   fn ptr_filter(p: *const c_void) -> Option<core::ptr::NonNull<c_void>> {
     match p as usize {
-      // wgl is known to sometimes give phony non-null pointer values.
+      // Note(Lokathor): wgl is known to sometimes give phony non-null pointer values.
       0 | 1 | 2 | 3 | usize::MAX => None,
       _ => unsafe { core::mem::transmute(p) },
     }
@@ -740,10 +740,12 @@ impl GlFns46 {
   /// ## Failure
   /// This fails if any non-nullable function does not load.
   /// The error value will be the name of the first non-nullable function that
-  /// doesn't load. ## Safety
-  /// * The "Get Proc Address" function will always be given a pointer to the
-  ///   start of a null-terminated string containing the name of a GL function
-  ///   to load.
+  /// doesn't load.
+  ///
+  /// ## Safety
+  /// * The "Get Proc Address" function you provide will always be given a
+  ///   pointer to the start of a null-terminated string containing the name of
+  ///   a GL function to load.
   /// * The "Get Proc Address" function given must always return accurate
   ///   function pointer values, or null on failure.
   pub unsafe fn load_from<F: Fn(*const u8) -> *const c_void>(f: F) -> Result<Self, &'static str> {
