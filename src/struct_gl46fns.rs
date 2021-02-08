@@ -6355,6 +6355,10 @@ impl GlFns46 {
       None => Self::not_loaded("glDebugMessageCallbackARB"),
     }
   }
+  #[doc(hidden)]
+  pub fn DebugMessageCallbackARB_is_loaded(&self) -> bool {
+    self.glDebugMessageCallbackARB_p.is_some()
+  }
   /// [glDebugMessageControlARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDebugMessageControlARB.xhtml)
   /// * `source` group: DebugSource
   /// * `type` group: DebugType
@@ -6368,6 +6372,10 @@ impl GlFns46 {
       None => Self::not_loaded("glDebugMessageControlARB"),
     }
   }
+  #[doc(hidden)]
+  pub fn DebugMessageControlARB_is_loaded(&self) -> bool {
+    self.glDebugMessageControlARB_p.is_some()
+  }
   /// [glDebugMessageInsertARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDebugMessageInsertARB.xhtml)
   /// * `source` group: DebugSource
   /// * `type` group: DebugType
@@ -6379,6 +6387,10 @@ impl GlFns46 {
       Some(f) => f(source, type_, id, severity, length, buf),
       None => Self::not_loaded("glDebugMessageInsertARB"),
     }
+  }
+  #[doc(hidden)]
+  pub fn DebugMessageInsertARB_is_loaded(&self) -> bool {
+    self.glDebugMessageInsertARB_p.is_some()
   }
   /// [glGetDebugMessageLogARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetDebugMessageLogARB.xhtml)
   /// * `sources` group: DebugSource
@@ -6397,6 +6409,10 @@ impl GlFns46 {
       None => Self::not_loaded("glGetDebugMessageLogARB"),
     }
   }
+  #[doc(hidden)]
+  pub fn GetDebugMessageLogARB_is_loaded(&self) -> bool {
+    self.glGetDebugMessageLogARB_p.is_some()
+  }
   /// [glDebugMessageCallbackKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDebugMessageCallbackKHR.xhtml)
   #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn DebugMessageCallbackKHR(&self, callback: GLDEBUGPROCKHR, userParam: *const void) {
@@ -6404,6 +6420,10 @@ impl GlFns46 {
       Some(f) => f(callback, userParam),
       None => Self::not_loaded("glDebugMessageCallbackKHR"),
     }
+  }
+  #[doc(hidden)]
+  pub fn DebugMessageCallbackKHR_is_loaded(&self) -> bool {
+    self.glDebugMessageCallbackKHR_p.is_some()
   }
   /// [glDebugMessageControlKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDebugMessageControlKHR.xhtml)
   /// * `source` group: DebugSource
@@ -6417,6 +6437,10 @@ impl GlFns46 {
       None => Self::not_loaded("glDebugMessageControlKHR"),
     }
   }
+  #[doc(hidden)]
+  pub fn DebugMessageControlKHR_is_loaded(&self) -> bool {
+    self.glDebugMessageControlKHR_p.is_some()
+  }
   /// [glDebugMessageInsertKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDebugMessageInsertKHR.xhtml)
   /// * `source` group: DebugSource
   /// * `type` group: DebugType
@@ -6427,6 +6451,10 @@ impl GlFns46 {
       Some(f) => f(source, type_, id, severity, length, buf),
       None => Self::not_loaded("glDebugMessageInsertKHR"),
     }
+  }
+  #[doc(hidden)]
+  pub fn DebugMessageInsertKHR_is_loaded(&self) -> bool {
+    self.glDebugMessageInsertKHR_p.is_some()
   }
   /// [glGetDebugMessageLogKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetDebugMessageLogKHR.xhtml)
   /// * `sources` group: DebugSource
@@ -6445,6 +6473,10 @@ impl GlFns46 {
       None => Self::not_loaded("glGetDebugMessageLogKHR"),
     }
   }
+  #[doc(hidden)]
+  pub fn GetDebugMessageLogKHR_is_loaded(&self) -> bool {
+    self.glGetDebugMessageLogKHR_p.is_some()
+  }
   /// [glGetObjectLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetObjectLabelKHR.xhtml)
   /// * `label` len: bufSize
   #[cfg_attr(feature = "track_caller", track_caller)]
@@ -6453,6 +6485,10 @@ impl GlFns46 {
       Some(f) => f(identifier, name, bufSize, length, label),
       None => Self::not_loaded("glGetObjectLabelKHR"),
     }
+  }
+  #[doc(hidden)]
+  pub fn GetObjectLabelKHR_is_loaded(&self) -> bool {
+    self.glGetObjectLabelKHR_p.is_some()
   }
   /// [glGetObjectPtrLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetObjectPtrLabelKHR.xhtml)
   /// * `label` len: bufSize
@@ -6463,6 +6499,10 @@ impl GlFns46 {
       None => Self::not_loaded("glGetObjectPtrLabelKHR"),
     }
   }
+  #[doc(hidden)]
+  pub fn GetObjectPtrLabelKHR_is_loaded(&self) -> bool {
+    self.glGetObjectPtrLabelKHR_p.is_some()
+  }
   /// [glGetPointervKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetPointervKHR.xhtml)
   #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn GetPointervKHR(&self, pname: GLenum, params: *mut *mut void) {
@@ -6470,6 +6510,10 @@ impl GlFns46 {
       Some(f) => f(pname, params),
       None => Self::not_loaded("glGetPointervKHR"),
     }
+  }
+  #[doc(hidden)]
+  pub fn GetPointervKHR_is_loaded(&self) -> bool {
+    self.glGetPointervKHR_p.is_some()
   }
   /// [glObjectLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glObjectLabelKHR.xhtml)
   /// * `identifier` group: ObjectIdentifier
@@ -6480,6 +6524,10 @@ impl GlFns46 {
       None => Self::not_loaded("glObjectLabelKHR"),
     }
   }
+  #[doc(hidden)]
+  pub fn ObjectLabelKHR_is_loaded(&self) -> bool {
+    self.glObjectLabelKHR_p.is_some()
+  }
   /// [glObjectPtrLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glObjectPtrLabelKHR.xhtml)
   #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn ObjectPtrLabelKHR(&self, ptr: *const void, length: GLsizei, label: *const GLchar) {
@@ -6487,6 +6535,10 @@ impl GlFns46 {
       Some(f) => f(ptr, length, label),
       None => Self::not_loaded("glObjectPtrLabelKHR"),
     }
+  }
+  #[doc(hidden)]
+  pub fn ObjectPtrLabelKHR_is_loaded(&self) -> bool {
+    self.glObjectPtrLabelKHR_p.is_some()
   }
   /// [glPopDebugGroupKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPopDebugGroupKHR.xhtml)
   #[cfg_attr(feature = "track_caller", track_caller)]
@@ -6496,6 +6548,10 @@ impl GlFns46 {
       None => Self::not_loaded("glPopDebugGroupKHR"),
     }
   }
+  #[doc(hidden)]
+  pub fn PopDebugGroupKHR_is_loaded(&self) -> bool {
+    self.glPopDebugGroupKHR_p.is_some()
+  }
   /// [glPushDebugGroupKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPushDebugGroupKHR.xhtml)
   /// * `source` group: DebugSource
   #[cfg_attr(feature = "track_caller", track_caller)]
@@ -6504,5 +6560,9 @@ impl GlFns46 {
       Some(f) => f(source, id, length, message),
       None => Self::not_loaded("glPushDebugGroupKHR"),
     }
+  }
+  #[doc(hidden)]
+  pub fn PushDebugGroupKHR_is_loaded(&self) -> bool {
+    self.glPushDebugGroupKHR_p.is_some()
   }
 }

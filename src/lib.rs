@@ -817,6 +817,10 @@ pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &
     writeln!(s, "      None => Self::not_loaded(\"{name}\"),", name = name)?;
     writeln!(s, "    }}")?;
     writeln!(s, "  }}")?;
+    writeln!(s, "  #[doc(hidden)]")?;
+    writeln!(s, "  pub fn {short_name}_is_loaded(&self) -> bool {{", short_name = short_name)?;
+    writeln!(s, "    self.{name}_p.is_some()", name = name)?;
+    writeln!(s, "  }}")?;
   }
   writeln!(s, "}}")?;
 
