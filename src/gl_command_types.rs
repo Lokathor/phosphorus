@@ -58,36 +58,36 @@ pub type glAlphaFragmentOp3ATI_t = unsafe extern "system" fn(op: FragmentOpATI, 
 /// * `func` group: AlphaFunction
 pub type glAlphaFunc_t = unsafe extern "system" fn(func: AlphaFunction, ref_: GLfloat);
 
-/// [glAlphaFuncQCOM](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaFuncQCOM.xhtml)
+/// [glAlphaFuncQCOM](https://www.khronos.org/registry/OpenGL/extensions/QCOM/QCOM_alpha_test.txt)
 pub type glAlphaFuncQCOM_t = unsafe extern "system" fn(func: GLenum, ref_: GLclampf);
 
-/// [glAlphaFuncx](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaFuncx.xhtml)
+/// glAlphaFuncx
 /// * `func` group: AlphaFunction
 pub type glAlphaFuncx_t = unsafe extern "system" fn(func: AlphaFunction, ref_: GLfixed);
 
-/// [glAlphaFuncxOES](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaFuncxOES.xhtml)
+/// [glAlphaFuncxOES](https://www.khronos.org/registry/OpenGL/extensions/OES/OES_fixed_point.txt)
 /// * `func` group: AlphaFunction
 /// * `ref` group: ClampedFixed
 pub type glAlphaFuncxOES_t = unsafe extern "system" fn(func: AlphaFunction, ref_: GLfixed);
 
-/// [glAlphaToCoverageDitherControlNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAlphaToCoverageDitherControlNV.xhtml)
+/// [glAlphaToCoverageDitherControlNV](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_alpha_to_coverage_dither_control.txt)
 pub type glAlphaToCoverageDitherControlNV_t = unsafe extern "system" fn(mode: GLenum);
 
-/// [glApplyFramebufferAttachmentCMAAINTEL](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glApplyFramebufferAttachmentCMAAINTEL.xhtml)
+/// [glApplyFramebufferAttachmentCMAAINTEL](https://www.khronos.org/registry/OpenGL/extensions/INTEL/INTEL_framebuffer_CMAA.txt)
 pub type glApplyFramebufferAttachmentCMAAINTEL_t = unsafe extern "system" fn();
 
-/// [glApplyTextureEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glApplyTextureEXT.xhtml)
+/// [glApplyTextureEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_light_texture.txt)
 /// * `mode` group: LightTextureModeEXT
 pub type glApplyTextureEXT_t = unsafe extern "system" fn(mode: LightTextureModeEXT);
 
-/// [glAreProgramsResidentNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAreProgramsResidentNV.xhtml)
+/// [glAreProgramsResidentNV](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_vertex_program.txt)
 /// * `programs` class: program
 /// * `programs` len: n
 /// * `residences` group: Boolean
 /// * `residences` len: n
 pub type glAreProgramsResidentNV_t = unsafe extern "system" fn(n: GLsizei, programs: *const GLuint, residences: *mut GLboolean) -> GLboolean;
 
-/// [glAreTexturesResident](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAreTexturesResident.xhtml)
+/// [glAreTexturesResident](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glAreTexturesResident.xml)
 /// * `textures` group: Texture
 /// * `textures` class: texture
 /// * `textures` len: n
@@ -95,7 +95,7 @@ pub type glAreProgramsResidentNV_t = unsafe extern "system" fn(n: GLsizei, progr
 /// * `residences` len: n
 pub type glAreTexturesResident_t = unsafe extern "system" fn(n: GLsizei, textures: *const GLuint, residences: *mut GLboolean) -> GLboolean;
 
-/// [glAreTexturesResidentEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAreTexturesResidentEXT.xhtml)
+/// [glAreTexturesResidentEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_texture_object.txt)
 /// * `textures` group: Texture
 /// * `textures` class: texture
 /// * `textures` len: n
@@ -103,19 +103,19 @@ pub type glAreTexturesResident_t = unsafe extern "system" fn(n: GLsizei, texture
 /// * `residences` len: n
 pub type glAreTexturesResidentEXT_t = unsafe extern "system" fn(n: GLsizei, textures: *const GLuint, residences: *mut GLboolean) -> GLboolean;
 
-/// [glArrayElement](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glArrayElement.xhtml)
+/// [glArrayElement](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glArrayElement.xml)
 pub type glArrayElement_t = unsafe extern "system" fn(i: GLint);
 
-/// [glArrayElementEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glArrayElementEXT.xhtml)
+/// [glArrayElementEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_vertex_array.txt)
 pub type glArrayElementEXT_t = unsafe extern "system" fn(i: GLint);
 
-/// [glArrayObjectATI](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glArrayObjectATI.xhtml)
+/// [glArrayObjectATI](https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_element_array.txt)
 /// * `array` group: EnableCap
 /// * `type` group: ScalarType
 /// * `buffer` class: buffer
 pub type glArrayObjectATI_t = unsafe extern "system" fn(array: EnableCap, size: GLint, type_: ScalarType, stride: GLsizei, buffer: GLuint, offset: GLuint);
 
-/// [glAsyncCopyBufferSubDataNVX](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAsyncCopyBufferSubDataNVX.xhtml)
+/// [glAsyncCopyBufferSubDataNVX](https://www.khronos.org/registry/OpenGL/extensions/NVX/NVX_gpu_multicast2.txt)
 /// * `waitSemaphoreArray` len: waitSemaphoreCount
 /// * `fenceValueArray` len: waitSemaphoreCount
 /// * `readBuffer` class: buffer
@@ -124,17 +124,17 @@ pub type glArrayObjectATI_t = unsafe extern "system" fn(array: EnableCap, size: 
 /// * `signalValueArray` len: signalSemaphoreCount
 pub type glAsyncCopyBufferSubDataNVX_t = unsafe extern "system" fn(waitSemaphoreCount: GLsizei, waitSemaphoreArray: *const GLuint, fenceValueArray: *const GLuint64, readGpu: GLuint, writeGpuMask: GLbitfield, readBuffer: GLuint, writeBuffer: GLuint, readOffset: GLintptr, writeOffset: GLintptr, size: GLsizeiptr, signalSemaphoreCount: GLsizei, signalSemaphoreArray: *const GLuint, signalValueArray: *const GLuint64) -> GLuint;
 
-/// [glAsyncCopyImageSubDataNVX](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAsyncCopyImageSubDataNVX.xhtml)
+/// [glAsyncCopyImageSubDataNVX](https://www.khronos.org/registry/OpenGL/extensions/NVX/NVX_gpu_multicast2.txt)
 /// * `waitSemaphoreArray` len: waitSemaphoreCount
 /// * `waitValueArray` len: waitSemaphoreCount
 /// * `signalSemaphoreArray` len: signalSemaphoreCount
 /// * `signalValueArray` len: signalSemaphoreCount
 pub type glAsyncCopyImageSubDataNVX_t = unsafe extern "system" fn(waitSemaphoreCount: GLsizei, waitSemaphoreArray: *const GLuint, waitValueArray: *const GLuint64, srcGpu: GLuint, dstGpuMask: GLbitfield, srcName: GLuint, srcTarget: GLenum, srcLevel: GLint, srcX: GLint, srcY: GLint, srcZ: GLint, dstName: GLuint, dstTarget: GLenum, dstLevel: GLint, dstX: GLint, dstY: GLint, dstZ: GLint, srcWidth: GLsizei, srcHeight: GLsizei, srcDepth: GLsizei, signalSemaphoreCount: GLsizei, signalSemaphoreArray: *const GLuint, signalValueArray: *const GLuint64) -> GLuint;
 
-/// [glAsyncMarkerSGIX](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAsyncMarkerSGIX.xhtml)
+/// [glAsyncMarkerSGIX](https://www.khronos.org/registry/OpenGL/extensions/SGIX/SGIX_async.txt)
 pub type glAsyncMarkerSGIX_t = unsafe extern "system" fn(marker: GLuint);
 
-/// [glAttachObjectARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAttachObjectARB.xhtml)
+/// [glAttachObjectARB](https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_vertex_shader.txt)
 /// * `containerObj` group: handleARB
 /// * `obj` group: handleARB
 pub type glAttachObjectARB_t = unsafe extern "system" fn(containerObj: GLhandleARB, obj: GLhandleARB);
@@ -144,7 +144,7 @@ pub type glAttachObjectARB_t = unsafe extern "system" fn(containerObj: GLhandleA
 /// * `shader` class: shader
 pub type glAttachShader_t = unsafe extern "system" fn(program: GLuint, shader: GLuint);
 
-/// [glBegin](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBegin.xhtml)
+/// [glBegin](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glBegin.xml)
 /// * `mode` group: PrimitiveType
 pub type glBegin_t = unsafe extern "system" fn(mode: PrimitiveType);
 
@@ -152,23 +152,23 @@ pub type glBegin_t = unsafe extern "system" fn(mode: PrimitiveType);
 /// * `mode` group: ConditionalRenderMode
 pub type glBeginConditionalRender_t = unsafe extern "system" fn(id: GLuint, mode: ConditionalRenderMode);
 
-/// [glBeginConditionalRenderNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginConditionalRenderNV.xhtml)
+/// [glBeginConditionalRenderNV](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_conditional_render.txt)
 /// * `mode` group: ConditionalRenderMode
 pub type glBeginConditionalRenderNV_t = unsafe extern "system" fn(id: GLuint, mode: ConditionalRenderMode);
 
-/// [glBeginConditionalRenderNVX](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginConditionalRenderNVX.xhtml)
+/// [glBeginConditionalRenderNVX](https://www.khronos.org/registry/OpenGL/extensions/NVX/NVX_conditional_render.txt)
 pub type glBeginConditionalRenderNVX_t = unsafe extern "system" fn(id: GLuint);
 
-/// [glBeginFragmentShaderATI](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginFragmentShaderATI.xhtml)
+/// [glBeginFragmentShaderATI](https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_fragment_shader.txt)
 pub type glBeginFragmentShaderATI_t = unsafe extern "system" fn();
 
-/// [glBeginOcclusionQueryNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginOcclusionQueryNV.xhtml)
+/// [glBeginOcclusionQueryNV](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_occlusion_query.txt)
 pub type glBeginOcclusionQueryNV_t = unsafe extern "system" fn(id: GLuint);
 
-/// [glBeginPerfMonitorAMD](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginPerfMonitorAMD.xhtml)
+/// [glBeginPerfMonitorAMD](https://www.khronos.org/registry/OpenGL/extensions/AMD/AMD_performance_monitor.txt)
 pub type glBeginPerfMonitorAMD_t = unsafe extern "system" fn(monitor: GLuint);
 
-/// [glBeginPerfQueryINTEL](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginPerfQueryINTEL.xhtml)
+/// [glBeginPerfQueryINTEL](https://www.khronos.org/registry/OpenGL/extensions/INTEL/INTEL_performance_query.txt)
 pub type glBeginPerfQueryINTEL_t = unsafe extern "system" fn(queryHandle: GLuint);
 
 /// [glBeginQuery](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginQuery.xhtml)
@@ -176,12 +176,12 @@ pub type glBeginPerfQueryINTEL_t = unsafe extern "system" fn(queryHandle: GLuint
 /// * `id` class: query
 pub type glBeginQuery_t = unsafe extern "system" fn(target: QueryTarget, id: GLuint);
 
-/// [glBeginQueryARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginQueryARB.xhtml)
+/// [glBeginQueryARB](https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_occlusion_query.txt)
 /// * `target` group: QueryTarget
 /// * `id` class: query
 pub type glBeginQueryARB_t = unsafe extern "system" fn(target: QueryTarget, id: GLuint);
 
-/// [glBeginQueryEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginQueryEXT.xhtml)
+/// [glBeginQueryEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_disjoint_timer_query.txt)
 /// * `target` group: QueryTarget
 /// * `id` class: query
 pub type glBeginQueryEXT_t = unsafe extern "system" fn(target: QueryTarget, id: GLuint);
@@ -195,25 +195,25 @@ pub type glBeginQueryIndexed_t = unsafe extern "system" fn(target: QueryTarget, 
 /// * `primitiveMode` group: PrimitiveType
 pub type glBeginTransformFeedback_t = unsafe extern "system" fn(primitiveMode: PrimitiveType);
 
-/// [glBeginTransformFeedbackEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginTransformFeedbackEXT.xhtml)
+/// [glBeginTransformFeedbackEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_transform_feedback.txt)
 /// * `primitiveMode` group: PrimitiveType
 pub type glBeginTransformFeedbackEXT_t = unsafe extern "system" fn(primitiveMode: PrimitiveType);
 
-/// [glBeginTransformFeedbackNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginTransformFeedbackNV.xhtml)
+/// [glBeginTransformFeedbackNV](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_transform_feedback.txt)
 /// * `primitiveMode` group: PrimitiveType
 pub type glBeginTransformFeedbackNV_t = unsafe extern "system" fn(primitiveMode: PrimitiveType);
 
-/// [glBeginVertexShaderEXT](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginVertexShaderEXT.xhtml)
+/// [glBeginVertexShaderEXT](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_vertex_shader.txt)
 pub type glBeginVertexShaderEXT_t = unsafe extern "system" fn();
 
-/// [glBeginVideoCaptureNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginVideoCaptureNV.xhtml)
+/// [glBeginVideoCaptureNV](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_video_capture.txt)
 pub type glBeginVideoCaptureNV_t = unsafe extern "system" fn(video_capture_slot: GLuint);
 
 /// [glBindAttribLocation](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBindAttribLocation.xhtml)
 /// * `program` class: program
 pub type glBindAttribLocation_t = unsafe extern "system" fn(program: GLuint, index: GLuint, name: *const GLchar);
 
-/// [glBindAttribLocationARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBindAttribLocationARB.xhtml)
+/// glBindAttribLocationARB
 /// * `programObj` group: handleARB
 pub type glBindAttribLocationARB_t = unsafe extern "system" fn(programObj: GLhandleARB, index: GLuint, name: *const GLcharARB);
 
@@ -221,6 +221,8 @@ pub type glBindAttribLocationARB_t = unsafe extern "system" fn(programObj: GLhan
 /// * `target` group: BufferTargetARB
 /// * `buffer` class: buffer
 pub type glBindBuffer_t = unsafe extern "system" fn(target: BufferTargetARB, buffer: GLuint);
+
+// continue here later
 
 /// [glBindBufferARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBindBufferARB.xhtml)
 /// * `target` group: BufferTargetARB

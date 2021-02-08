@@ -15,21 +15,18 @@ pub(crate) use gl_enumerations::*;
 pub mod gl_groups;
 pub(crate) use gl_groups::*;
 
+#[rustfmt::skip]
 pub mod gl_command_types;
 pub(crate) use gl_command_types::*;
 
-// pub mod gl_feature_delta_lists;
-// pub(crate) use gl_feature_delta_lists::*;
+pub mod gl_feature_lists;
+pub(crate) use gl_feature_lists::*;
 
 pub mod gl_extension_lists;
 pub(crate) use gl_extension_lists::*;
 
-pub mod gen_struct_loader;
-pub(crate) use gen_struct_loader::*;
-
-// TODO: format a struct loader
-
-// TODO: format a global loader
+pub mod struct_gl46fns;
+pub(crate) use struct_gl46fns::*;
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Enumeration<'s> {
@@ -561,7 +558,7 @@ impl<'s> Registry<'s> {
         out.sort();
         out.dedup();
         //
-        writeln!(s, "pub const {name}: &[&str] = {list:#?};", name = feature.name, list = out)?;
+        writeln!(s, "pub const {name}: [&str; {len}] = {list:#?};", name = feature.name, len = out.len(), list = out)?;
         writeln!(s)?;
       }
     }
@@ -652,4 +649,173 @@ fn burn_to_comment_end<'s>(iter: &mut impl Iterator<Item = XmlElement<'s>>) {
       other => panic!("unknown: {:?}", other),
     }
   }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CommandTypeEntry {
+  pub name: String,
+  pub comments: String,
+  pub type_declaration: String,
+}
+
+pub fn get_command_type_entries() -> Vec<CommandTypeEntry> {
+  let mut entries = Vec::new();
+  let mut current_entry = CommandTypeEntry::default();
+  for line in include_str!("gl_command_types.rs").lines().skip(1) {
+    if line.starts_with("// ") {
+      continue;
+    } else if line.is_empty() {
+      if !current_entry.name.is_empty() {
+        entries.push(current_entry);
+        current_entry = CommandTypeEntry::default();
+      } else {
+        continue;
+      }
+    } else if line.starts_with("///") {
+      current_entry.comments.push_str(line);
+      current_entry.comments.push('\n');
+    } else {
+      let ty_name = line["pub type ".len()..].split(' ').next().unwrap();
+      current_entry.name = ty_name[..ty_name.len() - 2].to_string();
+      current_entry.type_declaration = line.to_string();
+    }
+  }
+  if !current_entry.name.is_empty() {
+    entries.push(current_entry);
+  }
+  entries
+}
+
+pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &[&str], nullable_commands: &[&str]) -> core::fmt::Result {
+  let desired_command_type_entries: Vec<CommandTypeEntry> = get_command_type_entries().into_iter().filter(|entry| non_null_commands.contains(&&*entry.name) || nullable_commands.contains(&&*entry.name)).collect();
+
+  writeln!(s, "// Note(Lokathor): _p for ptr, _t for type")?;
+  writeln!(s)?;
+  writeln!(s, "#[repr(C)]")?;
+  writeln!(s, "pub struct {struct_name} {{", struct_name = struct_name)?;
+  for cmd in non_null_commands.iter() {
+    writeln!(s, "  {name}_p: {name}_t,", name = cmd)?;
+  }
+  for cmd in nullable_commands.iter() {
+    writeln!(s, "  {name}_p: Option<{name}_t>,", name = cmd)?;
+  }
+  writeln!(s, "}}")?;
+  writeln!(s)?;
+  writeln!(s, "impl {struct_name} {{", struct_name = struct_name)?;
+  writeln!(s, "  fn ptr_filter(p: *const c_void) -> Option<core::ptr::NonNull<c_void>> {{")?;
+  writeln!(s, "    match p as usize {{")?;
+  writeln!(s, "      // wgl is known to sometimes give phony non-null pointer values.")?;
+  writeln!(s, "      0 | 1 | 2 | 3 | usize::MAX => None,")?;
+  writeln!(s, "      _ => unsafe {{ core::mem::transmute(p) }},")?;
+  writeln!(s, "    }}")?;
+  writeln!(s, "  }}")?;
+  writeln!(s, "  #[cold]")?;
+  writeln!(s, "  #[inline(never)]")?;
+  writeln!(s, "  fn not_loaded(name: &str) -> ! {{")?;
+  writeln!(s, "    panic!(\"Function Not Loaded: {{}}\", name);")?;
+  writeln!(s, "  }}")?;
+  writeln!(s)?;
+  writeln!(s, "  /// Loads all GL functions from the loader given.")?;
+  writeln!(s, "  /// ")?;
+  writeln!(s, "  /// ## Failure")?;
+  writeln!(s, "  /// This fails if any non-nullable function does not load.")?;
+  writeln!(s, "  /// The error value will be the name of the first non-nullable function that doesn't load.")?;
+  writeln!(s, "  /// ## Safety")?;
+  writeln!(s, "  /// * The \"Get Proc Address\" function will always be given a pointer to the start of a null-terminated string containing the name of a GL function to load.")?;
+  writeln!(s, "  /// * The \"Get Proc Address\" function given must always return accurate function pointer values, or null on failure.")?;
+  writeln!(s, "  pub unsafe fn load_from<F:Fn(*const u8) -> *const c_void>(f: F) -> Result<Self, &'static str> {{")?;
+  writeln!(s, "    use core::mem::transmute;")?;
+  writeln!(s, "    type nn_cv = core::ptr::NonNull<c_void>;")?;
+  writeln!(s, "    // non-nullable loads")?;
+  for cmd in non_null_commands.iter() {
+    writeln!(s, "    let {name}_p = transmute::<nn_cv, {name}_t>(Self::ptr_filter(f(b\"{name}\\0\".as_ptr())).ok_or(\"{name}\")?);", name = cmd)?;
+  }
+  writeln!(s, "    // nullable loads")?;
+  for cmd in nullable_commands.iter() {
+    writeln!(s, "    let {name}_p = transmute::<Option<nn_cv>, Option<{name}_t>>(Self::ptr_filter(f(b\"{name}\\0\".as_ptr())));", name = cmd)?;
+  }
+  writeln!(s, "    // we're all good!")?;
+  writeln!(s, "    Ok(Self {{")?;
+  for cmd in non_null_commands.iter() {
+    writeln!(s, "      {name}_p,", name = cmd)?;
+  }
+  for cmd in nullable_commands.iter() {
+    writeln!(s, "      {name}_p,", name = cmd)?;
+  }
+  writeln!(s, "    }})")?;
+  writeln!(s, "  }}")?;
+  writeln!(s, "}}")?;
+  writeln!(s)?;
+  writeln!(s, "impl {struct_name} {{", struct_name = struct_name)?;
+  for cmd in non_null_commands.iter().copied() {
+    let entry = desired_command_type_entries.iter().find(|ent| ent.name == cmd).unwrap();
+    let name = &entry.name;
+    let unsafe_str = if entry.type_declaration.contains("unsafe") { "unsafe" } else { "" };
+    let short_name = &entry.name[2..];
+    let args_str = {
+      let open_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'(').unwrap();
+      let close_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b')').unwrap();
+      &entry.type_declaration[open_paren + 1..close_paren]
+    };
+    let ret_type = match entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'>') {
+      Some(position) => &entry.type_declaration[position + 1..entry.type_declaration.len() - 1],
+      None => "",
+    };
+    let ret_arrow = if ret_type.is_empty() { "" } else { "->" };
+    for docs_line in entry.comments.lines() {
+      writeln!(s, "  {}", docs_line)?;
+    }
+    let args_names = {
+      let mut s = String::new();
+      for arg in args_str.split(',') {
+        let arg_name = arg.split(':').next().unwrap();
+        if arg_name.len() > 0 {
+          write!(s, "{arg_name},", arg_name = arg_name)?;
+        }
+      }
+      s
+    };
+    writeln!(s, "  pub {unsafe_str} fn {short_name}(&self, {args_str}){ret_arrow}{ret_type} {{", unsafe_str = unsafe_str, short_name = short_name, args_str = args_str, ret_arrow = ret_arrow, ret_type = ret_type)?;
+    writeln!(s, "    (self.{name}_p)({args_names})", name = name, args_names = args_names)?;
+    writeln!(s, "  }}")?;
+  }
+  //
+  for cmd in nullable_commands.iter().copied() {
+    let entry = desired_command_type_entries.iter().find(|ent| ent.name == cmd).unwrap();
+    let name = &entry.name;
+    let unsafe_str = if entry.type_declaration.contains("unsafe") { "unsafe" } else { "" };
+    let short_name = &entry.name[2..];
+    let args_str = {
+      let open_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'(').unwrap();
+      let close_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b')').unwrap();
+      &entry.type_declaration[open_paren + 1..close_paren]
+    };
+    let ret_type = match entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'>') {
+      Some(position) => &entry.type_declaration[position + 1..entry.type_declaration.len() - 1],
+      None => "",
+    };
+    let ret_arrow = if ret_type.is_empty() { "" } else { "->" };
+    for docs_line in entry.comments.lines() {
+      writeln!(s, "  {}", docs_line)?;
+    }
+    let args_names = {
+      let mut s = String::new();
+      for arg in args_str.split(',') {
+        let arg_name = arg.split(':').next().unwrap();
+        if arg_name.len() > 0 {
+          write!(s, "{arg_name},", arg_name = arg_name)?;
+        }
+      }
+      s
+    };
+    writeln!(s, "  pub {unsafe_str} fn {short_name}(&self, {args_str}){ret_arrow}{ret_type} {{", unsafe_str = unsafe_str, short_name = short_name, args_str = args_str, ret_arrow = ret_arrow, ret_type = ret_type)?;
+    writeln!(s, "    match self.{name}_p {{", name = name)?;
+    writeln!(s, "      Some(f) => f({args_names}),", args_names = args_names)?;
+    writeln!(s, "      None => Self::not_loaded(\"{name}\"),", name = name)?;
+    writeln!(s, "    }}")?;
+    writeln!(s, "  }}")?;
+  }
+  writeln!(s, "}}")?;
+
+  Ok(())
 }

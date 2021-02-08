@@ -1,6 +1,6 @@
 use super::*;
 
-pub const GL_VERSION_1_0: &[&str] = [
+pub const GL_VERSION_1_0: [&str; 306] = [
   "glAccum",
   "glAlphaFunc",
   "glBegin",
@@ -309,7 +309,7 @@ pub const GL_VERSION_1_0: &[&str] = [
   "glViewport",
 ];
 
-pub const GL_VERSION_1_1: &[&str] = [
+pub const GL_VERSION_1_1: [&str; 336] = [
   "glAccum",
   "glAlphaFunc",
   "glAreTexturesResident",
@@ -648,7 +648,7 @@ pub const GL_VERSION_1_1: &[&str] = [
   "glViewport",
 ];
 
-pub const GL_VERSION_1_2: &[&str] = [
+pub const GL_VERSION_1_2: [&str; 340] = [
   "glAccum",
   "glAlphaFunc",
   "glAreTexturesResident",
@@ -991,7 +991,7 @@ pub const GL_VERSION_1_2: &[&str] = [
   "glViewport",
 ];
 
-pub const GL_VERSION_1_3: &[&str] = [
+pub const GL_VERSION_1_3: [&str; 386] = [
   "glAccum",
   "glActiveTexture",
   "glAlphaFunc",
@@ -1380,7 +1380,7 @@ pub const GL_VERSION_1_3: &[&str] = [
   "glViewport",
 ];
 
-pub const GL_VERSION_1_4: &[&str] = [
+pub const GL_VERSION_1_4: [&str; 433] = [
   "glAccum",
   "glActiveTexture",
   "glAlphaFunc",
@@ -1816,7 +1816,7 @@ pub const GL_VERSION_1_4: &[&str] = [
   "glWindowPos3sv",
 ];
 
-pub const GL_VERSION_1_5: &[&str] = [
+pub const GL_VERSION_1_5: [&str; 452] = [
   "glAccum",
   "glActiveTexture",
   "glAlphaFunc",
@@ -2271,7 +2271,7 @@ pub const GL_VERSION_1_5: &[&str] = [
   "glWindowPos3sv",
 ];
 
-pub const GL_VERSION_2_0: &[&str] = [
+pub const GL_VERSION_2_0: [&str; 545] = [
   "glAccum",
   "glActiveTexture",
   "glAlphaFunc",
@@ -2819,7 +2819,7 @@ pub const GL_VERSION_2_0: &[&str] = [
   "glWindowPos3sv",
 ];
 
-pub const GL_VERSION_2_1: &[&str] = [
+pub const GL_VERSION_2_1: [&str; 551] = [
   "glAccum",
   "glActiveTexture",
   "glAlphaFunc",
@@ -3373,7 +3373,7 @@ pub const GL_VERSION_2_1: &[&str] = [
   "glWindowPos3sv",
 ];
 
-pub const GL_VERSION_3_0: &[&str] = [
+pub const GL_VERSION_3_0: [&str; 635] = [
   "glAccum",
   "glActiveTexture",
   "glAlphaFunc",
@@ -4011,7 +4011,7 @@ pub const GL_VERSION_3_0: &[&str] = [
   "glWindowPos3sv",
 ];
 
-pub const GL_VERSION_3_1: &[&str] = [
+pub const GL_VERSION_3_1: [&str; 647] = [
   "glAccum",
   "glActiveTexture",
   "glAlphaFunc",
@@ -4661,7 +4661,7 @@ pub const GL_VERSION_3_1: &[&str] = [
   "glWindowPos3sv",
 ];
 
-pub const GL_VERSION_3_2: &[&str] = [
+pub const GL_VERSION_3_2: [&str; 316] = [
   "glActiveTexture",
   "glAttachShader",
   "glBeginConditionalRender",
@@ -4980,7 +4980,7 @@ pub const GL_VERSION_3_2: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_3_3: &[&str] = [
+pub const GL_VERSION_3_3: [&str; 374] = [
   "glActiveTexture",
   "glAttachShader",
   "glBeginConditionalRender",
@@ -5357,7 +5357,7 @@ pub const GL_VERSION_3_3: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_4_0: &[&str] = [
+pub const GL_VERSION_4_0: [&str; 420] = [
   "glActiveTexture",
   "glAttachShader",
   "glBeginConditionalRender",
@@ -5780,7 +5780,7 @@ pub const GL_VERSION_4_0: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_4_1: &[&str] = [
+pub const GL_VERSION_4_1: [&str; 508] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -6291,7 +6291,7 @@ pub const GL_VERSION_4_1: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_4_2: &[&str] = [
+pub const GL_VERSION_4_2: [&str; 520] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -6814,7 +6814,7 @@ pub const GL_VERSION_4_2: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_4_3: &[&str] = [
+pub const GL_VERSION_4_3: [&str; 564] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -7381,7 +7381,7 @@ pub const GL_VERSION_4_3: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_4_4: &[&str] = [
+pub const GL_VERSION_4_4: [&str; 573] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -7957,7 +7957,7 @@ pub const GL_VERSION_4_4: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_4_5: &[&str] = [
+pub const GL_VERSION_4_5: [&str; 695] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -8655,7 +8655,7 @@ pub const GL_VERSION_4_5: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_4_6: &[&str] = [
+pub const GL_VERSION_4_6: [&str; 699] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -9357,7 +9357,7 @@ pub const GL_VERSION_4_6: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_VERSION_ES_CM_1_0: &[&str] = [
+pub const GL_VERSION_ES_CM_1_0: [&str; 144] = [
   "glActiveTexture",
   "glAlphaFunc",
   "glAlphaFuncx",
@@ -9504,7 +9504,7 @@ pub const GL_VERSION_ES_CM_1_0: &[&str] = [
   "glViewport",
 ];
 
-pub const GL_ES_VERSION_2_0: &[&str] = [
+pub const GL_ES_VERSION_2_0: [&str; 142] = [
   "glActiveTexture",
   "glAttachShader",
   "glBindAttribLocation",
@@ -9649,7 +9649,7 @@ pub const GL_ES_VERSION_2_0: &[&str] = [
   "glViewport",
 ];
 
-pub const GL_ES_VERSION_3_0: &[&str] = [
+pub const GL_ES_VERSION_3_0: [&str; 246] = [
   "glActiveTexture",
   "glAttachShader",
   "glBeginQuery",
@@ -9898,7 +9898,7 @@ pub const GL_ES_VERSION_3_0: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_ES_VERSION_3_1: &[&str] = [
+pub const GL_ES_VERSION_3_1: [&str; 314] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -10215,7 +10215,7 @@ pub const GL_ES_VERSION_3_1: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_ES_VERSION_3_2: &[&str] = [
+pub const GL_ES_VERSION_3_2: [&str; 358] = [
   "glActiveShaderProgram",
   "glActiveTexture",
   "glAttachShader",
@@ -10576,7 +10576,7 @@ pub const GL_ES_VERSION_3_2: &[&str] = [
   "glWaitSync",
 ];
 
-pub const GL_SC_VERSION_2_0: &[&str] = [
+pub const GL_SC_VERSION_2_0: [&str; 111] = [
   "glActiveTexture",
   "glBindBuffer",
   "glBindFramebuffer",
