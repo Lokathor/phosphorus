@@ -730,6 +730,7 @@ impl GlFns46 {
   }
   #[cold]
   #[inline(never)]
+  #[cfg_attr(feature = "track_caller", track_caller)]
   fn not_loaded(name: &str) -> ! {
     panic!("Function Not Loaded: {}", name);
   }
@@ -6345,6 +6346,7 @@ impl GlFns46 {
   }
   /// [glDebugMessageCallbackARB](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDebugMessageCallbackARB.xhtml)
   /// * `userParam` len: COMPSIZE(callback)
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn DebugMessageCallbackARB(&self, callback: GLDEBUGPROCARB, userParam: *const void) {
     match self.glDebugMessageCallbackARB_p {
       Some(f) => f(callback, userParam),
@@ -6357,6 +6359,7 @@ impl GlFns46 {
   /// * `severity` group: DebugSeverity
   /// * `ids` len: count
   /// * `enabled` group: Boolean
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn DebugMessageControlARB(&self, source: DebugSource, type_: DebugType, severity: DebugSeverity, count: GLsizei, ids: *const GLuint, enabled: GLboolean) {
     match self.glDebugMessageControlARB_p {
       Some(f) => f(source, type_, severity, count, ids, enabled),
@@ -6368,6 +6371,7 @@ impl GlFns46 {
   /// * `type` group: DebugType
   /// * `severity` group: DebugSeverity
   /// * `buf` len: length
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn DebugMessageInsertARB(&self, source: DebugSource, type_: DebugType, id: GLuint, severity: DebugSeverity, length: GLsizei, buf: *const GLchar) {
     match self.glDebugMessageInsertARB_p {
       Some(f) => f(source, type_, id, severity, length, buf),
@@ -6384,6 +6388,7 @@ impl GlFns46 {
   /// * `severities` len: count
   /// * `lengths` len: count
   /// * `messageLog` len: bufSize
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn GetDebugMessageLogARB(&self, count: GLuint, bufSize: GLsizei, sources: *mut DebugSource, types: *mut DebugType, ids: *mut GLuint, severities: *mut DebugSeverity, lengths: *mut GLsizei, messageLog: *mut GLchar) -> GLuint {
     match self.glGetDebugMessageLogARB_p {
       Some(f) => f(count, bufSize, sources, types, ids, severities, lengths, messageLog),
@@ -6391,6 +6396,7 @@ impl GlFns46 {
     }
   }
   /// [glDebugMessageCallbackKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDebugMessageCallbackKHR.xhtml)
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn DebugMessageCallbackKHR(&self, callback: GLDEBUGPROCKHR, userParam: *const void) {
     match self.glDebugMessageCallbackKHR_p {
       Some(f) => f(callback, userParam),
@@ -6402,6 +6408,7 @@ impl GlFns46 {
   /// * `type` group: DebugType
   /// * `severity` group: DebugSeverity
   /// * `enabled` group: Boolean
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn DebugMessageControlKHR(&self, source: DebugSource, type_: DebugType, severity: DebugSeverity, count: GLsizei, ids: *const GLuint, enabled: GLboolean) {
     match self.glDebugMessageControlKHR_p {
       Some(f) => f(source, type_, severity, count, ids, enabled),
@@ -6412,6 +6419,7 @@ impl GlFns46 {
   /// * `source` group: DebugSource
   /// * `type` group: DebugType
   /// * `severity` group: DebugSeverity
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn DebugMessageInsertKHR(&self, source: DebugSource, type_: DebugType, id: GLuint, severity: DebugSeverity, length: GLsizei, buf: *const GLchar) {
     match self.glDebugMessageInsertKHR_p {
       Some(f) => f(source, type_, id, severity, length, buf),
@@ -6428,6 +6436,7 @@ impl GlFns46 {
   /// * `severities` len: count
   /// * `lengths` len: count
   /// * `messageLog` len: bufSize
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn GetDebugMessageLogKHR(&self, count: GLuint, bufSize: GLsizei, sources: *mut DebugSource, types: *mut DebugType, ids: *mut GLuint, severities: *mut DebugSeverity, lengths: *mut GLsizei, messageLog: *mut GLchar) -> GLuint {
     match self.glGetDebugMessageLogKHR_p {
       Some(f) => f(count, bufSize, sources, types, ids, severities, lengths, messageLog),
@@ -6436,6 +6445,7 @@ impl GlFns46 {
   }
   /// [glGetObjectLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetObjectLabelKHR.xhtml)
   /// * `label` len: bufSize
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn GetObjectLabelKHR(&self, identifier: GLenum, name: GLuint, bufSize: GLsizei, length: *mut GLsizei, label: *mut GLchar) {
     match self.glGetObjectLabelKHR_p {
       Some(f) => f(identifier, name, bufSize, length, label),
@@ -6444,6 +6454,7 @@ impl GlFns46 {
   }
   /// [glGetObjectPtrLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetObjectPtrLabelKHR.xhtml)
   /// * `label` len: bufSize
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn GetObjectPtrLabelKHR(&self, ptr: *const void, bufSize: GLsizei, length: *mut GLsizei, label: *mut GLchar) {
     match self.glGetObjectPtrLabelKHR_p {
       Some(f) => f(ptr, bufSize, length, label),
@@ -6451,6 +6462,7 @@ impl GlFns46 {
     }
   }
   /// [glGetPointervKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetPointervKHR.xhtml)
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn GetPointervKHR(&self, pname: GLenum, params: *mut *mut void) {
     match self.glGetPointervKHR_p {
       Some(f) => f(pname, params),
@@ -6459,6 +6471,7 @@ impl GlFns46 {
   }
   /// [glObjectLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glObjectLabelKHR.xhtml)
   /// * `identifier` group: ObjectIdentifier
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn ObjectLabelKHR(&self, identifier: ObjectIdentifier, name: GLuint, length: GLsizei, label: *const GLchar) {
     match self.glObjectLabelKHR_p {
       Some(f) => f(identifier, name, length, label),
@@ -6466,6 +6479,7 @@ impl GlFns46 {
     }
   }
   /// [glObjectPtrLabelKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glObjectPtrLabelKHR.xhtml)
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn ObjectPtrLabelKHR(&self, ptr: *const void, length: GLsizei, label: *const GLchar) {
     match self.glObjectPtrLabelKHR_p {
       Some(f) => f(ptr, length, label),
@@ -6473,6 +6487,7 @@ impl GlFns46 {
     }
   }
   /// [glPopDebugGroupKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPopDebugGroupKHR.xhtml)
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn PopDebugGroupKHR(&self) {
     match self.glPopDebugGroupKHR_p {
       Some(f) => f(),
@@ -6481,6 +6496,7 @@ impl GlFns46 {
   }
   /// [glPushDebugGroupKHR](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPushDebugGroupKHR.xhtml)
   /// * `source` group: DebugSource
+  #[cfg_attr(feature = "track_caller", track_caller)]
   pub unsafe fn PushDebugGroupKHR(&self, source: DebugSource, id: GLuint, length: GLsizei, message: *const GLchar) {
     match self.glPushDebugGroupKHR_p {
       Some(f) => f(source, id, length, message),

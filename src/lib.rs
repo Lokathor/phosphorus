@@ -711,6 +711,7 @@ pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &
   writeln!(s, "  }}")?;
   writeln!(s, "  #[cold]")?;
   writeln!(s, "  #[inline(never)]")?;
+  writeln!(s, "  #[cfg_attr(feature=\"track_caller\", track_caller)]")?;
   writeln!(s, "  fn not_loaded(name: &str) -> ! {{")?;
   writeln!(s, "    panic!(\"Function Not Loaded: {{}}\", name);")?;
   writeln!(s, "  }}")?;
@@ -808,6 +809,7 @@ pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &
       }
       s
     };
+    writeln!(s, "  #[cfg_attr(feature=\"track_caller\", track_caller)]")?;
     writeln!(s, "  pub {unsafe_str} fn {short_name}(&self, {args_str}){ret_arrow}{ret_type} {{", unsafe_str = unsafe_str, short_name = short_name, args_str = args_str, ret_arrow = ret_arrow, ret_type = ret_type)?;
     writeln!(s, "    match self.{name}_p {{", name = name)?;
     writeln!(s, "      Some(f) => f({args_names}),", args_names = args_names)?;
