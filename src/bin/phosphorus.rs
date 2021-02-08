@@ -32,7 +32,7 @@ fn main() {
     eprintln!("Extensions Count: {}", registry.extensions.len());
   }
   let mut s = String::with_capacity(1024 * 1024 * 10);
-  //registry.fmt_feature_lists(&mut s).unwrap();
+  //registry.fmt_command_types(&mut s).unwrap();
   let extension_fns = {
     let mut v = Vec::new();
     for ext in [GL_ARB_debug_output_COMMANDS, GL_KHR_debug_COMMANDS].iter() {
@@ -45,6 +45,6 @@ fn main() {
     v
   };
   s.push_str("use super::*;\n\n");
-  fmt_struct_loader(&mut s, "GlFns46", &GL_VERSION_4_6, &extension_fns).unwrap();
+  fmt_global_loader(&mut s, "GlFns46", &GL_VERSION_4_6, &extension_fns).unwrap();
   println!("{}", s);
 }

@@ -9684,8 +9684,8 @@ pub type glPathGlyphIndexArrayNV_t = unsafe extern "system" fn(firstPathName: GL
 
 /// [glPathGlyphIndexRangeNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPathGlyphIndexRangeNV.xhtml)
 /// * `fontStyle` group: PathFontStyle
-/// * `baseAndCount` len: [2]
-pub type glPathGlyphIndexRangeNV_t = unsafe extern "system" fn(fontTarget: GLenum, fontName: *const void, fontStyle: GLbitfield, pathParameterTemplate: GLuint, emScale: GLfloat, baseAndCount: GLuint) -> GLenum;
+/// * `baseAndCount` len: 2
+pub type glPathGlyphIndexRangeNV_t = unsafe extern "system" fn(fontTarget: GLenum, fontName: *const void, fontStyle: GLbitfield, pathParameterTemplate: GLuint, emScale: GLfloat, baseAndCount: *mut [GLuint; 2]) -> GLenum;
 
 /// [glPathGlyphRangeNV](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPathGlyphRangeNV.xhtml)
 /// * `firstPathName` group: Path

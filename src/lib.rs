@@ -68,7 +68,7 @@ impl<'s> CommandParam<'s> {
       match len.parse::<usize>() {
         Ok(count) => Some(count),
         Err(_) => {
-          if len.len() > 3 {
+          if len.len() > 2 {
             match len[1..len.len() - 1].parse::<usize>() {
               Ok(count) => Some(count),
               Err(_) => None,
@@ -318,6 +318,7 @@ impl<'s> Registry<'s> {
                       EndTag { name: "param" } => (),
                       Text(t) => {
                         param.len = Some(t);
+                        param.is_ptr = true;
                         assert_eq!(iter.next().unwrap().unwrap_end_tag(), "param");
                       }
                       other => panic!("unknown: {:?}", other),
@@ -584,7 +585,11 @@ impl<'s> Registry<'s> {
           writeln!(s, "/// * `{param}` class: {class}", param = param.name, class = class)?;
         }
         if let Some(len_str) = param.get_len_str() {
-          writeln!(s, "/// * `{param}` len: {len_str}", param = param.name, len_str = len_str)?;
+          if len_str.contains('[') {
+            writeln!(s, "/// * `{param}` len: {len_str}", param = param.name, len_str = &len_str[1..len_str.len() - 1])?;
+          } else {
+            writeln!(s, "/// * `{param}` len: {len_str}", param = param.name, len_str = len_str)?;
+          }
         }
       }
       writeln!(s, "pub type {name}_t = unsafe extern \"system\" fn(", name = command.name)?;
@@ -823,6 +828,117 @@ pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &
     writeln!(s, "  }}")?;
   }
   writeln!(s, "}}")?;
+
+  Ok(())
+}
+
+/// Assumes that a struct loader has already been defined and simply piggy-backs
+/// off of that.
+pub fn fmt_global_loader(s: &mut String, struct_name: &str, non_null_commands: &[&str], nullable_commands: &[&str]) -> core::fmt::Result {
+  let desired_command_type_entries: Vec<CommandTypeEntry> = get_command_type_entries().into_iter().filter(|entry| non_null_commands.contains(&&*entry.name) || nullable_commands.contains(&&*entry.name)).collect();
+
+  writeln!(s, "#[repr(transparent)]")?;
+  writeln!(s, "struct GlFnCell(core::cell::UnsafeCell<Option<{struct_name}>>);", struct_name = struct_name)?;
+  writeln!(s)?;
+  writeln!(s, "// Note(Lokathor): This is a lie, and `GlFnCell` MUST remain private to this module for safety to be upheld.")?;
+  writeln!(s, "unsafe impl Sync for GlFnsCell {{}}")?;
+  writeln!(s)?;
+  writeln!(s, "static GLOBAL_FNS: GlFnsCell = GlFnsCell(core::cell::UnsafeCell::new(None));")?;
+  writeln!(s)?;
+  writeln!(s, "/// Loads function pointer for global-style GL usage.")?;
+  writeln!(s, "/// ")?;
+  writeln!(s, "/// ## Safety")?;
+  writeln!(s, "/// * This action is non-atomic and is not synchronized.")?;
+  writeln!(s, "///   If your program is using GL in a multi-threaded way you **must** provide external synchronization of your own.")?;
+  writeln!(s, "///   Best practice is to initialize global GL as soon as possible within the program, and *before* spawning any other threads.")?;
+  writeln!(s, "pub unsafe fn load_global_{struct_name}<F:Fn(*const u8) -> *const c_void>(f: F) -> Result<(), &'static str> {{", struct_name = struct_name)?;
+  writeln!(s, "  let fns = {struct_name}::load_from(f)?;", struct_name = struct_name)?;
+  writeln!(s, "  unsafe {{ *GLOBAL_FNS.0.get() = Some(fns) }};")?;
+  writeln!(s, "  Ok(())")?;
+  writeln!(s, "}}")?;
+  writeln!(s)?;
+  writeln!(s, "/// Clears the global GL function settings.")?;
+  writeln!(s, "/// ")?;
+  writeln!(s, "/// ## Safety")?;
+  writeln!(s, "/// * As per the rules of [`load_global_{struct_name}`]", struct_name = struct_name)?;
+  writeln!(s, "pub unsafe fn reset_global_{struct_name}() {{", struct_name = struct_name)?;
+  writeln!(s, "  unsafe {{ *GLOBAL_FNS.0.get() = None }};")?;
+  writeln!(s, "}}")?;
+  writeln!(s)?;
+  //
+  for cmd in non_null_commands.iter().copied() {
+    let entry = desired_command_type_entries.iter().find(|ent| ent.name == cmd).unwrap();
+    let name = &entry.name;
+    let unsafe_str = if entry.type_declaration.contains("unsafe") { "unsafe" } else { "" };
+    let short_name = &entry.name[2..];
+    let args_str = {
+      let open_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'(').unwrap();
+      let close_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b')').unwrap();
+      &entry.type_declaration[open_paren + 1..close_paren]
+    };
+    let ret_type = match entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'>') {
+      Some(position) => &entry.type_declaration[position + 1..entry.type_declaration.len() - 1],
+      None => "",
+    };
+    let ret_arrow = if ret_type.is_empty() { "" } else { "->" };
+    for docs_line in entry.comments.lines() {
+      writeln!(s, "{}", docs_line)?;
+    }
+    let args_names = {
+      let mut s = String::new();
+      for arg in args_str.split(',') {
+        let arg_name = arg.split(':').next().unwrap();
+        if arg_name.len() > 0 {
+          write!(s, "{arg_name},", arg_name = arg_name)?;
+        }
+      }
+      s
+    };
+    writeln!(s, "pub {unsafe_str} fn {short_name}({args_str}){ret_arrow}{ret_type} {{", unsafe_str = unsafe_str, short_name = short_name, args_str = args_str, ret_arrow = ret_arrow, ret_type = ret_type)?;
+    writeln!(s, "  (unsafe {{ *GLOBAL_FNS.0.get() }})({args_names})", args_names = args_names)?;
+    writeln!(s, "}}")?;
+  }
+  //
+  for cmd in nullable_commands.iter().copied() {
+    let entry = desired_command_type_entries.iter().find(|ent| ent.name == cmd).unwrap();
+    let name = &entry.name;
+    let unsafe_str = if entry.type_declaration.contains("unsafe") { "unsafe" } else { "" };
+    let short_name = &entry.name[2..];
+    let args_str = {
+      let open_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'(').unwrap();
+      let close_paren = entry.type_declaration.as_bytes().iter().copied().position(|b| b == b')').unwrap();
+      &entry.type_declaration[open_paren + 1..close_paren]
+    };
+    let ret_type = match entry.type_declaration.as_bytes().iter().copied().position(|b| b == b'>') {
+      Some(position) => &entry.type_declaration[position + 1..entry.type_declaration.len() - 1],
+      None => "",
+    };
+    let ret_arrow = if ret_type.is_empty() { "" } else { "->" };
+    for docs_line in entry.comments.lines() {
+      writeln!(s, "  {}", docs_line)?;
+    }
+    let args_names = {
+      let mut s = String::new();
+      for arg in args_str.split(',') {
+        let arg_name = arg.split(':').next().unwrap();
+        if arg_name.len() > 0 {
+          write!(s, "{arg_name},", arg_name = arg_name)?;
+        }
+      }
+      s
+    };
+    writeln!(s, "#[cfg_attr(feature=\"track_caller\", track_caller)]")?;
+    writeln!(s, "pub {unsafe_str} fn {short_name}(&self, {args_str}){ret_arrow}{ret_type} {{", unsafe_str = unsafe_str, short_name = short_name, args_str = args_str, ret_arrow = ret_arrow, ret_type = ret_type)?;
+    writeln!(s, "  match self.{name}_p {{", name = name)?;
+    writeln!(s, "    Some(f) => f({args_names}),", args_names = args_names)?;
+    writeln!(s, "    None => Self::not_loaded(\"{name}\"),", name = name)?;
+    writeln!(s, "  }}")?;
+    writeln!(s, "}}")?;
+    writeln!(s, "#[doc(hidden)]")?;
+    writeln!(s, "pub fn {short_name}_is_loaded(&self) -> bool {{", short_name = short_name)?;
+    writeln!(s, "  self.{name}_p.is_some()", name = name)?;
+    writeln!(s, "}}")?;
+  }
 
   Ok(())
 }
