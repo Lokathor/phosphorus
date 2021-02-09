@@ -33,18 +33,21 @@ fn main() {
   }
   let mut s = String::with_capacity(1024 * 1024 * 10);
   //registry.fmt_command_types(&mut s).unwrap();
-  let extension_fns = {
-    let mut v = Vec::new();
-    for ext in [GL_ARB_debug_output_COMMANDS, GL_KHR_debug_COMMANDS].iter() {
-      for cmd in ext.iter().copied() {
-        if !GL_VERSION_4_6.contains(&cmd) {
-          v.push(cmd);
-        }
-      }
-    }
-    v
-  };
+  //let extension_fns = {
+  //  let mut v = Vec::new();
+  //  for ext in [GL_ARB_debug_output_COMMANDS, GL_KHR_debug_COMMANDS].iter() {
+  //    for cmd in ext.iter().copied() {
+  //      if !GL_VERSION_4_6.contains(&cmd) {
+  //        v.push(cmd);
+  //      }
+  //    }
+  //  }
+  //  v
+  //};
+  let mut all_fns: Vec<&str> = GL_VERSION_4_6.iter().chain(GL_ARB_debug_output_COMMANDS.iter()).chain(GL_KHR_debug_COMMANDS.iter()).copied().collect();
+  all_fns.sort();
+  all_fns.dedup();
   s.push_str("use super::*;\n\n");
-  fmt_global_loader(&mut s, "GlFns46", &GL_VERSION_4_6, &extension_fns).unwrap();
+  fmt_global_loader(&mut s, &all_fns).unwrap();
   println!("{}", s);
 }
