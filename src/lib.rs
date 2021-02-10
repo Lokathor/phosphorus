@@ -607,7 +607,7 @@ impl<'s> Registry<'s> {
 
   pub fn fmt_command_types(&self, s: &mut String) -> core::fmt::Result {
     for command in self.commands.iter() {
-      writeln!(s, "/// [{name}](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/{name}.xhtml)", name = command.name)?;
+      writeln!(s, "/// {name}", name = command.name)?;
       for param in command.params.iter() {
         if let Some(group) = param.group.as_ref() {
           writeln!(s, "/// * `{param}` group: {group}", param = param.name, group = group)?;
