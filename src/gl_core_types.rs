@@ -136,7 +136,7 @@ pub(crate) type GLuint64 = u64;
 pub(crate) type GLuint64EXT = u64;
 pub(crate) type GLushort = u16;
 pub(crate) type GLvdpauSurfaceNV = GLintptr;
-pub(crate) type GLvoid = void;
+//pub(crate) type GLvoid = void;
 pub(crate) type void = core::ffi::c_void;
 
 /// Note(Lokathor): Technically this should be `c_char` so that it's either `i8`

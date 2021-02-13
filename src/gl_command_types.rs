@@ -222,8 +222,6 @@ pub type glBindAttribLocationARB_t = unsafe extern "system" fn(programObj: GLhan
 /// * `buffer` class: buffer
 pub type glBindBuffer_t = unsafe extern "system" fn(target: BufferTargetARB, buffer: GLuint);
 
-// continue here later
-
 /// glBindBufferARB
 /// * `target` group: BufferTargetARB
 /// * `buffer` class: buffer
