@@ -916,10 +916,28 @@ pub type glClearBufferSubData_t = unsafe extern "system" fn(target: BufferTarget
 /// * `drawbuffer` group: DrawBufferName
 pub type glClearBufferfi_t = unsafe extern "system" fn(buffer: Buffer, drawbuffer: GLint, depth: GLfloat, stencil: GLint);
 
-/// glClearBufferfv
-/// * `buffer` group: Buffer
-/// * `drawbuffer` group: DrawBufferName
-/// * `value` len: COMPSIZE(buffer)
+/// [glClearBufferfv](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glClearBuffer.xhtml)
+///
+/// Clears a specified buffer of the currently bound draw framebuffer object to
+/// a specified value.
+///
+/// * If `buffer` is `GL_COLOR`, a particular draw buffer `GL_DRAW_BUFFERi` is
+///   specified by passing `i` as `drawbuffer` (eg: to affect `GL_DRAW_BUFFER0`
+///   you'd pass 0). In this case, `value` points to a four-element vector
+///   specifying the R, G, B, and A color to clear that draw buffer to. If the
+///   value of `GL_DRAW_BUFFERi` is `GL_NONE`, the command has no effect.
+///   Otherwise, the value of `GL_DRAW_BUFFERi` identifies one or more color
+///   buffers, each of which is cleared to the same value. Clamping and type
+///   conversion for fixed-point color buffers are performed in the same fashion
+///   as for `glClearColor`.
+/// * If `buffer` is `GL_DEPTH`, `drawbuffer` must be zero, and `value` points
+///   to a single value to clear the depth buffer to. Clamping and type
+///   conversion for fixed-point depth buffers are performed in the same fashion
+///   as for `glClearDepth`.
+///
+/// ## Errors
+/// * `GL_INVALID_ENUM` is generated if `buffer` is not `GL_COLOR` or
+///   `GL_DEPTH`.
 pub type glClearBufferfv_t = unsafe extern "system" fn(buffer: Buffer, drawbuffer: GLint, value: *const GLfloat);
 
 /// glClearBufferiv
