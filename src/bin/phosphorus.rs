@@ -209,11 +209,11 @@ fn print_out_gl46_superbible() {
   command_type_entries.retain(|cte| non_null_commands.contains(cte.name.as_str()) || nullable_commands.contains(cte.name.as_str()));
 
   // Print All Enumeration Declarations
-  for enum_entry in enumeration_entries.iter() {
-    print!("{}", enum_entry.comments);
-    println!("{}", enum_entry.enum_declaration);
-    println!();
-  }
+  //for enum_entry in enumeration_entries.iter() {
+  //  print!("{}", enum_entry.comments);
+  //  println!("{}", enum_entry.enum_declaration);
+  //  println!();
+  //}
 
   println!();
   println!("// // // // // // // // // // // // // // // // // // // // // // // // // //");
@@ -231,15 +231,15 @@ fn print_out_gl46_superbible() {
   }
   let mut group_list: Vec<&str> = g.keys().copied().filter(|g| command_type_entries.iter().any(|cte| cte.type_declaration.contains(g))).collect();
   group_list.sort();
-  for group in group_list.iter() {
-    g.entry(group).or_insert(Vec::new()).sort();
-    println!("/// {}", group);
-    for group_entry in g.entry(group).or_insert(Vec::new()).iter() {
-      println!("/// * [`{}`]", group_entry);
-    }
-    println!("pub type {} = GLenum;", group);
-    println!("");
-  }
+  //for group in group_list.iter() {
+  //  g.entry(group).or_insert(Vec::new()).sort();
+  //  println!("/// {}", group);
+  //  for group_entry in g.entry(group).or_insert(Vec::new()).iter() {
+  //    println!("/// * [`{}`]", group_entry);
+  //  }
+  //  println!("pub type {} = GLenum;", group);
+  //  println!("");
+  //}
 
   println!();
   println!("// // // // // // // // // // // // // // // // // // // // // // // // // //");

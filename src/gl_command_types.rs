@@ -139,10 +139,14 @@ pub type glAsyncMarkerSGIX_t = unsafe extern "system" fn(marker: GLuint);
 /// * `obj` group: handleARB
 pub type glAttachObjectARB_t = unsafe extern "system" fn(containerObj: GLhandleARB, obj: GLhandleARB);
 
-/// glAttachShader
-/// * `program` class: program
-/// * `shader` class: shader
-pub type glAttachShader_t = unsafe extern "system" fn(program: GLuint, shader: GLuint);
+/// [glAttachShader](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glAttachShader.xhtml)
+///
+/// Attaches the given shader object to the given program object. You can attach
+/// more than one shader of the same type to a program.
+///
+/// * `program` is the program you're attaching the shader object to.
+/// * `shader` is the shader you're attaching.
+pub type glAttachShader_t = extern "system" fn(program: GLuint, shader: GLuint);
 
 /// glBegin
 /// * `mode` group: PrimitiveType
@@ -452,9 +456,13 @@ pub type glBindTransformFeedback_t = unsafe extern "system" fn(target: BindTrans
 /// * `id` class: transform feedback
 pub type glBindTransformFeedbackNV_t = unsafe extern "system" fn(target: BufferTargetARB, id: GLuint);
 
-/// glBindVertexArray
-/// * `array` class: vertex array
-pub type glBindVertexArray_t = unsafe extern "system" fn(array: GLuint);
+/// [glBindVertexArray](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBindVertexArray.xhtml)
+///
+/// Binds a given vertex array object as the active vertex array object. Passing
+/// 0 will make it so that no vertex array object is bound.
+///
+/// * `array` names the vertex array object to bind.
+pub type glBindVertexArray_t = extern "system" fn(array: GLuint);
 
 /// glBindVertexArrayAPPLE
 /// * `array` class: vertex array
@@ -1595,9 +1603,14 @@ pub type glCommandListSegmentsNV_t = unsafe extern "system" fn(list: GLuint, seg
 /// glCompileCommandListNV
 pub type glCompileCommandListNV_t = unsafe extern "system" fn(list: GLuint);
 
-/// glCompileShader
-/// * `shader` class: shader
-pub type glCompileShader_t = unsafe extern "system" fn(shader: GLuint);
+/// [glCompileShader](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glCompileShader.xhtml)
+///
+/// Compiles the source code assigned to the shader. The compilation status is
+/// stored as part of the shader object's state, check it with `glGetShader` and
+/// `glGetShaderInfoLog`.
+///
+/// * `shader` names the shader to compile.
+pub type glCompileShader_t = extern "system" fn(shader: GLuint);
 
 /// glCompileShaderARB
 /// * `shaderObj` group: handleARB
@@ -2355,8 +2368,13 @@ pub type glCreateMemoryObjectsEXT_t = unsafe extern "system" fn(n: GLsizei, memo
 /// glCreatePerfQueryINTEL
 pub type glCreatePerfQueryINTEL_t = unsafe extern "system" fn(queryId: GLuint, queryHandle: *mut GLuint);
 
-/// glCreateProgram
-pub type glCreateProgram_t = unsafe extern "system" fn() -> GLuint;
+/// [glCreateProgram](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glCreateProgram.xhtml)
+///
+/// Creates an empty program object, returning its name (a non-zero ID value).
+///
+/// ## Failure
+/// * If this fails, 0 is returned.
+pub type glCreateProgram_t = extern "system" fn() -> GLuint;
 
 /// glCreateProgramObjectARB
 pub type glCreateProgramObjectARB_t = unsafe extern "system" fn() -> GLhandleARB;
@@ -2389,9 +2407,16 @@ pub type glCreateSamplers_t = unsafe extern "system" fn(n: GLsizei, samplers: *m
 /// * `semaphores` len: n
 pub type glCreateSemaphoresNV_t = unsafe extern "system" fn(n: GLsizei, semaphores: *mut GLuint);
 
-/// glCreateShader
+/// [glCreateShader](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glCreateShader.xhtml)
+///
+/// Creates a new empty shader object of the given type, returning its name (a
+/// non-zero ID value).
+///
 /// * `type` group: ShaderType
-pub type glCreateShader_t = unsafe extern "system" fn(type_: ShaderType) -> GLuint;
+///
+/// ## Failure
+/// * If an error occurs the function returns 0.
+pub type glCreateShader_t = extern "system" fn(type_: ShaderType) -> GLuint;
 
 /// glCreateShaderObjectARB
 /// * `shaderType` group: ShaderType
@@ -2431,9 +2456,12 @@ pub type glCreateTextures_t = unsafe extern "system" fn(target: TextureTarget, n
 /// * `ids` len: n
 pub type glCreateTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, ids: *mut GLuint);
 
-/// glCreateVertexArrays
-/// * `arrays` class: vertex array
-/// * `arrays` len: n
+/// [glCreateVertexArrays](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glCreateVertexArrays.xhtml)
+///
+/// Fills a buffer with new vertex array object names (non-zero ID values).
+///
+/// * `n` the size of the buffer.
+/// * `arrays` pointer to the start of the buffer.
 pub type glCreateVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *mut GLuint);
 
 /// glCullFace
@@ -2638,9 +2666,15 @@ pub type glDeletePerfMonitorsAMD_t = unsafe extern "system" fn(n: GLsizei, monit
 /// glDeletePerfQueryINTEL
 pub type glDeletePerfQueryINTEL_t = unsafe extern "system" fn(queryHandle: GLuint);
 
-/// glDeleteProgram
-/// * `program` class: program
-pub type glDeleteProgram_t = unsafe extern "system" fn(program: GLuint);
+/// [glDeleteProgram](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDeleteProgram.xhtml)
+///
+/// Marks a program object for deletion. If the shader program is not in use it
+/// will be immediately deleted, otherwise it will be deleted once it's no
+/// longer in use. When a program object is deleted any shaders attached to it
+/// are automatically unattached from it.
+///
+/// * `program` names the program to mark for deletion.
+pub type glDeleteProgram_t = extern "system" fn(program: GLuint);
 
 /// glDeleteProgramPipelines
 /// * `pipelines` class: program pipeline
@@ -2705,9 +2739,13 @@ pub type glDeleteSamplers_t = unsafe extern "system" fn(count: GLsizei, samplers
 /// * `semaphores` len: n
 pub type glDeleteSemaphoresEXT_t = unsafe extern "system" fn(n: GLsizei, semaphores: *const GLuint);
 
-/// glDeleteShader
-/// * `shader` class: shader
-pub type glDeleteShader_t = unsafe extern "system" fn(shader: GLuint);
+/// [glDeleteShader](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDeleteShader.xhtml)
+///
+/// Marks a shader to be deleted. If it's not attached to a program it will be
+/// deleted immediately, otherwise it won't be deleted until it's unattached.
+///
+/// * `shader` names the shader to mark for deletion.
+pub type glDeleteShader_t = extern "system" fn(shader: GLuint);
 
 /// glDeleteStatesNV
 /// * `states` len: n
@@ -2744,9 +2782,15 @@ pub type glDeleteTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, id
 /// * `ids` len: n
 pub type glDeleteTransformFeedbacksNV_t = unsafe extern "system" fn(n: GLsizei, ids: *const GLuint);
 
-/// glDeleteVertexArrays
-/// * `arrays` class: vertex array
-/// * `arrays` len: n
+/// [glDeleteVertexArrays](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDeleteVertexArrays.xhtml)
+///
+/// Deletes a list of vertex array objects. If a vertex array object that is
+/// bound is deleted then the binding reverts to 0 and the default vertex array
+/// becomes current. Passing any vertex array object IDs not currently in use,
+/// or passing 0, is silently ignored.
+///
+/// * `n` the size of the list
+/// * `arrays` the vertex array objects to delete.
 pub type glDeleteVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *const GLuint);
 
 /// glDeleteVertexArraysAPPLE
@@ -2920,8 +2964,19 @@ pub type glDispatchComputeGroupSizeARB_t = unsafe extern "system" fn(num_groups_
 /// * `indirect` group: BufferOffset
 pub type glDispatchComputeIndirect_t = unsafe extern "system" fn(indirect: GLintptr);
 
-/// glDrawArrays
-/// * `mode` group: PrimitiveType
+/// [glDrawArrays](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawArrays.xhtml)
+///
+/// Draws `count` sequential indices using each enabled array to construct a
+/// sequence of primitives, starting from `first`. Depending on the `mode`
+/// specified, the number of indices required per primitive can vary.
+///
+/// If vertex attributes are modified by `glDrawArrays` the values are
+/// unspecified after the call returns. Any other attributes remain well
+/// defined.
+///
+/// * `mode` is the type of primitive to render.
+/// * `first` is the starting index to use within the enabled arrays.
+/// * `count` is the number of **indices** to be rendered.
 pub type glDrawArrays_t = unsafe extern "system" fn(mode: PrimitiveType, first: GLint, count: GLsizei);
 
 /// glDrawArraysEXT
@@ -7653,9 +7708,14 @@ pub type glLineWidthx_t = unsafe extern "system" fn(width: GLfixed);
 /// glLineWidthxOES
 pub type glLineWidthxOES_t = unsafe extern "system" fn(width: GLfixed);
 
-/// glLinkProgram
-/// * `program` class: program
-pub type glLinkProgram_t = unsafe extern "system" fn(program: GLuint);
+/// [glLinkProgram](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glLinkProgram.xhtml)
+///
+/// Performs linking on a program object. The link status of the program will be
+/// stored in its object state, you can check it with `glGetProgram` and/or
+/// `glGetProgramInfoLog`.
+///
+/// * `program` the name of the program to link
+pub type glLinkProgram_t = extern "system" fn(program: GLuint);
 
 /// glLinkProgramARB
 /// * `programObj` group: handleARB
@@ -9981,9 +10041,14 @@ pub type glPointParameterxv_t = unsafe extern "system" fn(pname: PointParameterN
 /// * `params` len: COMPSIZE(pname)
 pub type glPointParameterxvOES_t = unsafe extern "system" fn(pname: PointParameterNameARB, params: *const GLfixed);
 
-/// glPointSize
-/// * `size` group: CheckedFloat32
-pub type glPointSize_t = unsafe extern "system" fn(size: GLfloat);
+/// [glPointSize](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPointSize.xhtml)
+///
+/// Sets the diameter of rasterized points if `GL_PROGRAM_POINT_SIZE` is
+/// *disabled*. (Otherwise, this setting is ignored and you must modify
+/// `gl_PointSize` from within a shader to change point size.)
+///
+/// The default point size is 1.0, and it cannot be set to less than 0.0.
+pub type glPointSize_t = extern "system" fn(size: GLfloat);
 
 /// glPointSizePointerOES
 /// * `pointer` len: COMPSIZE(type,stride)
@@ -11942,10 +12007,18 @@ pub type glShaderOp2EXT_t = unsafe extern "system" fn(op: VertexShaderOpEXT, res
 /// * `op` group: VertexShaderOpEXT
 pub type glShaderOp3EXT_t = unsafe extern "system" fn(op: VertexShaderOpEXT, res: GLuint, arg1: GLuint, arg2: GLuint, arg3: GLuint);
 
-/// glShaderSource
-/// * `shader` class: shader
-/// * `string` len: count
-/// * `length` len: count
+/// [glShaderSource](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glShaderSource.xhtml)
+///
+/// Sets the source string of the named shader. This replaces any previously set
+/// source. OpenGL copies the data into its own memory, so you can free your
+/// instance of the source string after the call (if necessary).
+///
+/// * `shader` the shader ID to attach the source to.
+/// * `count` the length of the `string` and `length` arrays.
+/// * `string` an array of pointers to the start of shader source code strings.
+/// * `length` if non-null, this is an array of lengths for each pointer in
+///   `string` (or negative if that entry is null-termiated). if `length` is
+///   null then *all* strings in `string` must each be null-termianted.
 pub type glShaderSource_t = unsafe extern "system" fn(shader: GLuint, count: GLsizei, string: *const *const GLchar, length: *const GLint);
 
 /// glShaderSourceARB
@@ -14086,9 +14159,15 @@ pub type glUpdateObjectBufferATI_t = unsafe extern "system" fn(buffer: GLuint, o
 /// glUploadGpuMaskNVX
 pub type glUploadGpuMaskNVX_t = unsafe extern "system" fn(mask: GLbitfield);
 
-/// glUseProgram
-/// * `program` class: program
-pub type glUseProgram_t = unsafe extern "system" fn(program: GLuint);
+/// [glUseProgram](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glUseProgram.xhtml)
+///
+/// Sets a given shader program for use during rendering.
+///
+/// Setting 0 as the program object makes the output of all rendering actions
+/// undefined, but this is not an error.
+///
+/// * `program` names the program to set for use.
+pub type glUseProgram_t = extern "system" fn(program: GLuint);
 
 /// glUseProgramObjectARB
 /// * `programObj` group: handleARB
