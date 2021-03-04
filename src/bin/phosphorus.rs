@@ -5,7 +5,7 @@ use phosphorus::{gl_extension_deltas::*, gl_feature_deltas::*, registry::*, sour
 use std::collections::{BTreeSet, HashMap};
 
 fn main() {
-  print_out_gl46_superbible()
+  print_out_gl33_plus_extensions()
 }
 
 fn print_out_registry() {
@@ -147,6 +147,17 @@ fn print_out_gl33_plus_extensions() {
   let nullable_commands: Vec<&str> = nullable_commands.iter().copied().collect();
   let mut s = String::with_capacity(10 * 1024 * 1024);
   fmt_struct_loader(&mut s, "GlFns", &non_null_commands, &nullable_commands);
+  println!("{}", s);
+
+  println!();
+  println!("// // // // // // // // // // // // // // // // // // // // // // // // // //");
+  println!();
+  // print command loader
+  let mut nullable_global_commands: Vec<&str> = nullable_commands.clone();
+  nullable_global_commands.extend(non_null_commands);
+  nullable_global_commands.sort();
+  let mut s = String::with_capacity(10 * 1024 * 1024);
+  fmt_global_loader(&mut s, &nullable_global_commands);
   println!("{}", s);
 }
 

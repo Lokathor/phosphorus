@@ -115,14 +115,22 @@ pub fn fmt_struct_loader(s: &mut String, struct_name: &str, non_null_commands: &
   writeln!(s, "  }}")?;
   writeln!(s)?;
   writeln!(s, "  /// Loads all GL functions from the loader given.")?;
-  writeln!(s, "  /// ")?;
+  writeln!(s, "  ///")?;
   writeln!(s, "  /// ## Failure")?;
-  writeln!(s, "  /// This fails if any non-nullable function does not load.")?;
-  writeln!(s, "  /// The error value will be the name of the first non-nullable function that doesn't load.")?;
-  writeln!(s, "  /// ")?;
+  writeln!(s, "  /// This fails if any of the required functions don't load. The error")?;
+  writeln!(s, "  /// value will be the name of the first function that doesn't load.")?;
+  writeln!(s, "  ///")?;
   writeln!(s, "  /// ## Safety")?;
-  writeln!(s, "  /// * The \"Get Proc Address\" function you provide will always be given a pointer to the start of a null-terminated string containing the name of a GL function to load.")?;
-  writeln!(s, "  /// * The \"Get Proc Address\" function given must always return accurate function pointer values, or null on failure.")?;
+  writeln!(s, "  /// * The \"Get Proc Address\" function you provide will always be given a")?;
+  writeln!(s, "  ///   pointer to the start of a null-terminated string containing the name of")?;
+  writeln!(s, "  ///   a GL function to load.")?;
+  writeln!(s, "  /// * The \"Get Proc Address\" function given must always return accurate")?;
+  writeln!(s, "  ///   function pointer values, or null on failure.")?;
+  writeln!(s, "  /// * Some \"Get Proc Address\" implementations will return context-specific")?;
+  writeln!(s, "  ///   function pointers. Others will return general function pointers even if")?;
+  writeln!(s, "  ///   the current context doesn't support the command. It's **up to you** to")?;
+  writeln!(s, "  ///   only load and use this struct with an appropriate GL context as the")?;
+  writeln!(s, "  ///   current context.")?;
   writeln!(s, "  pub unsafe fn load_from(f: &dyn Fn(*const u8) -> *const c_void) -> Result<Self, &'static str> {{")?;
   writeln!(s, "    use core::mem::transmute;")?;
   writeln!(s, "    type nn_cv = core::ptr::NonNull<c_void>;")?;
@@ -284,6 +292,7 @@ pub fn fmt_global_loader(s: &mut String, nullable_commands: &[&str]) -> core::fm
   //
   writeln!(s, "}}")?;
   writeln!(s)?;
+  /*
   writeln!(s, "/// Clears the global GL function settings.")?;
   writeln!(s, "/// ")?;
   writeln!(s, "/// ## Safety")?;
@@ -297,6 +306,7 @@ pub fn fmt_global_loader(s: &mut String, nullable_commands: &[&str]) -> core::fm
   }
   //
   writeln!(s, "}}")?;
+  */
   writeln!(s)?;
   //
   for cmd in nullable_commands.iter().copied() {
@@ -343,10 +353,12 @@ pub fn fmt_global_loader(s: &mut String, nullable_commands: &[&str]) -> core::fm
     writeln!(s, "pub unsafe fn {name}_load_with(f: &dyn Fn(*const u8) -> *const c_void) {{", name = name)?;
     writeln!(s, "  *{name}_p.0.get() = core::mem::transmute::<Option<core::ptr::NonNull<c_void>>, Option<{name}_t>>(gl_ptr_filter(f(b\"{name}\\0\".as_ptr())));", name = name)?;
     writeln!(s, "}}")?;
+    /*
     writeln!(s, "#[doc(hidden)]")?;
     writeln!(s, "pub unsafe fn {name}_reset_ptr() {{", name = name)?;
     writeln!(s, "  *{name}_p.0.get() = None;", name = name)?;
     writeln!(s, "}}")?;
+    */
   }
 
   Ok(())
