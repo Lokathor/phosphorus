@@ -29,8 +29,13 @@ pub type glActiveShaderProgramEXT_t = unsafe extern "system" fn(pipeline: GLuint
 /// * `face` group: StencilFaceDirection
 pub type glActiveStencilFaceEXT_t = unsafe extern "system" fn(face: StencilFaceDirection);
 
-/// glActiveTexture
-/// * `texture` group: TextureUnit
+/// [glActiveTexture](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glActiveTexture.xhtml)
+///
+/// Specifies which texture unit to make active.
+///
+/// `texture` should be one of the `GL_TEXTUREi` values, ranging from
+/// `GL_TEXTURE0` to the value of `GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS` minus 1.
+/// The initial value is `GL_TEXTURE0`.
 pub type glActiveTexture_t = unsafe extern "system" fn(texture: TextureUnit);
 
 /// glActiveTextureARB
