@@ -6230,13 +6230,32 @@ pub type glGetSharpenTexFuncSGIS_t = unsafe extern "system" fn(target: TextureTa
 /// * `shadertype` group: ShaderType
 pub type glGetStageIndexNV_t = unsafe extern "system" fn(shadertype: ShaderType) -> GLushort;
 
-/// glGetString
-/// * `name` group: StringName
-pub type glGetString_t = unsafe extern "system" fn(name: StringName) -> GLubyte;
+/// [glGetString](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetString.xhtml)
+///
+/// Gets various string info about the GL implementation.
+///
+/// * `name`:
+///   * `GL_VENDOR`: The name of the company that made this GL implementation.
+///   * `GL_RENDERER`: The name of the renderer.
+///   * `GL_VERSION`: A version or release number.
+///   * `GL_SHADING_LANGUAGE_VERSION`: The version/release for the shading
+///     language.
+pub type glGetString_t = unsafe extern "system" fn(name: StringName) -> *const GLubyte;
 
-/// glGetStringi
-/// * `name` group: StringName
-pub type glGetStringi_t = unsafe extern "system" fn(name: StringName, index: GLuint) -> GLubyte;
+/// [glGetStringi](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetString.xhtml)
+///
+/// Gets indexed string info about the GL implementation.
+///
+/// * `name`: One of:
+///   * `GL_EXTENSIONS`: Returns the name of the extension specified by `index`.
+///     Extensions are indexed in the range `0 .. GL_NUM_EXTENSIONS`. Use
+///     `glGetIntegerv` to find the current implementation's number of
+///     extensions.
+/// * `index`: The index of the string to return.
+///
+/// See Also:
+/// [glGetIntegerv](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGet.xhtml)
+pub type glGetStringi_t = unsafe extern "system" fn(name: StringName, index: GLuint) -> *const GLubyte;
 
 /// glGetSubroutineIndex
 /// * `program` class: program
