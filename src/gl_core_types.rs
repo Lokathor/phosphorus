@@ -5,7 +5,7 @@ use super::*;
 /// A GL enumeration value.
 #[derive(PartialEq, Eq, Hash)]
 #[repr(transparent)]
-pub struct GLenum(pub c_uint);
+pub struct GLenum(pub u32);
 impl core::fmt::Debug for GLenum {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "GlEnum(0x{:X})", self.0)
@@ -23,7 +23,7 @@ impl Copy for GLenum {}
 /// You can mix around the bits of these values using standard bitwise ops.
 #[derive(PartialEq, Eq, Hash)]
 #[repr(transparent)]
-pub struct GLbitfield(pub c_uint);
+pub struct GLbitfield(pub u32);
 impl core::fmt::Debug for GLbitfield {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "GlBitfield(0b{:b})", self.0)
@@ -77,7 +77,7 @@ impl core::ops::Not for GLbitfield {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-pub struct GLhandleARB(#[cfg(any(target_os = "ios", target_os = "macos"))] pub *mut void, #[cfg(not(any(target_os = "ios", target_os = "macos")))] pub c_uint);
+pub struct GLhandleARB(#[cfg(any(target_os = "ios", target_os = "macos"))] pub *mut void, #[cfg(not(any(target_os = "ios", target_os = "macos")))] pub GLuint);
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -109,29 +109,29 @@ pub type GLVULKANPROCNV = Option<unsafe extern "system" fn()>;
 // them just for use within the crate. Since they aren't world-visible, the
 // outside world will show the base Rust type on function arguments.
 
-pub(crate) type GLboolean = c_uchar;
+pub(crate) type GLboolean = bool;
 pub(crate) type GLbyte = i8;
 pub(crate) type GLcharARB = u8;
-pub(crate) type GLclampd = c_double;
-pub(crate) type GLclampf = c_float;
+pub(crate) type GLclampd = f64;
+pub(crate) type GLclampf = f32;
 pub(crate) type GLclampx = i32;
-pub(crate) type GLdouble = c_double;
+pub(crate) type GLdouble = f64;
 pub(crate) type GLfixed = i32;
-pub(crate) type GLfloat = c_float;
+pub(crate) type GLfloat = f32;
 pub(crate) type GLhalf = u16;
 pub(crate) type GLhalfARB = u16;
-pub(crate) type GLhalfNV = c_ushort;
-pub(crate) type GLint = c_int;
+pub(crate) type GLhalfNV = u16;
+pub(crate) type GLint = i32;
 pub(crate) type GLint64 = i64;
 pub(crate) type GLint64EXT = i64;
 pub(crate) type GLintptr = isize;
 pub(crate) type GLintptrARB = isize;
 pub(crate) type GLshort = i16;
-pub(crate) type GLsizei = c_int;
+pub(crate) type GLsizei = u32;
 pub(crate) type GLsizeiptr = isize;
 pub(crate) type GLsizeiptrARB = isize;
 pub(crate) type GLubyte = u8;
-pub(crate) type GLuint = c_uint;
+pub(crate) type GLuint = u32;
 pub(crate) type GLuint64 = u64;
 pub(crate) type GLuint64EXT = u64;
 pub(crate) type GLushort = u16;

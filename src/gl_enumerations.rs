@@ -4388,7 +4388,7 @@ pub const GL_INVALID_FRAMEBUFFER_OPERATION_EXT: GLenum = GLenum(0x0506);
 
 pub const GL_INVALID_FRAMEBUFFER_OPERATION_OES: GLenum = GLenum(0x0506);
 
-pub const GL_INVALID_INDEX: c_uint = 0xFFFFFFFF;
+pub const GL_INVALID_INDEX: GLuint = 0xFFFFFFFF;
 
 pub const GL_INVALID_OPERATION: GLenum = GLenum(0x0502);
 
