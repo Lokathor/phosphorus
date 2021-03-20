@@ -29,7 +29,6 @@
 //! it exposes by at least preventing you from accidentally mixing up `GLenum`,
 //! `GLbitfield`, and plain integer values.
 
-use chlorine::*;
 use magnesium::{XmlElement::*, *};
 
 use core::fmt::Write;
