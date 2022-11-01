@@ -29,6 +29,18 @@ fn main() {
   println!("registry: {registry:#?}");
 }
 
+fn burn_until<'a>(
+  end: &str, elem_iter: &mut impl Iterator<Item = XmlElement<'a>>,
+) {
+  loop {
+    if let EndTag { name } = elem_iter.next().unwrap() {
+      if end == name {
+        return;
+      }
+    }
+  }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Registry {
   pub enumerations: Vec<Enumeration>,
@@ -90,294 +102,14 @@ impl Registry {
                 break 'commands;
               }
               StartTag { name: "command", attrs } => {
-                let mut command = Command::default();
-                for attr in TagAttributeIterator::new(attrs) {
-                  if attr.key == "comment" {
-                    continue;
-                  }
-                  println!("command_attr: {attr:?}");
-                }
-                'command: loop {
-                  match elem_iter.next().unwrap() {
-                    EndTag { name: "command" } => {
-                      registry.commands.push(command);
-                      break 'command;
-                    }
-                    StartTag { name: "proto", attrs } => {
-                      // proto attrs
-                      for attr in TagAttributeIterator::new(attrs) {
-                        match attr.key {
-                          "group" => {
-                            command.return_group = Some(attr.value.to_string())
-                          }
-                          "class" => {
-                            command.return_class = Some(attr.value.to_string())
-                          }
-                          other => panic!("{other:?}"),
-                        }
-                      }
-                      // return type
-                      match elem_iter.next().unwrap() {
-                        Text("void") => command.return_ty = "()".to_string(),
-                        Text("void *") => {
-                          command.return_ty = "*mut c_void".to_string()
-                        }
-                        Text("const") => {
-                          assert_eq!(
-                            elem_iter.next().unwrap(),
-                            StartTag { name: "ptype", attrs: "" }
-                          );
-                          let t = match elem_iter.next().unwrap() {
-                            Text(t) => t.to_string(),
-                            other => panic!("{other:?}"),
-                          };
-                          assert_eq!(
-                            elem_iter.next().unwrap(),
-                            EndTag { name: "ptype" }
-                          );
-                          assert_eq!(elem_iter.next().unwrap(), Text("*"));
-                          command.return_ty = format!("*const {t}");
-                        }
-                        StartTag { name: "ptype", attrs: "" } => {
-                          match elem_iter.next().unwrap() {
-                            Text(t) => command.return_ty = t.to_string(),
-                            other => panic!("{other:?}"),
-                          }
-                          assert_eq!(
-                            elem_iter.next().unwrap(),
-                            EndTag { name: "ptype" }
-                          );
-                        }
-                        other => panic!("{other:?}"),
-                      }
-                      // name
-                      match elem_iter.next().unwrap() {
-                        StartTag { name: "name", attrs: "" } => {
-                          match elem_iter.next().unwrap() {
-                            Text(t) => command.name = t.to_string(),
-                            other => panic!("{other:?}"),
-                          }
-                          assert_eq!(
-                            elem_iter.next().unwrap(),
-                            EndTag { name: "name" }
-                          );
-                        }
-                        other => panic!("{other:?}"),
-                      }
-                      assert_eq!(
-                        elem_iter.next().unwrap(),
-                        EndTag { name: "proto" }
-                      );
-                    }
-                    StartTag { name: "param", attrs } => {
-                      let mut param = Param::default();
-                      for attr in TagAttributeIterator::new(attrs) {
-                        match attr.key {
-                          "group" => param.group = Some(attr.value.to_string()),
-                          "class" => param.class = Some(attr.value.to_string()),
-                          "len" => param.len = Some(attr.value.to_string()),
-                          other => panic!("{other:?}"),
-                        }
-                      }
-                      'param: loop {
-                        match elem_iter.next().unwrap() {
-                          EndTag { name: "param" } => {
-                            command.params.push(param);
-                            break 'param;
-                          }
-                          StartTag { name: "ptype", attrs: "" } => {
-                            match elem_iter.next().unwrap() {
-                              Text(t) => param.param_ty = t.to_string(),
-                              other => panic!("{other:?}"),
-                            }
-                            assert_eq!(
-                              elem_iter.next().unwrap(),
-                              EndTag { name: "ptype" }
-                            );
-                          }
-                          Text("const") => {
-                            assert_eq!(
-                              elem_iter.next().unwrap(),
-                              StartTag { name: "ptype", attrs: "" }
-                            );
-                            let t = match elem_iter.next().unwrap() {
-                              Text(t) => t.to_string(),
-                              other => panic!("{other:?}"),
-                            };
-                            assert_eq!(
-                              elem_iter.next().unwrap(),
-                              EndTag { name: "ptype" }
-                            );
-                            match elem_iter.next().unwrap() {
-                              Text("*") => {
-                                param.param_ty = format!("*const {t}")
-                              }
-                              Text("*const*") => {
-                                param.param_ty = format!("*const *const {t}")
-                              }
-                              Text("**") => {
-                                param.param_ty = format!("*const *mut {t}")
-                              }
-                              other => panic!("{other:?}"),
-                            }
-                          }
-                          Text("const void *") => {
-                            param.param_ty = "*const c_void".to_string();
-                          }
-                          Text("const void **") => {
-                            param.param_ty = "*const *mut c_void".to_string();
-                          }
-                          Text("void *") => {
-                            param.param_ty = "*mut c_void".to_string();
-                          }
-                          Text("void **") => {
-                            param.param_ty = "*mut *mut c_void".to_string();
-                          }
-                          Text("const void *const*") => {
-                            param.param_ty = "*const *const c_void".to_string();
-                          }
-                          Text("*") => {
-                            param.param_ty = format!("*mut {}", param.param_ty);
-                          }
-                          StartTag { name: "name", attrs: "" } => {
-                            match elem_iter.next().unwrap() {
-                              Text(t) => param.name = t.to_string(),
-                              other => panic!("{other:?}"),
-                            }
-                            assert_eq!(
-                              elem_iter.next().unwrap(),
-                              EndTag { name: "name" }
-                            );
-                          }
-                          other => panic!("{other:?}, Command: {command:?}"),
-                        }
-                      }
-                    }
-                    EmptyTag { name: "glx", .. } => (),
-                    EmptyTag { name: "vecequiv", .. } => (),
-                    EmptyTag { name: "alias", attrs } => {
-                      for attr in TagAttributeIterator::new(attrs) {
-                        match attr.key {
-                          "name" => {
-                            command.alias = Some(attr.value.to_string())
-                          }
-                          other => panic!("{other:?}"),
-                        }
-                      }
-                    }
-                    other => panic!("{other:?}"),
-                  }
-                }
+                registry.commands.push(Command::new(&mut elem_iter, attrs))
               }
               other => panic!("{other:?}"),
             }
           }
         }
         StartTag { name: "feature", attrs } => {
-          let mut feature = Feature::default();
-          for attr in TagAttributeIterator::new(attrs) {
-            match attr.key {
-              "api" => feature.api = attr.value.to_string(),
-              "name" => feature.name = attr.value.to_string(),
-              "number" => feature.number = attr.value.to_string(),
-              other => panic!("{other:?}"),
-            }
-          }
-          'feature: loop {
-            match elem_iter.next().unwrap() {
-              EndTag { name: "feature" } => {
-                registry.features.push(feature);
-                break 'feature;
-              }
-              EmptyTag { name: "require", .. } => (),
-              StartTag { name: "require", attrs } => {
-                let mut profile = None;
-                for attr in TagAttributeIterator::new(attrs) {
-                  match attr.key {
-                    "comment" => (),
-                    "profile" => match attr.value {
-                      "core" => profile = Some(Profile::Core),
-                      "compatibility" => profile = Some(Profile::Compatibility),
-                      "common" => (),
-                      other => panic!("{other:?}"),
-                    },
-                    other => panic!("{other:?}"),
-                  }
-                }
-                'require: loop {
-                  match elem_iter.next().unwrap() {
-                    EndTag { name: "require" } => break 'require,
-                    EmptyTag { name: "type", .. } => continue,
-                    EmptyTag { name: "enum", attrs } => {
-                      for attr in TagAttributeIterator::new(attrs) {
-                        match attr.key {
-                          "name" => feature
-                            .required_enumerations
-                            .push((attr.value.to_string(), profile)),
-                          "comment" => (),
-                          other => panic!("{other:?}"),
-                        }
-                      }
-                    }
-                    EmptyTag { name: "command", attrs } => {
-                      for attr in TagAttributeIterator::new(attrs) {
-                        match attr.key {
-                          "name" => feature
-                            .required_commands
-                            .push((attr.value.to_string(), profile)),
-                          other => panic!("{other:?}"),
-                        }
-                      }
-                    }
-                    other => panic!("{other:?}"),
-                  }
-                }
-              }
-              StartTag { name: "remove", attrs } => {
-                let mut profile = None;
-                for attr in TagAttributeIterator::new(attrs) {
-                  match attr.key {
-                    "comment" => (),
-                    "profile" => match attr.value {
-                      "core" => profile = Some(Profile::Core),
-                      "compatibility" => profile = Some(Profile::Compatibility),
-                      "common" => (),
-                      other => panic!("{other:?}"),
-                    },
-                    other => panic!("{other:?}, Feature: {:?}", feature.name),
-                  }
-                }
-                'remove: loop {
-                  match elem_iter.next().unwrap() {
-                    EndTag { name: "remove" } => break 'remove,
-                    EmptyTag { name: "type", .. } => continue,
-                    EmptyTag { name: "enum", attrs } => {
-                      for attr in TagAttributeIterator::new(attrs) {
-                        match attr.key {
-                          "name" => feature
-                            .removed_enumerations
-                            .push((attr.value.to_string(), profile)),
-                          other => panic!("{other:?}"),
-                        }
-                      }
-                    }
-                    EmptyTag { name: "command", attrs } => {
-                      for attr in TagAttributeIterator::new(attrs) {
-                        match attr.key {
-                          "name" => feature
-                            .removed_commands
-                            .push((attr.value.to_string(), profile)),
-                          other => panic!("{other:?}"),
-                        }
-                      }
-                    }
-                    other => panic!("{other:?}"),
-                  }
-                }
-              }
-              other => panic!("{other:?}"),
-            }
-          }
+          registry.features.push(Feature::new(&mut elem_iter, attrs))
         }
         StartTag { name: "extensions", attrs: "" } => 'extensions: loop {
           match elem_iter.next().unwrap() {
@@ -394,63 +126,7 @@ impl Registry {
               registry.extensions.push(extension);
             }
             StartTag { name: "extension", attrs } => {
-              let mut extension = Extension::default();
-              for attr in TagAttributeIterator::new(attrs) {
-                match attr.key {
-                  "name" => extension.name = attr.value.to_string(),
-                  "supported" => extension.supported = attr.value.to_string(),
-                  "comment" => (),
-                  other => panic!("{other:?}"),
-                }
-              }
-              'extension: loop {
-                match elem_iter.next().unwrap() {
-                  EndTag { name: "extension" } => {
-                    registry.extensions.push(extension);
-                    break 'extension;
-                  }
-                  StartTag { name: "require", attrs } => 'require: loop {
-                    for attr in TagAttributeIterator::new(attrs) {
-                      match attr.key {
-                        "comment" => (),
-                        "api" => extension.api = Some(attr.value.to_string()),
-                        "profile" => {
-                          extension.profile = Some(attr.value.to_string())
-                        }
-                        other => panic!("{other:?}"),
-                      }
-                    }
-                    match elem_iter.next().unwrap() {
-                      EndTag { name: "require" } => break 'require,
-                      EmptyTag { name: "enum", attrs } => {
-                        for attr in TagAttributeIterator::new(attrs) {
-                          match attr.key {
-                            "name" => extension
-                              .required_enumerations
-                              .push(attr.value.to_string()),
-                            "comment" => (),
-                            other => panic!("{other:?}"),
-                          }
-                        }
-                      }
-                      EmptyTag { name: "command", attrs } => {
-                        for attr in TagAttributeIterator::new(attrs) {
-                          match attr.key {
-                            "name" => extension
-                              .required_commands
-                              .push(attr.value.to_string()),
-                            "comment" => (),
-                            other => panic!("{other:?}"),
-                          }
-                        }
-                      }
-                      EmptyTag { name: "type", attrs: _ } => (),
-                      other => panic!("{other:?}"),
-                    }
-                  },
-                  other => panic!("{other:?}"),
-                }
-              }
+              registry.extensions.push(Extension::new(&mut elem_iter, attrs))
             }
             other => panic!("{other:?}"),
           }
@@ -472,18 +148,6 @@ pub struct Enumeration {
   pub is_bitmask: bool,
 }
 
-fn burn_until<'a>(
-  end: &str, elem_iter: &mut impl Iterator<Item = XmlElement<'a>>,
-) {
-  loop {
-    if let EndTag { name } = elem_iter.next().unwrap() {
-      if end == name {
-        return;
-      }
-    }
-  }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct Command {
   pub return_ty: String,
@@ -493,6 +157,156 @@ pub struct Command {
   pub params: Vec<Param>,
   /// This command is an alias of another command, named here.
   pub alias: Option<String>,
+}
+impl Command {
+  pub fn new<'a>(
+    elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
+  ) -> Self {
+    let mut command = Command::default();
+    for attr in TagAttributeIterator::new(attrs) {
+      if attr.key == "comment" {
+        continue;
+      }
+      println!("command_attr: {attr:?}");
+    }
+    loop {
+      match elem_iter.next().unwrap() {
+        EndTag { name: "command" } => {
+          return command;
+        }
+        StartTag { name: "proto", attrs } => {
+          // proto attrs
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "group" => command.return_group = Some(attr.value.to_string()),
+              "class" => command.return_class = Some(attr.value.to_string()),
+              other => panic!("{other:?}"),
+            }
+          }
+          // return type
+          match elem_iter.next().unwrap() {
+            Text("void") => command.return_ty = "()".to_string(),
+            Text("void *") => command.return_ty = "*mut c_void".to_string(),
+            Text("const") => {
+              assert_eq!(
+                elem_iter.next().unwrap(),
+                StartTag { name: "ptype", attrs: "" }
+              );
+              let t = match elem_iter.next().unwrap() {
+                Text(t) => t.to_string(),
+                other => panic!("{other:?}"),
+              };
+              assert_eq!(elem_iter.next().unwrap(), EndTag { name: "ptype" });
+              assert_eq!(elem_iter.next().unwrap(), Text("*"));
+              command.return_ty = format!("*const {t}");
+            }
+            StartTag { name: "ptype", attrs: "" } => {
+              match elem_iter.next().unwrap() {
+                Text(t) => command.return_ty = t.to_string(),
+                other => panic!("{other:?}"),
+              }
+              assert_eq!(elem_iter.next().unwrap(), EndTag { name: "ptype" });
+            }
+            other => panic!("{other:?}"),
+          }
+          // name
+          match elem_iter.next().unwrap() {
+            StartTag { name: "name", attrs: "" } => {
+              match elem_iter.next().unwrap() {
+                Text(t) => command.name = t.to_string(),
+                other => panic!("{other:?}"),
+              }
+              assert_eq!(elem_iter.next().unwrap(), EndTag { name: "name" });
+            }
+            other => panic!("{other:?}"),
+          }
+          assert_eq!(elem_iter.next().unwrap(), EndTag { name: "proto" });
+        }
+        StartTag { name: "param", attrs } => {
+          let mut param = Param::default();
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "group" => param.group = Some(attr.value.to_string()),
+              "class" => param.class = Some(attr.value.to_string()),
+              "len" => param.len = Some(attr.value.to_string()),
+              other => panic!("{other:?}"),
+            }
+          }
+          'param: loop {
+            match elem_iter.next().unwrap() {
+              EndTag { name: "param" } => {
+                command.params.push(param);
+                break 'param;
+              }
+              StartTag { name: "ptype", attrs: "" } => {
+                match elem_iter.next().unwrap() {
+                  Text(t) => param.param_ty = t.to_string(),
+                  other => panic!("{other:?}"),
+                }
+                assert_eq!(elem_iter.next().unwrap(), EndTag { name: "ptype" });
+              }
+              Text("const") => {
+                assert_eq!(
+                  elem_iter.next().unwrap(),
+                  StartTag { name: "ptype", attrs: "" }
+                );
+                let t = match elem_iter.next().unwrap() {
+                  Text(t) => t.to_string(),
+                  other => panic!("{other:?}"),
+                };
+                assert_eq!(elem_iter.next().unwrap(), EndTag { name: "ptype" });
+                match elem_iter.next().unwrap() {
+                  Text("*") => param.param_ty = format!("*const {t}"),
+                  Text("*const*") => {
+                    param.param_ty = format!("*const *const {t}")
+                  }
+                  Text("**") => param.param_ty = format!("*const *mut {t}"),
+                  other => panic!("{other:?}"),
+                }
+              }
+              Text("const void *") => {
+                param.param_ty = "*const c_void".to_string();
+              }
+              Text("const void **") => {
+                param.param_ty = "*const *mut c_void".to_string();
+              }
+              Text("void *") => {
+                param.param_ty = "*mut c_void".to_string();
+              }
+              Text("void **") => {
+                param.param_ty = "*mut *mut c_void".to_string();
+              }
+              Text("const void *const*") => {
+                param.param_ty = "*const *const c_void".to_string();
+              }
+              Text("*") => {
+                param.param_ty = format!("*mut {}", param.param_ty);
+              }
+              StartTag { name: "name", attrs: "" } => {
+                match elem_iter.next().unwrap() {
+                  Text(t) => param.name = t.to_string(),
+                  other => panic!("{other:?}"),
+                }
+                assert_eq!(elem_iter.next().unwrap(), EndTag { name: "name" });
+              }
+              other => panic!("{other:?}, Command: {command:?}"),
+            }
+          }
+        }
+        EmptyTag { name: "glx", .. } => (),
+        EmptyTag { name: "vecequiv", .. } => (),
+        EmptyTag { name: "alias", attrs } => {
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "name" => command.alias = Some(attr.value.to_string()),
+              other => panic!("{other:?}"),
+            }
+          }
+        }
+        other => panic!("{other:?}"),
+      }
+    }
+  }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -524,6 +338,113 @@ pub struct Feature {
   /// (name, profile)
   pub removed_commands: Vec<(String, Option<Profile>)>,
 }
+impl Feature {
+  pub fn new<'a>(
+    elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
+  ) -> Self {
+    let mut feature = Feature::default();
+    for attr in TagAttributeIterator::new(attrs) {
+      match attr.key {
+        "api" => feature.api = attr.value.to_string(),
+        "name" => feature.name = attr.value.to_string(),
+        "number" => feature.number = attr.value.to_string(),
+        other => panic!("{other:?}"),
+      }
+    }
+    loop {
+      match elem_iter.next().unwrap() {
+        EndTag { name: "feature" } => return feature,
+        EmptyTag { name: "require", .. } => (),
+        StartTag { name: "require", attrs } => {
+          let mut profile = None;
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "comment" => (),
+              "profile" => match attr.value {
+                "core" => profile = Some(Profile::Core),
+                "compatibility" => profile = Some(Profile::Compatibility),
+                "common" => (),
+                other => panic!("{other:?}"),
+              },
+              other => panic!("{other:?}"),
+            }
+          }
+          'require: loop {
+            match elem_iter.next().unwrap() {
+              EndTag { name: "require" } => break 'require,
+              EmptyTag { name: "type", .. } => continue,
+              EmptyTag { name: "enum", attrs } => {
+                for attr in TagAttributeIterator::new(attrs) {
+                  match attr.key {
+                    "name" => feature
+                      .required_enumerations
+                      .push((attr.value.to_string(), profile)),
+                    "comment" => (),
+                    other => panic!("{other:?}"),
+                  }
+                }
+              }
+              EmptyTag { name: "command", attrs } => {
+                for attr in TagAttributeIterator::new(attrs) {
+                  match attr.key {
+                    "name" => feature
+                      .required_commands
+                      .push((attr.value.to_string(), profile)),
+                    other => panic!("{other:?}"),
+                  }
+                }
+              }
+              other => panic!("{other:?}"),
+            }
+          }
+        }
+        StartTag { name: "remove", attrs } => {
+          let mut profile = None;
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "comment" => (),
+              "profile" => match attr.value {
+                "core" => profile = Some(Profile::Core),
+                "compatibility" => profile = Some(Profile::Compatibility),
+                "common" => (),
+                other => panic!("{other:?}"),
+              },
+              other => panic!("{other:?}, Feature: {:?}", feature.name),
+            }
+          }
+          'remove: loop {
+            match elem_iter.next().unwrap() {
+              EndTag { name: "remove" } => break 'remove,
+              EmptyTag { name: "type", .. } => continue,
+              EmptyTag { name: "enum", attrs } => {
+                for attr in TagAttributeIterator::new(attrs) {
+                  match attr.key {
+                    "name" => feature
+                      .removed_enumerations
+                      .push((attr.value.to_string(), profile)),
+                    other => panic!("{other:?}"),
+                  }
+                }
+              }
+              EmptyTag { name: "command", attrs } => {
+                for attr in TagAttributeIterator::new(attrs) {
+                  match attr.key {
+                    "name" => feature
+                      .removed_commands
+                      .push((attr.value.to_string(), profile)),
+                    other => panic!("{other:?}"),
+                  }
+                }
+              }
+              other => panic!("{other:?}"),
+            }
+          }
+        }
+        other => panic!("{other:?}"),
+      }
+    }
+  }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Extension {
@@ -533,4 +454,63 @@ pub struct Extension {
   pub profile: Option<String>,
   pub required_enumerations: Vec<String>,
   pub required_commands: Vec<String>,
+}
+impl Extension {
+  /// works for StartTag, not EmptyTag
+  pub fn new<'a>(
+    elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
+  ) -> Self {
+    let mut extension = Extension::default();
+    for attr in TagAttributeIterator::new(attrs) {
+      match attr.key {
+        "name" => extension.name = attr.value.to_string(),
+        "supported" => extension.supported = attr.value.to_string(),
+        "comment" => (),
+        other => panic!("{other:?}"),
+      }
+    }
+    loop {
+      match elem_iter.next().unwrap() {
+        EndTag { name: "extension" } => return extension,
+        StartTag { name: "require", attrs } => 'require: loop {
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "comment" => (),
+              "api" => extension.api = Some(attr.value.to_string()),
+              "profile" => extension.profile = Some(attr.value.to_string()),
+              other => panic!("{other:?}"),
+            }
+          }
+          match elem_iter.next().unwrap() {
+            EndTag { name: "require" } => break 'require,
+            EmptyTag { name: "enum", attrs } => {
+              for attr in TagAttributeIterator::new(attrs) {
+                match attr.key {
+                  "name" => {
+                    extension.required_enumerations.push(attr.value.to_string())
+                  }
+                  "comment" => (),
+                  other => panic!("{other:?}"),
+                }
+              }
+            }
+            EmptyTag { name: "command", attrs } => {
+              for attr in TagAttributeIterator::new(attrs) {
+                match attr.key {
+                  "name" => {
+                    extension.required_commands.push(attr.value.to_string())
+                  }
+                  "comment" => (),
+                  other => panic!("{other:?}"),
+                }
+              }
+            }
+            EmptyTag { name: "type", attrs: _ } => (),
+            other => panic!("{other:?}"),
+          }
+        },
+        other => panic!("{other:?}"),
+      }
+    }
+  }
 }
