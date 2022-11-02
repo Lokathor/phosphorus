@@ -45,7 +45,7 @@ macro_rules! list_features_and_return {
 
 fn main() {
   let args = Args::parse();
-  println!("parsed args as: {args:?}");
+  println!("parsed args: {args:?}");
 
   let gl_xml = std::fs::read_to_string(&args.xml).unwrap();
   let mut elem_iter = ElementIterator::new(&gl_xml)
@@ -63,29 +63,60 @@ fn main() {
     println!("No features found with that API.");
     list_features_and_return!(registry.features);
   }
-  println!(
-    "Matching APIs: {:?}",
-    api_entries.iter().map(|f| f.name.as_str()).collect::<Vec<_>>()
-  );
 
-  let mut total_enumerations = Vec::new();
-  let mut total_commands = Vec::new();
-  let mut success = false;
+  // These are *just the names* of all the things we want to output. Once we've
+  // got the full list of things to output, we'll have to look up the rest of
+  // the info over in the registry.
+  let mut output_enumerations = Vec::new();
+  let mut output_commands = Vec::new();
+  let mut feature_name_and_number_match = false;
   for feature in api_entries.iter() {
-    total_enumerations.extend_from_slice(&feature.required_enumerations);
-    total_commands.extend_from_slice(&feature.required_commands);
-    if !feature.removed_commands.is_empty()
-      || !feature.removed_enumerations.is_empty()
-    {
-      println!("TODO: PROCESS THE API REMOVALS");
+    for requirement in feature.requirements.iter() {
+      if let Some(api) = requirement.api.as_ref() {
+        if api.as_str() != args.api.as_str() {
+          continue;
+        }
+      }
+      if let Some(profile) = requirement.profile.as_ref() {
+        if profile.as_str() != "core" {
+          continue;
+        }
+      }
+      output_enumerations.extend_from_slice(&requirement.enumerations);
+      output_commands.extend_from_slice(&requirement.commands);
+    }
+
+    for removal in feature.removals.iter() {
+      if let Some(api) = removal.api.as_ref() {
+        if api.as_str() != args.api.as_str() {
+          continue;
+        }
+      }
+      if let Some(profile) = removal.profile.as_ref() {
+        if profile.as_str() != "core" {
+          continue;
+        }
+      }
+      for enumeration in removal.enumerations.iter() {
+        if let Some(index) =
+          output_enumerations.iter().position(|e| e == enumeration)
+        {
+          output_enumerations.remove(index);
+        }
+      }
+      for command in removal.commands.iter() {
+        if let Some(index) = output_commands.iter().position(|e| e == command) {
+          output_commands.remove(index);
+        }
+      }
     }
 
     if feature.name == args.name && feature.number == args.number {
-      success = true;
+      feature_name_and_number_match = true;
       break;
     }
   }
-  if !success {
+  if !feature_name_and_number_match {
     println!("Could not find an exact feature match!");
     list_features_and_return!(registry.features);
   }
@@ -106,14 +137,32 @@ fn main() {
       );
       return;
     }
-    // TODO: add the debug extension
+    for requirement in extension.requirements.iter() {
+      if let Some(api) = requirement.api.as_ref() {
+        if api.as_str() != args.api.as_str() {
+          continue;
+        }
+      }
+      if let Some(profile) = requirement.profile.as_ref() {
+        if profile.as_str() != "core" {
+          continue;
+        }
+      }
+      output_enumerations.extend_from_slice(&requirement.enumerations);
+      output_commands.extend_from_slice(&requirement.commands);
+    }
   }
+  output_enumerations.sort();
+  output_commands.sort();
 
   println!(
     "Found {} enumerations and {} commands.",
-    total_enumerations.len(),
-    total_commands.len()
+    output_enumerations.len(),
+    output_commands.len()
   );
+
+  println!("{:?}", output_enumerations);
+  println!("{:?}", output_commands);
 }
 
 fn burn_until<'a>(
@@ -412,139 +461,17 @@ pub enum Profile {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Feature {
-  pub api: String,
-  pub name: String,
-  pub number: String,
-  /// (name, profile)
-  pub required_enumerations: Vec<(String, Option<Profile>)>,
-  /// (name, profile)
-  pub required_commands: Vec<(String, Option<Profile>)>,
-  /// (name, profile)
-  pub removed_enumerations: Vec<(String, Option<Profile>)>,
-  /// (name, profile)
-  pub removed_commands: Vec<(String, Option<Profile>)>,
-}
-impl Feature {
-  pub fn new<'a>(
-    elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
-  ) -> Self {
-    let mut feature = Feature::default();
-    for attr in TagAttributeIterator::new(attrs) {
-      match attr.key {
-        "api" => feature.api = attr.value.to_string(),
-        "name" => feature.name = attr.value.to_string(),
-        "number" => feature.number = attr.value.to_string(),
-        other => panic!("{other:?}"),
-      }
-    }
-    loop {
-      match elem_iter.next().unwrap() {
-        EndTag { name: "feature" } => return feature,
-        EmptyTag { name: "require", .. } => (),
-        StartTag { name: "require", attrs } => {
-          let mut profile = None;
-          for attr in TagAttributeIterator::new(attrs) {
-            match attr.key {
-              "comment" => (),
-              "profile" => match attr.value {
-                "core" => profile = Some(Profile::Core),
-                "compatibility" => profile = Some(Profile::Compatibility),
-                "common" => (),
-                other => panic!("{other:?}"),
-              },
-              other => panic!("{other:?}"),
-            }
-          }
-          'require: loop {
-            match elem_iter.next().unwrap() {
-              EndTag { name: "require" } => break 'require,
-              EmptyTag { name: "type", .. } => continue,
-              EmptyTag { name: "enum", attrs } => {
-                for attr in TagAttributeIterator::new(attrs) {
-                  match attr.key {
-                    "name" => feature
-                      .required_enumerations
-                      .push((attr.value.to_string(), profile)),
-                    "comment" => (),
-                    other => panic!("{other:?}"),
-                  }
-                }
-              }
-              EmptyTag { name: "command", attrs } => {
-                for attr in TagAttributeIterator::new(attrs) {
-                  match attr.key {
-                    "name" => feature
-                      .required_commands
-                      .push((attr.value.to_string(), profile)),
-                    other => panic!("{other:?}"),
-                  }
-                }
-              }
-              other => panic!("{other:?}"),
-            }
-          }
-        }
-        StartTag { name: "remove", attrs } => {
-          let mut profile = None;
-          for attr in TagAttributeIterator::new(attrs) {
-            match attr.key {
-              "comment" => (),
-              "profile" => match attr.value {
-                "core" => profile = Some(Profile::Core),
-                "compatibility" => profile = Some(Profile::Compatibility),
-                "common" => (),
-                other => panic!("{other:?}"),
-              },
-              other => panic!("{other:?}, Feature: {:?}", feature.name),
-            }
-          }
-          'remove: loop {
-            match elem_iter.next().unwrap() {
-              EndTag { name: "remove" } => break 'remove,
-              EmptyTag { name: "type", .. } => continue,
-              EmptyTag { name: "enum", attrs } => {
-                for attr in TagAttributeIterator::new(attrs) {
-                  match attr.key {
-                    "name" => feature
-                      .removed_enumerations
-                      .push((attr.value.to_string(), profile)),
-                    other => panic!("{other:?}"),
-                  }
-                }
-              }
-              EmptyTag { name: "command", attrs } => {
-                for attr in TagAttributeIterator::new(attrs) {
-                  match attr.key {
-                    "name" => feature
-                      .removed_commands
-                      .push((attr.value.to_string(), profile)),
-                    other => panic!("{other:?}"),
-                  }
-                }
-              }
-              other => panic!("{other:?}"),
-            }
-          }
-        }
-        other => panic!("{other:?}"),
-      }
-    }
-  }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ExtensionRequirement {
+pub struct Requirement {
   api: Option<String>,
   profile: Option<String>,
   enumerations: Vec<String>,
   commands: Vec<String>,
 }
-impl ExtensionRequirement {
+impl Requirement {
   pub fn new<'a>(
     elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
   ) -> Self {
-    let mut requirement = ExtensionRequirement::default();
+    let mut requirement = Requirement::default();
     for attr in TagAttributeIterator::new(attrs) {
       match attr.key {
         "comment" => (),
@@ -582,10 +509,95 @@ impl ExtensionRequirement {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct Removal {
+  api: Option<String>,
+  profile: Option<String>,
+  enumerations: Vec<String>,
+  commands: Vec<String>,
+}
+impl Removal {
+  pub fn new<'a>(
+    elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
+  ) -> Self {
+    let mut removal = Removal::default();
+    for attr in TagAttributeIterator::new(attrs) {
+      match attr.key {
+        "comment" => (),
+        "api" => removal.api = Some(attr.value.to_string()),
+        "profile" => removal.profile = Some(attr.value.to_string()),
+        other => panic!("{other:?}"),
+      }
+    }
+    loop {
+      match elem_iter.next().unwrap() {
+        EndTag { name: "remove" } => return removal,
+        EmptyTag { name: "enum", attrs } => {
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "name" => removal.enumerations.push(attr.value.to_string()),
+              "comment" => (),
+              other => panic!("{other:?}"),
+            }
+          }
+        }
+        EmptyTag { name: "command", attrs } => {
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "name" => removal.commands.push(attr.value.to_string()),
+              "comment" => (),
+              other => panic!("{other:?}"),
+            }
+          }
+        }
+        EmptyTag { name: "type", attrs: _ } => (),
+        other => panic!("{other:?}"),
+      }
+    }
+  }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Feature {
+  pub api: String,
+  pub name: String,
+  pub number: String,
+  pub requirements: Vec<Requirement>,
+  pub removals: Vec<Removal>,
+}
+impl Feature {
+  pub fn new<'a>(
+    elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
+  ) -> Self {
+    let mut feature = Feature::default();
+    for attr in TagAttributeIterator::new(attrs) {
+      match attr.key {
+        "api" => feature.api = attr.value.to_string(),
+        "name" => feature.name = attr.value.to_string(),
+        "number" => feature.number = attr.value.to_string(),
+        other => panic!("{other:?}"),
+      }
+    }
+    loop {
+      match elem_iter.next().unwrap() {
+        EndTag { name: "feature" } => return feature,
+        EmptyTag { name: "require", .. } => (),
+        StartTag { name: "require", attrs } => {
+          feature.requirements.push(Requirement::new(elem_iter, attrs));
+        }
+        StartTag { name: "remove", attrs } => {
+          feature.removals.push(Removal::new(elem_iter, attrs));
+        }
+        other => panic!("{other:?}"),
+      }
+    }
+  }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct Extension {
   pub name: String,
   pub supported: String,
-  pub requirements: Vec<ExtensionRequirement>,
+  pub requirements: Vec<Requirement>,
 }
 impl Extension {
   /// works for StartTag, not EmptyTag
@@ -604,9 +616,9 @@ impl Extension {
     loop {
       match elem_iter.next().unwrap() {
         EndTag { name: "extension" } => return extension,
-        StartTag { name: "require", attrs } => extension
-          .requirements
-          .push(ExtensionRequirement::new(elem_iter, attrs)),
+        StartTag { name: "require", attrs } => {
+          extension.requirements.push(Requirement::new(elem_iter, attrs))
+        }
         other => panic!("{other:?}"),
       }
     }
