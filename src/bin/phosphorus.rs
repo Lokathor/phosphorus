@@ -1,23 +1,53 @@
 #![allow(clippy::from_str_radix_10)]
 #![allow(clippy::field_reassign_with_default)]
 
+use std::path::PathBuf;
+
+use clap::Parser;
 use magnesium::{
   skip_comments, skip_empty_text_elements, trim_text, ElementIterator,
   TagAttributeIterator,
   XmlElement::{self, *},
 };
 
-fn main() {
-  let mut args_list: Vec<String> = std::env::args().collect();
+#[derive(Parser, Debug)]
+struct Args {
+  /// gl.xml file
+  #[arg(long)]
+  xml: PathBuf,
 
-  let file_name = if args_list.len() == 2 {
-    args_list.pop().unwrap()
-  } else {
-    println!("USAGE: phosphorus [gl.xml]");
+  #[arg(long)]
+  api: String,
+
+  #[arg(long)]
+  name: String,
+
+  #[arg(long)]
+  number: String,
+
+  /// List of extensions to add
+  #[arg(long)]
+  ext: Vec<String>,
+}
+
+macro_rules! list_features_and_return {
+  ($features:expr) => {{
+    println!("Available features include:");
+    for f in $features.iter() {
+      let api = &f.api;
+      let name = &f.name;
+      let number = &f.number;
+      println!("* api:{api}, name:{name}, number:{number}");
+    }
     return;
-  };
-  println!("Reading File: {file_name:?}");
-  let gl_xml = std::fs::read_to_string(file_name.as_str()).unwrap();
+  }};
+}
+
+fn main() {
+  let args = Args::parse();
+  println!("parsed args as: {args:?}");
+
+  let gl_xml = std::fs::read_to_string(&args.xml).unwrap();
   let mut elem_iter = ElementIterator::new(&gl_xml)
     .filter_map(skip_comments)
     .map(trim_text)
@@ -26,7 +56,76 @@ fn main() {
     StartTag { name: "registry", attrs: "" } => Registry::new(&mut elem_iter),
     _ => panic!("couldn't read the `registry` element"),
   };
-  println!("registry: {registry:#?}");
+
+  let api_entries: Vec<&Feature> =
+    registry.features.iter().filter(|f| f.api == args.api).collect();
+  if api_entries.is_empty() {
+    println!("No features found with that API.");
+    list_features_and_return!(registry.features);
+  }
+  println!(
+    "Matching APIs: {:?}",
+    api_entries.iter().map(|f| f.name.as_str()).collect::<Vec<_>>()
+  );
+
+  let mut total_enumerations = Vec::new();
+  let mut total_commands = Vec::new();
+  let mut success = false;
+  for feature in api_entries.iter() {
+    total_enumerations.extend_from_slice(&feature.required_enumerations);
+    total_commands.extend_from_slice(&feature.required_commands);
+    if !feature.removed_commands.is_empty()
+      || !feature.removed_enumerations.is_empty()
+    {
+      println!("TODO: PROCESS THE API REMOVALS");
+    }
+
+    if feature.name == args.name && feature.number == args.number {
+      success = true;
+      break;
+    }
+  }
+  if !success {
+    println!("Could not find an exact feature match!");
+    list_features_and_return!(registry.features);
+  }
+
+  for ex in args.ext.iter() {
+    let extension: &Extension =
+      match registry.extensions.iter().find(|x| &x.name == ex) {
+        Some(x) => x,
+        None => {
+          println!("Requested extension `{ex}` is not available.");
+          return;
+        }
+      };
+    if !extension.supported.contains(&args.api) {
+      println!(
+        "Found extension `{ex}`, but it isn't supported by API `{}`.",
+        args.api
+      );
+      return;
+    }
+    // TODO: add the debug extension
+  }
+
+  println!(
+    "Found {} enumerations and {} commands.",
+    total_enumerations.len(),
+    total_commands.len()
+  );
+}
+
+fn burn_until<'a>(
+  end: &str, elem_iter: &mut impl Iterator<Item = XmlElement<'a>>,
+) {
+  loop {
+    if let EndTag { name } = elem_iter.next().unwrap() {
+      if end == name {
+        return;
+      }
+    }
+  }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -409,45 +508,11 @@ impl Registry {
                     registry.extensions.push(extension);
                     break 'extension;
                   }
-                  StartTag { name: "require", attrs } => 'require: loop {
-                    for attr in TagAttributeIterator::new(attrs) {
-                      match attr.key {
-                        "comment" => (),
-                        "api" => extension.api = Some(attr.value.to_string()),
-                        "profile" => {
-                          extension.profile = Some(attr.value.to_string())
-                        }
-                        other => panic!("{other:?}"),
-                      }
-                    }
-                    match elem_iter.next().unwrap() {
-                      EndTag { name: "require" } => break 'require,
-                      EmptyTag { name: "enum", attrs } => {
-                        for attr in TagAttributeIterator::new(attrs) {
-                          match attr.key {
-                            "name" => extension
-                              .required_enumerations
-                              .push(attr.value.to_string()),
-                            "comment" => (),
-                            other => panic!("{other:?}"),
-                          }
-                        }
-                      }
-                      EmptyTag { name: "command", attrs } => {
-                        for attr in TagAttributeIterator::new(attrs) {
-                          match attr.key {
-                            "name" => extension
-                              .required_commands
-                              .push(attr.value.to_string()),
-                            "comment" => (),
-                            other => panic!("{other:?}"),
-                          }
-                        }
-                      }
-                      EmptyTag { name: "type", attrs: _ } => (),
-                      other => panic!("{other:?}"),
-                    }
-                  },
+                  StartTag { name: "require", attrs } => {
+                    extension
+                      .requirements
+                      .push(ExtensionRequirement::new(&mut elem_iter, attrs));
+                  }
                   other => panic!("{other:?}"),
                 }
               }
@@ -470,18 +535,6 @@ pub struct Enumeration {
   pub type_: Option<String>,
   pub api: Option<String>,
   pub is_bitmask: bool,
-}
-
-fn burn_until<'a>(
-  end: &str, elem_iter: &mut impl Iterator<Item = XmlElement<'a>>,
-) {
-  loop {
-    if let EndTag { name } = elem_iter.next().unwrap() {
-      if end == name {
-        return;
-      }
-    }
-  }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -526,11 +579,56 @@ pub struct Feature {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct ExtensionRequirement {
+  api: Option<String>,
+  profile: Option<String>,
+  enumerations: Vec<String>,
+  commands: Vec<String>,
+}
+impl ExtensionRequirement {
+  pub fn new<'a>(
+    elem_iter: &mut impl Iterator<Item = XmlElement<'a>>, attrs: &str,
+  ) -> Self {
+    let mut requirement = ExtensionRequirement::default();
+    for attr in TagAttributeIterator::new(attrs) {
+      match attr.key {
+        "comment" => (),
+        "api" => requirement.api = Some(attr.value.to_string()),
+        "profile" => requirement.profile = Some(attr.value.to_string()),
+        other => panic!("{other:?}"),
+      }
+    }
+    loop {
+      match elem_iter.next().unwrap() {
+        EndTag { name: "require" } => return requirement,
+        EmptyTag { name: "enum", attrs } => {
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "name" => requirement.enumerations.push(attr.value.to_string()),
+              "comment" => (),
+              other => panic!("{other:?}"),
+            }
+          }
+        }
+        EmptyTag { name: "command", attrs } => {
+          for attr in TagAttributeIterator::new(attrs) {
+            match attr.key {
+              "name" => requirement.commands.push(attr.value.to_string()),
+              "comment" => (),
+              other => panic!("{other:?}"),
+            }
+          }
+        }
+        EmptyTag { name: "type", attrs: _ } => (),
+        other => panic!("{other:?}"),
+      }
+    }
+  }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct Extension {
   pub name: String,
   pub supported: String,
-  pub api: Option<String>,
-  pub profile: Option<String>,
-  pub required_enumerations: Vec<String>,
-  pub required_commands: Vec<String>,
+  pub requirements: Vec<ExtensionRequirement>,
 }
