@@ -46,7 +46,7 @@ macro_rules! list_features_and_return {
 
 fn main() {
   let args = Args::parse();
-  eprintln!("{args:?}");
+  println!("// {args:?}");
 
   let gl_xml = std::fs::read_to_string(&args.xml).unwrap();
   let mut elem_iter = ElementIterator::new(&gl_xml)
@@ -157,12 +157,6 @@ fn main() {
   }
   output_enumeration_names.sort();
   output_command_names.sort();
-
-  eprintln!(
-    "Found {} enumerations and {} commands.",
-    output_enumeration_names.len(),
-    output_command_names.len()
-  );
 
   let mut output_enumerations = Vec::new();
   let mut output_commands = Vec::new();
