@@ -1,3 +1,11 @@
+#![allow(clippy::upper_case_acronyms)]
+#![allow(dead_code)]
+#![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
+#![allow(non_snake_case)]
+#![allow(clippy::unused_unit)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::too_many_arguments)]
 type GLenum = u32;
 type GLbitfield = u32;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
@@ -9,10 +17,29 @@ type GLeglImageOES = *mut void;
 type GLsync = *mut void;
 type _cl_context = void;
 type _cl_event = void;
-type GLDEBUGPROC = Option<unsafe extern "system" fn(source: GLenum, type_: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *const void)>;
+type GLDEBUGPROC = Option<
+  unsafe extern "system" fn(
+    source: GLenum,
+    type_: GLenum,
+    id: GLuint,
+    severity: GLenum,
+    length: GLsizei,
+    message: *const GLchar,
+    userParam: *const void,
+  ),
+>;
 type GLDEBUGPROCARB = GLDEBUGPROC;
 type GLDEBUGPROCKHR = GLDEBUGPROC;
-type GLDEBUGPROCAMD = Option<unsafe extern "system" fn(id: GLuint, category: GLenum, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut void)>;
+type GLDEBUGPROCAMD = Option<
+  unsafe extern "system" fn(
+    id: GLuint,
+    category: GLenum,
+    severity: GLenum,
+    length: GLsizei,
+    message: *const GLchar,
+    userParam: *mut void,
+  ),
+>;
 type GLVULKANPROCNV = Option<unsafe extern "system" fn()>;
 type GLboolean = bool;
 type GLbyte = i8;

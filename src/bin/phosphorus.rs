@@ -1,6 +1,7 @@
 #![allow(clippy::from_str_radix_10)]
 #![allow(clippy::field_reassign_with_default)]
 
+use core::fmt::Write;
 use std::path::PathBuf;
 
 use clap::Parser;
@@ -45,7 +46,7 @@ macro_rules! list_features_and_return {
 
 fn main() {
   let args = Args::parse();
-  println!("parsed args: {args:?}");
+  eprintln!("{args:?}");
 
   let gl_xml = std::fs::read_to_string(&args.xml).unwrap();
   let mut elem_iter = ElementIterator::new(&gl_xml)
@@ -67,8 +68,8 @@ fn main() {
   // These are *just the names* of all the things we want to output. Once we've
   // got the full list of things to output, we'll have to look up the rest of
   // the info over in the registry.
-  let mut output_enumerations = Vec::new();
-  let mut output_commands = Vec::new();
+  let mut output_enumeration_names = Vec::new();
+  let mut output_command_names = Vec::new();
   let mut feature_name_and_number_match = false;
   for feature in api_entries.iter() {
     for requirement in feature.requirements.iter() {
@@ -82,8 +83,8 @@ fn main() {
           continue;
         }
       }
-      output_enumerations.extend_from_slice(&requirement.enumerations);
-      output_commands.extend_from_slice(&requirement.commands);
+      output_enumeration_names.extend_from_slice(&requirement.enumerations);
+      output_command_names.extend_from_slice(&requirement.commands);
     }
 
     for removal in feature.removals.iter() {
@@ -99,14 +100,16 @@ fn main() {
       }
       for enumeration in removal.enumerations.iter() {
         if let Some(index) =
-          output_enumerations.iter().position(|e| e == enumeration)
+          output_enumeration_names.iter().position(|e| e == enumeration)
         {
-          output_enumerations.remove(index);
+          output_enumeration_names.remove(index);
         }
       }
       for command in removal.commands.iter() {
-        if let Some(index) = output_commands.iter().position(|e| e == command) {
-          output_commands.remove(index);
+        if let Some(index) =
+          output_command_names.iter().position(|e| e == command)
+        {
+          output_command_names.remove(index);
         }
       }
     }
@@ -148,21 +151,54 @@ fn main() {
           continue;
         }
       }
-      output_enumerations.extend_from_slice(&requirement.enumerations);
-      output_commands.extend_from_slice(&requirement.commands);
+      output_enumeration_names.extend_from_slice(&requirement.enumerations);
+      output_command_names.extend_from_slice(&requirement.commands);
     }
   }
-  output_enumerations.sort();
-  output_commands.sort();
+  output_enumeration_names.sort();
+  output_command_names.sort();
 
-  println!(
+  eprintln!(
     "Found {} enumerations and {} commands.",
-    output_enumerations.len(),
-    output_commands.len()
+    output_enumeration_names.len(),
+    output_command_names.len()
   );
 
-  println!("{:?}", output_enumerations);
-  println!("{:?}", output_commands);
+  let mut output_enumerations = Vec::new();
+  let mut output_commands = Vec::new();
+  for output_enumeration_name in output_enumeration_names {
+    if let Some(enumeration) = registry.enumerations.iter().find(|e| {
+      e.name == output_enumeration_name
+        && (match e.api.as_ref() {
+          Some(e_api) => e_api.as_str() == args.api,
+          None => true,
+        })
+    }) {
+      output_enumerations.push(enumeration.clone());
+    } else {
+      println!("Registry error: `{}` is part of the requested feature, but not defined in the registry.",
+      output_enumeration_name);
+      return;
+    }
+  }
+  for output_command_name in output_command_names {
+    if let Some(command) =
+      registry.commands.iter().find(|c| c.name == output_command_name)
+    {
+      output_commands.push(command.clone());
+    } else {
+      println!("Registry error: `{}` is part of the requested feature, but not defined in the registry.",
+      output_command_name);
+      return;
+    }
+  }
+  output_enumerations.dedup_by_key(|e| e.name.clone());
+  output_commands.dedup_by_key(|c| c.name.clone());
+
+  println!("{}", phosphorus::GL_CORE_TYPES);
+  output_enumerations.iter().for_each(|e| e.print_rust_const());
+  output_commands.iter().for_each(|c| c.print_global_wrapper_fn());
+  print_global_loader(&output_commands);
 }
 
 fn burn_until<'a>(
@@ -273,23 +309,56 @@ impl Registry {
   }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Enumeration {
-  pub value: String,
   pub name: String,
+  pub value: String,
   pub group: Option<String>,
   pub alias: Option<String>,
   pub type_: Option<String>,
   pub api: Option<String>,
   pub is_bitmask: bool,
 }
+impl Enumeration {
+  pub fn print_rust_const(&self) {
+    if let Some(group) = self.group.as_ref() {
+      let s = if group.contains(',') { "s" } else { "" };
+      print!("/// * Group{s}: ");
+      for (i, entry) in group.split(',').enumerate() {
+        if i != 0 {
+          print!(", ");
+        }
+        print!("`{entry}`");
+      }
+      println!();
+    }
+    if self.name.chars().any(|c| c.is_ascii_lowercase()) {
+      println!("#[allow(non_upper_case_globals)]");
+    }
+    let name = &self.name;
+    let type_ = match self.type_.as_deref() {
+      None => {
+        if self.value.starts_with('-') {
+          "i32"
+        } else {
+          "u32"
+        }
+      }
+      Some("u") => "u32",
+      Some("ull") => "u64",
+      Some(other) => panic!("unknown enumeration type: `{other}`"),
+    };
+    let expr = &self.value;
+    println!("pub const {name}: {type_} = {expr};");
+  }
+}
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Command {
+  pub name: String,
   pub return_ty: String,
   pub return_group: Option<String>,
   pub return_class: Option<String>,
-  pub name: String,
   pub params: Vec<Param>,
   /// This command is an alias of another command, named here.
   pub alias: Option<String>,
@@ -322,7 +391,7 @@ impl Command {
           // return type
           match elem_iter.next().unwrap() {
             Text("void") => command.return_ty = "()".to_string(),
-            Text("void *") => command.return_ty = "*mut c_void".to_string(),
+            Text("void *") => command.return_ty = "*mut void".to_string(),
             Text("const") => {
               assert_eq!(
                 elem_iter.next().unwrap(),
@@ -401,19 +470,19 @@ impl Command {
                 }
               }
               Text("const void *") => {
-                param.param_ty = "*const c_void".to_string();
+                param.param_ty = "*const void".to_string();
               }
               Text("const void **") => {
-                param.param_ty = "*const *mut c_void".to_string();
+                param.param_ty = "*const *mut void".to_string();
               }
               Text("void *") => {
-                param.param_ty = "*mut c_void".to_string();
+                param.param_ty = "*mut void".to_string();
               }
               Text("void **") => {
-                param.param_ty = "*mut *mut c_void".to_string();
+                param.param_ty = "*mut *mut void".to_string();
               }
               Text("const void *const*") => {
-                param.param_ty = "*const *const c_void".to_string();
+                param.param_ty = "*const *const void".to_string();
               }
               Text("*") => {
                 param.param_ty = format!("*mut {}", param.param_ty);
@@ -443,9 +512,41 @@ impl Command {
       }
     }
   }
+
+  pub(crate) fn print_global_wrapper_fn(&self) {
+    let name = &self.name;
+    let static_name = format!("{name}_p");
+    let ret_ty = &self.return_ty;
+    let mut arg_name_and_type_list = String::new();
+    let mut fn_ptr_ty = "unsafe extern \"system\" fn(".to_string();
+    let mut arg_name_list = String::new();
+    for param in self.params.iter() {
+      let param_name = match param.name.as_str() {
+        "type" => "type_",
+        "ref" => "ref_",
+        other => other,
+      };
+      let param_ty = &param.param_ty;
+      write!(arg_name_and_type_list, "{param_name}: {param_ty}, ").ok();
+      write!(fn_ptr_ty, "{},", param.param_ty).ok();
+      write!(arg_name_list, "{param_name}, ").ok();
+    }
+    write!(fn_ptr_ty, ")->{ret_ty}").ok();
+    println!(
+      "
+      static {static_name}: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
+      #[inline]
+      pub unsafe fn {name}({arg_name_and_type_list}) -> {ret_ty} {{
+        let u: usize = {static_name}.load(core::sync::atomic::Ordering::Acquire);
+        assert!(u != 0);
+        let _func_p: {fn_ptr_ty} = unsafe {{ core::mem::transmute(u) }};
+        _func_p({arg_name_list})
+      }}"
+    );
+  }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Param {
   pub param_ty: String,
   pub name: String,
@@ -623,4 +724,29 @@ impl Extension {
       }
     }
   }
+}
+
+fn print_global_loader(commands: &[Command]) {
+  let mut command_info = String::new();
+  for command in commands.iter() {
+    let name = &command.name;
+    writeln!(command_info, "(\"{name}\\0\", &{name}_p),").ok();
+  }
+  println!(
+    "
+    pub unsafe fn load_gl_functions(load_fn: &dyn Fn(*const u8) -> *const void) -> Result<(), &'static str> {{
+      let command_info = [{command_info}];
+      for (command_name, command_p) in command_info.iter() {{
+        let addr: usize = match load_fn(command_name.as_ptr()) as usize {{
+          0 | 1 | 2 | 3 | usize::MAX => {{
+            return Err(&command_name[..command_name.len()-1]);
+          }}
+          other => other
+        }};
+        command_p.store(addr, core::sync::atomic::Ordering::Release);
+      }}
+      Ok( () )
+    }}
+    "
+  );
 }
