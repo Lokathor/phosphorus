@@ -41,7 +41,7 @@ type GLDEBUGPROCAMD = Option<
   ),
 >;
 type GLVULKANPROCNV = Option<unsafe extern "system" fn()>;
-type GLboolean = bool;
+type GLboolean = u32;
 type GLbyte = i8;
 type GLcharARB = u8;
 type GLclampd = f64;
