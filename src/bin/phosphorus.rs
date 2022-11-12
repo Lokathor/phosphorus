@@ -54,6 +54,17 @@ fn main() {
   println!("//! ");
   println!("//! Before actually calling any GL function, you must first");
   println!("//! load the GL function pointers using [`load_gl_functions`].");
+  println!("//! Always do this *after* your GL context has been created.");
+  println!("//! Function pointers are loaded into global atomic variables,");
+  println!("//! so all GL contexts across all threads must use compatible");
+  println!("//! pointers. In practice, if all contexts are created using the");
+  println!("//! same context creation parameters they will have compatible");
+  println!("//! function pointers.");
+  println!("//! ");
+  println!("//! On some platforms it's possible to load an extension function");
+  println!("//! without the extension being supported for your context.");
+  println!("//! Always check that your context supports an extension before");
+  println!("//! calling any extension function.");
 
   let gl_xml = std::fs::read_to_string(&args.xml).unwrap();
   let mut elem_iter = ElementIterator::new(&gl_xml)
@@ -322,6 +333,7 @@ pub struct Enumeration {
 }
 impl Enumeration {
   pub fn print_rust_const(&self) {
+    #[cfg(FALSE)]
     if let Some(group) = self.group.as_ref() {
       let s = if group.contains(',') { "s" } else { "" };
       print!("/// * Group{s}: ");
