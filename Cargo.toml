@@ -1,7 +1,7 @@
 [package]
 name = "phosphorus"
 description = "Makes GL bindings for you."
-version = "2.0.2"
+version = "2.0.3"
 repository = "https://github.com/Lokathor/phosphorus"
 edition = "2021"
 license = "Zlib OR Apache-2.0 OR MIT"
