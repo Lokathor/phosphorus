@@ -65,6 +65,8 @@ fn main() {
   println!("//! without the extension being supported for your context.");
   println!("//! Always check that your context supports an extension before");
   println!("//! calling any extension function.");
+  println!("//! ");
+  println!("//! Calling any GL function that isn't loaded will cause a panic.");
 
   let gl_xml = std::fs::read_to_string(&args.xml).unwrap();
   let mut elem_iter = ElementIterator::new(&gl_xml)
@@ -776,7 +778,8 @@ fn print_global_loader(commands: &[Command]) {
     /// ## Failure
     /// * Returns `Ok` when all functions load successfully. Otherwise you will
     ///   get an `Err` with a list of all functions that failed to load.
-    /// * The loading process does not \"early return\", all functions will 
+    /// * The loading process does not \"early return\". It will always attempt
+    ///   to load all functions, only returning the list of errors at the end.
     pub unsafe fn load_gl_functions(load_fn: &dyn Fn(*const u8) -> *const void) -> Result<(), Vec<&'static str>> {{
       let command_info = &[{command_info}];
       let mut load_failures = Vec::new();
