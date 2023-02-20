@@ -4,6 +4,19 @@
 #![allow(clippy::match_single_binding)]
 #![allow(clippy::should_implement_trait)]
 
+#[allow(dead_code)]
+#[doc(hidden)]
+pub mod enumerations;
+#[allow(dead_code)]
+#[doc(hidden)]
+pub mod fn_type_signatures;
+#[allow(dead_code)]
+#[doc(hidden)]
+pub mod special_numbers;
+#[allow(dead_code)]
+#[doc(hidden)]
+pub mod type_alias;
+
 use core::fmt::Write;
 use magnesium::{XmlElement::*, *};
 
@@ -169,7 +182,7 @@ impl EnumEntry {
         "alias" => s.alias = value,
         "type" => s.ty = value,
         "api" => s.api = value,
-        other => panic!("{other:?}"),
+        _ => panic!("{key:?} = {value:?}"),
       }
     }
     s
@@ -452,6 +465,9 @@ fn do_commands(
               param.name = iter.next().unwrap().unwrap_text();
               if param.name == "type" {
                 param.name = "ty";
+              }
+              if param.name == "ref" {
+                param.name = "reference";
               }
               assert_eq!(iter.next().unwrap().unwrap_end_tag(), "name");
               assert_eq!(iter.next().unwrap().unwrap_end_tag(), "param");
