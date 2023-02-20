@@ -6,18 +6,18 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::too_many_arguments)]
-type GLenum = u32;
-type GLbitfield = u32;
+pub type GLenum = u32;
+pub type GLbitfield = u32;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
-type GLhandleARB = *mut void;
+pub type GLhandleARB = *mut void;
 #[cfg(not(any(target_os = "ios", target_os = "macos")))]
-type GLhandleARB = GLuint;
-type GLeglClientBufferEXT = *mut void;
-type GLeglImageOES = *mut void;
-type GLsync = *mut void;
-type _cl_context = void;
-type _cl_event = void;
-type GLDEBUGPROC = Option<
+pub type GLhandleARB = GLuint;
+pub type GLeglClientBufferEXT = *mut void;
+pub type GLeglImageOES = *mut void;
+pub type GLsync = *mut void;
+pub type _cl_context = void;
+pub type _cl_event = void;
+pub type GLDEBUGPROC = Option<
   unsafe extern "system" fn(
     source: GLenum,
     type_: GLenum,
@@ -28,9 +28,9 @@ type GLDEBUGPROC = Option<
     userParam: *const void,
   ),
 >;
-type GLDEBUGPROCARB = GLDEBUGPROC;
-type GLDEBUGPROCKHR = GLDEBUGPROC;
-type GLDEBUGPROCAMD = Option<
+pub type GLDEBUGPROCARB = GLDEBUGPROC;
+pub type GLDEBUGPROCKHR = GLDEBUGPROC;
+pub type GLDEBUGPROCAMD = Option<
   unsafe extern "system" fn(
     id: GLuint,
     category: GLenum,
@@ -40,33 +40,33 @@ type GLDEBUGPROCAMD = Option<
     userParam: *mut void,
   ),
 >;
-type GLVULKANPROCNV = Option<unsafe extern "system" fn()>;
-type GLboolean = u32;
-type GLbyte = i8;
-type GLcharARB = u8;
-type GLclampd = f64;
-type GLclampf = f32;
-type GLclampx = i32;
-type GLdouble = f64;
-type GLfixed = i32;
-type GLfloat = f32;
-type GLhalf = u16;
-type GLhalfARB = u16;
-type GLhalfNV = u16;
-type GLint = i32;
-type GLint64 = i64;
-type GLint64EXT = i64;
-type GLintptr = isize;
-type GLintptrARB = isize;
-type GLshort = i16;
-type GLsizei = u32;
-type GLsizeiptr = isize;
-type GLsizeiptrARB = isize;
-type GLubyte = u8;
-type GLuint = u32;
-type GLuint64 = u64;
-type GLuint64EXT = u64;
-type GLushort = u16;
-type GLvdpauSurfaceNV = GLintptr;
-type void = core::ffi::c_void;
-type GLchar = u8;
+pub type GLVULKANPROCNV = Option<unsafe extern "system" fn()>;
+pub type GLboolean = u32;
+pub type GLbyte = i8;
+pub type GLcharARB = u8;
+pub type GLclampd = f64;
+pub type GLclampf = f32;
+pub type GLclampx = i32;
+pub type GLdouble = f64;
+pub type GLfixed = i32;
+pub type GLfloat = f32;
+pub type GLhalf = u16;
+pub type GLhalfARB = u16;
+pub type GLhalfNV = u16;
+pub type GLint = i32;
+pub type GLint64 = i64;
+pub type GLint64EXT = i64;
+pub type GLintptr = isize;
+pub type GLintptrARB = isize;
+pub type GLshort = i16;
+pub type GLsizei = u32;
+pub type GLsizeiptr = isize;
+pub type GLsizeiptrARB = isize;
+pub type GLubyte = u8;
+pub type GLuint = u32;
+pub type GLuint64 = u64;
+pub type GLuint64EXT = u64;
+pub type GLushort = u16;
+pub type GLvdpauSurfaceNV = GLintptr;
+pub type void = core::ffi::c_void;
+pub type GLchar = u8;
