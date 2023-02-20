@@ -1,12 +1,9 @@
 [package]
 name = "phosphorus"
-description = "Makes GL bindings for you."
-version = "2.0.3"
-repository = "https://github.com/Lokathor/phosphorus"
+respoitory = "https://github.com/Lokathor/phosphorus"
+version = "0.1.0"
 edition = "2021"
 license = "Zlib OR Apache-2.0 OR MIT"
 
 [dependencies]
-magnesium = "1.2"
-tinyvec = { version = "1", features = ["alloc"] }
-clap = { version = "4", features = ["derive"] }
+magnesium = "1.2.0"
