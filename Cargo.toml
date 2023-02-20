@@ -1,9 +1,9 @@
 [package]
 name = "phosphorus"
-respoitory = "https://github.com/Lokathor/phosphorus"
-version = "0.1.0"
+repository = "https://github.com/Lokathor/phosphorus"
+version = "3.0.0+gl.xml-2023.02.19"
 edition = "2021"
 license = "Zlib OR Apache-2.0 OR MIT"
 
 [dependencies]
-magnesium = "1.2.0"
+magnesium = "1.2.1"
