@@ -1,6 +1,6 @@
 #![allow(nonstandard_style)]
 use super::type_alias::*;
-/// Holds fn pointers for 701 GL functions
+/// Holds fn pointers for 712 GL functions
 #[repr(C)]
 pub struct GlFns {
   glActiveShaderProgram: Option<glActiveShaderProgram_t>,
@@ -112,8 +112,11 @@ pub struct GlFns {
   glCreateVertexArrays: Option<glCreateVertexArrays_t>,
   glCullFace: Option<glCullFace_t>,
   glDebugMessageCallback: Option<glDebugMessageCallback_t>,
+  glDebugMessageCallbackKHR: Option<glDebugMessageCallbackKHR_t>,
   glDebugMessageControl: Option<glDebugMessageControl_t>,
+  glDebugMessageControlKHR: Option<glDebugMessageControlKHR_t>,
   glDebugMessageInsert: Option<glDebugMessageInsert_t>,
+  glDebugMessageInsertKHR: Option<glDebugMessageInsertKHR_t>,
   glDeleteBuffers: Option<glDeleteBuffers_t>,
   glDeleteFramebuffers: Option<glDeleteFramebuffers_t>,
   glDeleteProgram: Option<glDeleteProgram_t>,
@@ -213,6 +216,7 @@ pub struct GlFns {
   glGetCompressedTextureImage: Option<glGetCompressedTextureImage_t>,
   glGetCompressedTextureSubImage: Option<glGetCompressedTextureSubImage_t>,
   glGetDebugMessageLog: Option<glGetDebugMessageLog_t>,
+  glGetDebugMessageLogKHR: Option<glGetDebugMessageLogKHR_t>,
   glGetDoublei_v: Option<glGetDoublei_v_t>,
   glGetDoublev: Option<glGetDoublev_t>,
   glGetError: Option<glGetError_t>,
@@ -238,8 +242,11 @@ pub struct GlFns {
   glGetNamedFramebufferParameteriv: Option<glGetNamedFramebufferParameteriv_t>,
   glGetNamedRenderbufferParameteriv: Option<glGetNamedRenderbufferParameteriv_t>,
   glGetObjectLabel: Option<glGetObjectLabel_t>,
+  glGetObjectLabelKHR: Option<glGetObjectLabelKHR_t>,
   glGetObjectPtrLabel: Option<glGetObjectPtrLabel_t>,
+  glGetObjectPtrLabelKHR: Option<glGetObjectPtrLabelKHR_t>,
   glGetPointerv: Option<glGetPointerv_t>,
+  glGetPointervKHR: Option<glGetPointervKHR_t>,
   glGetProgramBinary: Option<glGetProgramBinary_t>,
   glGetProgramInfoLog: Option<glGetProgramInfoLog_t>,
   glGetProgramInterfaceiv: Option<glGetProgramInterfaceiv_t>,
@@ -394,7 +401,9 @@ pub struct GlFns {
   glNormalP3ui: Option<glNormalP3ui_t>,
   glNormalP3uiv: Option<glNormalP3uiv_t>,
   glObjectLabel: Option<glObjectLabel_t>,
+  glObjectLabelKHR: Option<glObjectLabelKHR_t>,
   glObjectPtrLabel: Option<glObjectPtrLabel_t>,
+  glObjectPtrLabelKHR: Option<glObjectPtrLabelKHR_t>,
   glPatchParameterfv: Option<glPatchParameterfv_t>,
   glPatchParameteri: Option<glPatchParameteri_t>,
   glPauseTransformFeedback: Option<glPauseTransformFeedback_t>,
@@ -409,6 +418,7 @@ pub struct GlFns {
   glPolygonOffset: Option<glPolygonOffset_t>,
   glPolygonOffsetClamp: Option<glPolygonOffsetClamp_t>,
   glPopDebugGroup: Option<glPopDebugGroup_t>,
+  glPopDebugGroupKHR: Option<glPopDebugGroupKHR_t>,
   glPrimitiveBoundingBox: Option<glPrimitiveBoundingBox_t>,
   glPrimitiveRestartIndex: Option<glPrimitiveRestartIndex_t>,
   glProgramBinary: Option<glProgramBinary_t>,
@@ -465,6 +475,7 @@ pub struct GlFns {
   glProgramUniformMatrix4x3fv: Option<glProgramUniformMatrix4x3fv_t>,
   glProvokingVertex: Option<glProvokingVertex_t>,
   glPushDebugGroup: Option<glPushDebugGroup_t>,
+  glPushDebugGroupKHR: Option<glPushDebugGroupKHR_t>,
   glQueryCounter: Option<glQueryCounter_t>,
   glReadBuffer: Option<glReadBuffer_t>,
   glReadPixels: Option<glReadPixels_t>,
@@ -722,6 +733,7 @@ impl GlFns {
     let box_self: Box<Self> = unsafe { Box::from_raw(ptr_self) };
     box_self
   }
+  #[allow(clippy::missing_safety_doc)]
   pub unsafe fn load(&mut self, mut loader: impl FnMut(*const u8) -> *const core::ffi::c_void) {
     use core::mem::transmute;
     self.glActiveShaderProgram = unsafe { transmute(loader("glActiveShaderProgram\0".as_ptr())) };
@@ -858,8 +870,14 @@ impl GlFns {
     self.glCreateVertexArrays = unsafe { transmute(loader("glCreateVertexArrays\0".as_ptr())) };
     self.glCullFace = unsafe { transmute(loader("glCullFace\0".as_ptr())) };
     self.glDebugMessageCallback = unsafe { transmute(loader("glDebugMessageCallback\0".as_ptr())) };
+    self.glDebugMessageCallbackKHR =
+      unsafe { transmute(loader("glDebugMessageCallbackKHR\0".as_ptr())) };
     self.glDebugMessageControl = unsafe { transmute(loader("glDebugMessageControl\0".as_ptr())) };
+    self.glDebugMessageControlKHR =
+      unsafe { transmute(loader("glDebugMessageControlKHR\0".as_ptr())) };
     self.glDebugMessageInsert = unsafe { transmute(loader("glDebugMessageInsert\0".as_ptr())) };
+    self.glDebugMessageInsertKHR =
+      unsafe { transmute(loader("glDebugMessageInsertKHR\0".as_ptr())) };
     self.glDeleteBuffers = unsafe { transmute(loader("glDeleteBuffers\0".as_ptr())) };
     self.glDeleteFramebuffers = unsafe { transmute(loader("glDeleteFramebuffers\0".as_ptr())) };
     self.glDeleteProgram = unsafe { transmute(loader("glDeleteProgram\0".as_ptr())) };
@@ -993,6 +1011,8 @@ impl GlFns {
     self.glGetCompressedTextureSubImage =
       unsafe { transmute(loader("glGetCompressedTextureSubImage\0".as_ptr())) };
     self.glGetDebugMessageLog = unsafe { transmute(loader("glGetDebugMessageLog\0".as_ptr())) };
+    self.glGetDebugMessageLogKHR =
+      unsafe { transmute(loader("glGetDebugMessageLogKHR\0".as_ptr())) };
     self.glGetDoublei_v = unsafe { transmute(loader("glGetDoublei_v\0".as_ptr())) };
     self.glGetDoublev = unsafe { transmute(loader("glGetDoublev\0".as_ptr())) };
     self.glGetError = unsafe { transmute(loader("glGetError\0".as_ptr())) };
@@ -1029,8 +1049,11 @@ impl GlFns {
     self.glGetNamedRenderbufferParameteriv =
       unsafe { transmute(loader("glGetNamedRenderbufferParameteriv\0".as_ptr())) };
     self.glGetObjectLabel = unsafe { transmute(loader("glGetObjectLabel\0".as_ptr())) };
+    self.glGetObjectLabelKHR = unsafe { transmute(loader("glGetObjectLabelKHR\0".as_ptr())) };
     self.glGetObjectPtrLabel = unsafe { transmute(loader("glGetObjectPtrLabel\0".as_ptr())) };
+    self.glGetObjectPtrLabelKHR = unsafe { transmute(loader("glGetObjectPtrLabelKHR\0".as_ptr())) };
     self.glGetPointerv = unsafe { transmute(loader("glGetPointerv\0".as_ptr())) };
+    self.glGetPointervKHR = unsafe { transmute(loader("glGetPointervKHR\0".as_ptr())) };
     self.glGetProgramBinary = unsafe { transmute(loader("glGetProgramBinary\0".as_ptr())) };
     self.glGetProgramInfoLog = unsafe { transmute(loader("glGetProgramInfoLog\0".as_ptr())) };
     self.glGetProgramInterfaceiv =
@@ -1241,7 +1264,9 @@ impl GlFns {
     self.glNormalP3ui = unsafe { transmute(loader("glNormalP3ui\0".as_ptr())) };
     self.glNormalP3uiv = unsafe { transmute(loader("glNormalP3uiv\0".as_ptr())) };
     self.glObjectLabel = unsafe { transmute(loader("glObjectLabel\0".as_ptr())) };
+    self.glObjectLabelKHR = unsafe { transmute(loader("glObjectLabelKHR\0".as_ptr())) };
     self.glObjectPtrLabel = unsafe { transmute(loader("glObjectPtrLabel\0".as_ptr())) };
+    self.glObjectPtrLabelKHR = unsafe { transmute(loader("glObjectPtrLabelKHR\0".as_ptr())) };
     self.glPatchParameterfv = unsafe { transmute(loader("glPatchParameterfv\0".as_ptr())) };
     self.glPatchParameteri = unsafe { transmute(loader("glPatchParameteri\0".as_ptr())) };
     self.glPauseTransformFeedback =
@@ -1257,6 +1282,7 @@ impl GlFns {
     self.glPolygonOffset = unsafe { transmute(loader("glPolygonOffset\0".as_ptr())) };
     self.glPolygonOffsetClamp = unsafe { transmute(loader("glPolygonOffsetClamp\0".as_ptr())) };
     self.glPopDebugGroup = unsafe { transmute(loader("glPopDebugGroup\0".as_ptr())) };
+    self.glPopDebugGroupKHR = unsafe { transmute(loader("glPopDebugGroupKHR\0".as_ptr())) };
     self.glPrimitiveBoundingBox = unsafe { transmute(loader("glPrimitiveBoundingBox\0".as_ptr())) };
     self.glPrimitiveRestartIndex =
       unsafe { transmute(loader("glPrimitiveRestartIndex\0".as_ptr())) };
@@ -1332,6 +1358,7 @@ impl GlFns {
       unsafe { transmute(loader("glProgramUniformMatrix4x3fv\0".as_ptr())) };
     self.glProvokingVertex = unsafe { transmute(loader("glProvokingVertex\0".as_ptr())) };
     self.glPushDebugGroup = unsafe { transmute(loader("glPushDebugGroup\0".as_ptr())) };
+    self.glPushDebugGroupKHR = unsafe { transmute(loader("glPushDebugGroupKHR\0".as_ptr())) };
     self.glQueryCounter = unsafe { transmute(loader("glQueryCounter\0".as_ptr())) };
     self.glReadBuffer = unsafe { transmute(loader("glReadBuffer\0".as_ptr())) };
     self.glReadPixels = unsafe { transmute(loader("glReadPixels\0".as_ptr())) };
@@ -1712,8 +1739,11 @@ pub const BLANK_GL_FNS: GlFns = GlFns {
   glCreateVertexArrays: None,
   glCullFace: None,
   glDebugMessageCallback: None,
+  glDebugMessageCallbackKHR: None,
   glDebugMessageControl: None,
+  glDebugMessageControlKHR: None,
   glDebugMessageInsert: None,
+  glDebugMessageInsertKHR: None,
   glDeleteBuffers: None,
   glDeleteFramebuffers: None,
   glDeleteProgram: None,
@@ -1812,6 +1842,7 @@ pub const BLANK_GL_FNS: GlFns = GlFns {
   glGetCompressedTextureImage: None,
   glGetCompressedTextureSubImage: None,
   glGetDebugMessageLog: None,
+  glGetDebugMessageLogKHR: None,
   glGetDoublei_v: None,
   glGetDoublev: None,
   glGetError: None,
@@ -1837,8 +1868,11 @@ pub const BLANK_GL_FNS: GlFns = GlFns {
   glGetNamedFramebufferParameteriv: None,
   glGetNamedRenderbufferParameteriv: None,
   glGetObjectLabel: None,
+  glGetObjectLabelKHR: None,
   glGetObjectPtrLabel: None,
+  glGetObjectPtrLabelKHR: None,
   glGetPointerv: None,
+  glGetPointervKHR: None,
   glGetProgramBinary: None,
   glGetProgramInfoLog: None,
   glGetProgramInterfaceiv: None,
@@ -1993,7 +2027,9 @@ pub const BLANK_GL_FNS: GlFns = GlFns {
   glNormalP3ui: None,
   glNormalP3uiv: None,
   glObjectLabel: None,
+  glObjectLabelKHR: None,
   glObjectPtrLabel: None,
+  glObjectPtrLabelKHR: None,
   glPatchParameterfv: None,
   glPatchParameteri: None,
   glPauseTransformFeedback: None,
@@ -2008,6 +2044,7 @@ pub const BLANK_GL_FNS: GlFns = GlFns {
   glPolygonOffset: None,
   glPolygonOffsetClamp: None,
   glPopDebugGroup: None,
+  glPopDebugGroupKHR: None,
   glPrimitiveBoundingBox: None,
   glPrimitiveRestartIndex: None,
   glProgramBinary: None,
@@ -2064,6 +2101,7 @@ pub const BLANK_GL_FNS: GlFns = GlFns {
   glProgramUniformMatrix4x3fv: None,
   glProvokingVertex: None,
   glPushDebugGroup: None,
+  glPushDebugGroupKHR: None,
   glQueryCounter: None,
   glReadBuffer: None,
   glReadPixels: None,
@@ -2443,8 +2481,11 @@ impl GlFns {
   mk_wrapper_method!(glCreateVertexArrays, CreateVertexArrays, [n: GLsizei, arrays: *mut GLuint, ] -> ());
   mk_wrapper_method!(glCullFace, CullFace, [mode: GLenum, ] -> ());
   mk_wrapper_method!(glDebugMessageCallback, DebugMessageCallback, [callback: GLDEBUGPROC, userParam: *const c_void, ] -> ());
+  mk_wrapper_method!(glDebugMessageCallbackKHR, DebugMessageCallbackKHR, [callback: GLDEBUGPROCKHR, userParam: *const c_void, ] -> ());
   mk_wrapper_method!(glDebugMessageControl, DebugMessageControl, [source: GLenum, ty: GLenum, severity: GLenum, count: GLsizei, ids: *const GLuint, enabled: GLboolean, ] -> ());
+  mk_wrapper_method!(glDebugMessageControlKHR, DebugMessageControlKHR, [source: GLenum, ty: GLenum, severity: GLenum, count: GLsizei, ids: *const GLuint, enabled: GLboolean, ] -> ());
   mk_wrapper_method!(glDebugMessageInsert, DebugMessageInsert, [source: GLenum, ty: GLenum, id: GLuint, severity: GLenum, length: GLsizei, buf: *const GLchar, ] -> ());
+  mk_wrapper_method!(glDebugMessageInsertKHR, DebugMessageInsertKHR, [source: GLenum, ty: GLenum, id: GLuint, severity: GLenum, length: GLsizei, buf: *const GLchar, ] -> ());
   mk_wrapper_method!(glDeleteBuffers, DeleteBuffers, [n: GLsizei, buffers: *const GLuint, ] -> ());
   mk_wrapper_method!(glDeleteFramebuffers, DeleteFramebuffers, [n: GLsizei, framebuffers: *const GLuint, ] -> ());
   mk_wrapper_method!(glDeleteProgram, DeleteProgram, [program: GLuint, ] -> ());
@@ -2543,6 +2584,7 @@ impl GlFns {
   mk_wrapper_method!(glGetCompressedTextureImage, GetCompressedTextureImage, [texture: GLuint, level: GLint, bufSize: GLsizei, pixels: *mut c_void, ] -> ());
   mk_wrapper_method!(glGetCompressedTextureSubImage, GetCompressedTextureSubImage, [texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, bufSize: GLsizei, pixels: *mut c_void, ] -> ());
   mk_wrapper_method!(glGetDebugMessageLog, GetDebugMessageLog, [count: GLuint, bufSize: GLsizei, sources: *mut GLenum, types: *mut GLenum, ids: *mut GLuint, severities: *mut GLenum, lengths: *mut GLsizei, messageLog: *mut GLchar, ] -> GLuint);
+  mk_wrapper_method!(glGetDebugMessageLogKHR, GetDebugMessageLogKHR, [count: GLuint, bufSize: GLsizei, sources: *mut GLenum, types: *mut GLenum, ids: *mut GLuint, severities: *mut GLenum, lengths: *mut GLsizei, messageLog: *mut GLchar, ] -> GLuint);
   mk_wrapper_method!(glGetDoublei_v, GetDoublei_v, [target: GLenum, index: GLuint, data: *mut GLdouble, ] -> ());
   mk_wrapper_method!(glGetDoublev, GetDoublev, [pname: GLenum, data: *mut GLdouble, ] -> ());
   mk_wrapper_method!(glGetError, GetError, [] -> GLenum);
@@ -2568,8 +2610,11 @@ impl GlFns {
   mk_wrapper_method!(glGetNamedFramebufferParameteriv, GetNamedFramebufferParameteriv, [framebuffer: GLuint, pname: GLenum, param: *mut GLint, ] -> ());
   mk_wrapper_method!(glGetNamedRenderbufferParameteriv, GetNamedRenderbufferParameteriv, [renderbuffer: GLuint, pname: GLenum, params: *mut GLint, ] -> ());
   mk_wrapper_method!(glGetObjectLabel, GetObjectLabel, [identifier: GLenum, name: GLuint, bufSize: GLsizei, length: *mut GLsizei, label: *mut GLchar, ] -> ());
+  mk_wrapper_method!(glGetObjectLabelKHR, GetObjectLabelKHR, [identifier: GLenum, name: GLuint, bufSize: GLsizei, length: *mut GLsizei, label: *mut GLchar, ] -> ());
   mk_wrapper_method!(glGetObjectPtrLabel, GetObjectPtrLabel, [ptr: *const c_void, bufSize: GLsizei, length: *mut GLsizei, label: *mut GLchar, ] -> ());
+  mk_wrapper_method!(glGetObjectPtrLabelKHR, GetObjectPtrLabelKHR, [ptr: *const c_void, bufSize: GLsizei, length: *mut GLsizei, label: *mut GLchar, ] -> ());
   mk_wrapper_method!(glGetPointerv, GetPointerv, [pname: GLenum, params: *mut *mut c_void, ] -> ());
+  mk_wrapper_method!(glGetPointervKHR, GetPointervKHR, [pname: GLenum, params: *mut *mut c_void, ] -> ());
   mk_wrapper_method!(glGetProgramBinary, GetProgramBinary, [program: GLuint, bufSize: GLsizei, length: *mut GLsizei, binaryFormat: *mut GLenum, binary: *mut c_void, ] -> ());
   mk_wrapper_method!(glGetProgramInfoLog, GetProgramInfoLog, [program: GLuint, bufSize: GLsizei, length: *mut GLsizei, infoLog: *mut GLchar, ] -> ());
   mk_wrapper_method!(glGetProgramInterfaceiv, GetProgramInterfaceiv, [program: GLuint, programInterface: GLenum, pname: GLenum, params: *mut GLint, ] -> ());
@@ -2724,7 +2769,9 @@ impl GlFns {
   mk_wrapper_method!(glNormalP3ui, NormalP3ui, [ty: GLenum, coords: GLuint, ] -> ());
   mk_wrapper_method!(glNormalP3uiv, NormalP3uiv, [ty: GLenum, coords: *const GLuint, ] -> ());
   mk_wrapper_method!(glObjectLabel, ObjectLabel, [identifier: GLenum, name: GLuint, length: GLsizei, label: *const GLchar, ] -> ());
+  mk_wrapper_method!(glObjectLabelKHR, ObjectLabelKHR, [identifier: GLenum, name: GLuint, length: GLsizei, label: *const GLchar, ] -> ());
   mk_wrapper_method!(glObjectPtrLabel, ObjectPtrLabel, [ptr: *const c_void, length: GLsizei, label: *const GLchar, ] -> ());
+  mk_wrapper_method!(glObjectPtrLabelKHR, ObjectPtrLabelKHR, [ptr: *const c_void, length: GLsizei, label: *const GLchar, ] -> ());
   mk_wrapper_method!(glPatchParameterfv, PatchParameterfv, [pname: GLenum, values: *const GLfloat, ] -> ());
   mk_wrapper_method!(glPatchParameteri, PatchParameteri, [pname: GLenum, value: GLint, ] -> ());
   mk_wrapper_method!(glPauseTransformFeedback, PauseTransformFeedback, [] -> ());
@@ -2739,6 +2786,7 @@ impl GlFns {
   mk_wrapper_method!(glPolygonOffset, PolygonOffset, [factor: GLfloat, units: GLfloat, ] -> ());
   mk_wrapper_method!(glPolygonOffsetClamp, PolygonOffsetClamp, [factor: GLfloat, units: GLfloat, clamp: GLfloat, ] -> ());
   mk_wrapper_method!(glPopDebugGroup, PopDebugGroup, [] -> ());
+  mk_wrapper_method!(glPopDebugGroupKHR, PopDebugGroupKHR, [] -> ());
   mk_wrapper_method!(glPrimitiveBoundingBox, PrimitiveBoundingBox, [minX: GLfloat, minY: GLfloat, minZ: GLfloat, minW: GLfloat, maxX: GLfloat, maxY: GLfloat, maxZ: GLfloat, maxW: GLfloat, ] -> ());
   mk_wrapper_method!(glPrimitiveRestartIndex, PrimitiveRestartIndex, [index: GLuint, ] -> ());
   mk_wrapper_method!(glProgramBinary, ProgramBinary, [program: GLuint, binaryFormat: GLenum, binary: *const c_void, length: GLsizei, ] -> ());
@@ -2795,6 +2843,7 @@ impl GlFns {
   mk_wrapper_method!(glProgramUniformMatrix4x3fv, ProgramUniformMatrix4x3fv, [program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: *const GLfloat, ] -> ());
   mk_wrapper_method!(glProvokingVertex, ProvokingVertex, [mode: GLenum, ] -> ());
   mk_wrapper_method!(glPushDebugGroup, PushDebugGroup, [source: GLenum, id: GLuint, length: GLsizei, message: *const GLchar, ] -> ());
+  mk_wrapper_method!(glPushDebugGroupKHR, PushDebugGroupKHR, [source: GLenum, id: GLuint, length: GLsizei, message: *const GLchar, ] -> ());
   mk_wrapper_method!(glQueryCounter, QueryCounter, [id: GLuint, target: GLenum, ] -> ());
   mk_wrapper_method!(glReadBuffer, ReadBuffer, [src: GLenum, ] -> ());
   mk_wrapper_method!(glReadPixels, ReadPixels, [x: GLint, y: GLint, width: GLsizei, height: GLsizei, format: GLenum, ty: GLenum, pixels: *mut c_void, ] -> ());
@@ -3036,5877 +3085,3288 @@ impl GlFns {
   mk_wrapper_method!(glViewportIndexedfv, ViewportIndexedfv, [index: GLuint, v: *const GLfloat, ] -> ());
   mk_wrapper_method!(glWaitSync, WaitSync, [sync: GLsync, flags: GLbitfield, timeout: GLuint64, ] -> ());
 }
-type glActiveShaderProgram_t = unsafe extern "system" fn(pipeline: GLuint, program: GLuint);
-type glActiveTexture_t = unsafe extern "system" fn(texture: GLenum);
-type glAttachShader_t = unsafe extern "system" fn(program: GLuint, shader: GLuint);
-type glBeginConditionalRender_t = unsafe extern "system" fn(id: GLuint, mode: GLenum);
-type glBeginQuery_t = unsafe extern "system" fn(target: GLenum, id: GLuint);
-type glBeginQueryIndexed_t = unsafe extern "system" fn(target: GLenum, index: GLuint, id: GLuint);
-type glBeginTransformFeedback_t = unsafe extern "system" fn(primitiveMode: GLenum);
-type glBindAttribLocation_t =
-  unsafe extern "system" fn(program: GLuint, index: GLuint, name: *const GLchar);
-type glBindBuffer_t = unsafe extern "system" fn(target: GLenum, buffer: GLuint);
-type glBindBufferBase_t = unsafe extern "system" fn(target: GLenum, index: GLuint, buffer: GLuint);
-type glBindBufferRange_t = unsafe extern "system" fn(
-  target: GLenum,
-  index: GLuint,
-  buffer: GLuint,
-  offset: GLintptr,
-  size: GLsizeiptr,
-);
-type glBindBuffersBase_t =
-  unsafe extern "system" fn(target: GLenum, first: GLuint, count: GLsizei, buffers: *const GLuint);
-type glBindBuffersRange_t = unsafe extern "system" fn(
-  target: GLenum,
-  first: GLuint,
-  count: GLsizei,
-  buffers: *const GLuint,
-  offsets: *const GLintptr,
-  sizes: *const GLsizeiptr,
-);
-type glBindFragDataLocation_t =
-  unsafe extern "system" fn(program: GLuint, color: GLuint, name: *const GLchar);
-type glBindFragDataLocationIndexed_t = unsafe extern "system" fn(
-  program: GLuint,
-  colorNumber: GLuint,
-  index: GLuint,
-  name: *const GLchar,
-);
-type glBindFramebuffer_t = unsafe extern "system" fn(target: GLenum, framebuffer: GLuint);
-type glBindImageTexture_t = unsafe extern "system" fn(
-  unit: GLuint,
-  texture: GLuint,
-  level: GLint,
-  layered: GLboolean,
-  layer: GLint,
-  access: GLenum,
-  format: GLenum,
-);
-type glBindImageTextures_t =
-  unsafe extern "system" fn(first: GLuint, count: GLsizei, textures: *const GLuint);
-type glBindProgramPipeline_t = unsafe extern "system" fn(pipeline: GLuint);
-type glBindRenderbuffer_t = unsafe extern "system" fn(target: GLenum, renderbuffer: GLuint);
-type glBindSampler_t = unsafe extern "system" fn(unit: GLuint, sampler: GLuint);
-type glBindSamplers_t =
-  unsafe extern "system" fn(first: GLuint, count: GLsizei, samplers: *const GLuint);
-type glBindTexture_t = unsafe extern "system" fn(target: GLenum, texture: GLuint);
-type glBindTextureUnit_t = unsafe extern "system" fn(unit: GLuint, texture: GLuint);
-type glBindTextures_t =
-  unsafe extern "system" fn(first: GLuint, count: GLsizei, textures: *const GLuint);
-type glBindTransformFeedback_t = unsafe extern "system" fn(target: GLenum, id: GLuint);
-type glBindVertexArray_t = unsafe extern "system" fn(array: GLuint);
-type glBindVertexBuffer_t = unsafe extern "system" fn(
-  bindingindex: GLuint,
-  buffer: GLuint,
-  offset: GLintptr,
-  stride: GLsizei,
-);
-type glBindVertexBuffers_t = unsafe extern "system" fn(
-  first: GLuint,
-  count: GLsizei,
-  buffers: *const GLuint,
-  offsets: *const GLintptr,
-  strides: *const GLsizei,
-);
-type glBlendBarrier_t = unsafe extern "system" fn();
-type glBlendColor_t =
-  unsafe extern "system" fn(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
-type glBlendEquation_t = unsafe extern "system" fn(mode: GLenum);
-type glBlendEquationSeparate_t = unsafe extern "system" fn(modeRGB: GLenum, modeAlpha: GLenum);
-type glBlendEquationSeparatei_t =
-  unsafe extern "system" fn(buf: GLuint, modeRGB: GLenum, modeAlpha: GLenum);
-type glBlendEquationi_t = unsafe extern "system" fn(buf: GLuint, mode: GLenum);
-type glBlendFunc_t = unsafe extern "system" fn(sfactor: GLenum, dfactor: GLenum);
-type glBlendFuncSeparate_t = unsafe extern "system" fn(
-  sfactorRGB: GLenum,
-  dfactorRGB: GLenum,
-  sfactorAlpha: GLenum,
-  dfactorAlpha: GLenum,
-);
-type glBlendFuncSeparatei_t = unsafe extern "system" fn(
-  buf: GLuint,
-  srcRGB: GLenum,
-  dstRGB: GLenum,
-  srcAlpha: GLenum,
-  dstAlpha: GLenum,
-);
-type glBlendFunci_t = unsafe extern "system" fn(buf: GLuint, src: GLenum, dst: GLenum);
-type glBlitFramebuffer_t = unsafe extern "system" fn(
-  srcX0: GLint,
-  srcY0: GLint,
-  srcX1: GLint,
-  srcY1: GLint,
-  dstX0: GLint,
-  dstY0: GLint,
-  dstX1: GLint,
-  dstY1: GLint,
-  mask: GLbitfield,
-  filter: GLenum,
-);
-type glBlitNamedFramebuffer_t = unsafe extern "system" fn(
-  readFramebuffer: GLuint,
-  drawFramebuffer: GLuint,
-  srcX0: GLint,
-  srcY0: GLint,
-  srcX1: GLint,
-  srcY1: GLint,
-  dstX0: GLint,
-  dstY0: GLint,
-  dstX1: GLint,
-  dstY1: GLint,
-  mask: GLbitfield,
-  filter: GLenum,
-);
-type glBufferData_t =
-  unsafe extern "system" fn(target: GLenum, size: GLsizeiptr, data: *const c_void, usage: GLenum);
-type glBufferStorage_t = unsafe extern "system" fn(
-  target: GLenum,
-  size: GLsizeiptr,
-  data: *const c_void,
-  flags: GLbitfield,
-);
-type glBufferSubData_t = unsafe extern "system" fn(
-  target: GLenum,
-  offset: GLintptr,
-  size: GLsizeiptr,
-  data: *const c_void,
-);
-type glCheckFramebufferStatus_t = unsafe extern "system" fn(target: GLenum) -> GLenum;
-type glCheckNamedFramebufferStatus_t =
-  unsafe extern "system" fn(framebuffer: GLuint, target: GLenum) -> GLenum;
-type glClampColor_t = unsafe extern "system" fn(target: GLenum, clamp: GLenum);
-type glClear_t = unsafe extern "system" fn(mask: GLbitfield);
-type glClearBufferData_t = unsafe extern "system" fn(
-  target: GLenum,
-  internalformat: GLenum,
-  format: GLenum,
-  ty: GLenum,
-  data: *const c_void,
-);
-type glClearBufferSubData_t = unsafe extern "system" fn(
-  target: GLenum,
-  internalformat: GLenum,
-  offset: GLintptr,
-  size: GLsizeiptr,
-  format: GLenum,
-  ty: GLenum,
-  data: *const c_void,
-);
-type glClearBufferfi_t =
-  unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, depth: GLfloat, stencil: GLint);
-type glClearBufferfv_t =
-  unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, value: *const GLfloat);
-type glClearBufferiv_t =
-  unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, value: *const GLint);
-type glClearBufferuiv_t =
-  unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, value: *const GLuint);
-type glClearColor_t =
-  unsafe extern "system" fn(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
-type glClearDepth_t = unsafe extern "system" fn(depth: GLdouble);
-type glClearDepthf_t = unsafe extern "system" fn(d: GLfloat);
-type glClearNamedBufferData_t = unsafe extern "system" fn(
-  buffer: GLuint,
-  internalformat: GLenum,
-  format: GLenum,
-  ty: GLenum,
-  data: *const c_void,
-);
-type glClearNamedBufferSubData_t = unsafe extern "system" fn(
-  buffer: GLuint,
-  internalformat: GLenum,
-  offset: GLintptr,
-  size: GLsizeiptr,
-  format: GLenum,
-  ty: GLenum,
-  data: *const c_void,
-);
-type glClearNamedFramebufferfi_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  buffer: GLenum,
-  drawbuffer: GLint,
-  depth: GLfloat,
-  stencil: GLint,
-);
-type glClearNamedFramebufferfv_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  buffer: GLenum,
-  drawbuffer: GLint,
-  value: *const GLfloat,
-);
-type glClearNamedFramebufferiv_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  buffer: GLenum,
-  drawbuffer: GLint,
-  value: *const GLint,
-);
-type glClearNamedFramebufferuiv_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  buffer: GLenum,
-  drawbuffer: GLint,
-  value: *const GLuint,
-);
-type glClearStencil_t = unsafe extern "system" fn(s: GLint);
-type glClearTexImage_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  format: GLenum,
-  ty: GLenum,
-  data: *const c_void,
-);
-type glClearTexSubImage_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  data: *const c_void,
-);
-type glClientWaitSync_t =
-  unsafe extern "system" fn(sync: GLsync, flags: GLbitfield, timeout: GLuint64) -> GLenum;
-type glClipControl_t = unsafe extern "system" fn(origin: GLenum, depth: GLenum);
-type glColorMask_t =
-  unsafe extern "system" fn(red: GLboolean, green: GLboolean, blue: GLboolean, alpha: GLboolean);
-type glColorMaski_t =
-  unsafe extern "system" fn(index: GLuint, r: GLboolean, g: GLboolean, b: GLboolean, a: GLboolean);
-type glColorP3ui_t = unsafe extern "system" fn(ty: GLenum, color: GLuint);
-type glColorP3uiv_t = unsafe extern "system" fn(ty: GLenum, color: *const GLuint);
-type glColorP4ui_t = unsafe extern "system" fn(ty: GLenum, color: GLuint);
-type glColorP4uiv_t = unsafe extern "system" fn(ty: GLenum, color: *const GLuint);
-type glCompileShader_t = unsafe extern "system" fn(shader: GLuint);
-type glCompressedTexImage1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLenum,
-  width: GLsizei,
-  border: GLint,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTexImage2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  border: GLint,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTexImage3D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  border: GLint,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTexSubImage1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  width: GLsizei,
-  format: GLenum,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTexSubImage2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  format: GLenum,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTexSubImage3D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  format: GLenum,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTextureSubImage1D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  width: GLsizei,
-  format: GLenum,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTextureSubImage2D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  format: GLenum,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCompressedTextureSubImage3D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  format: GLenum,
-  imageSize: GLsizei,
-  data: *const c_void,
-);
-type glCopyBufferSubData_t = unsafe extern "system" fn(
-  readTarget: GLenum,
-  writeTarget: GLenum,
-  readOffset: GLintptr,
-  writeOffset: GLintptr,
-  size: GLsizeiptr,
-);
-type glCopyImageSubData_t = unsafe extern "system" fn(
-  srcName: GLuint,
-  srcTarget: GLenum,
-  srcLevel: GLint,
-  srcX: GLint,
-  srcY: GLint,
-  srcZ: GLint,
-  dstName: GLuint,
-  dstTarget: GLenum,
-  dstLevel: GLint,
-  dstX: GLint,
-  dstY: GLint,
-  dstZ: GLint,
-  srcWidth: GLsizei,
-  srcHeight: GLsizei,
-  srcDepth: GLsizei,
-);
-type glCopyNamedBufferSubData_t = unsafe extern "system" fn(
-  readBuffer: GLuint,
-  writeBuffer: GLuint,
-  readOffset: GLintptr,
-  writeOffset: GLintptr,
-  size: GLsizeiptr,
-);
-type glCopyTexImage1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLenum,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  border: GLint,
-);
-type glCopyTexImage2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLenum,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  border: GLint,
-);
-type glCopyTexSubImage1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-);
-type glCopyTexSubImage2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glCopyTexSubImage3D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glCopyTextureSubImage1D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-);
-type glCopyTextureSubImage2D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glCopyTextureSubImage3D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glCreateBuffers_t = unsafe extern "system" fn(n: GLsizei, buffers: *mut GLuint);
-type glCreateFramebuffers_t = unsafe extern "system" fn(n: GLsizei, framebuffers: *mut GLuint);
-type glCreateProgram_t = unsafe extern "system" fn() -> GLuint;
-type glCreateProgramPipelines_t = unsafe extern "system" fn(n: GLsizei, pipelines: *mut GLuint);
-type glCreateQueries_t = unsafe extern "system" fn(target: GLenum, n: GLsizei, ids: *mut GLuint);
-type glCreateRenderbuffers_t = unsafe extern "system" fn(n: GLsizei, renderbuffers: *mut GLuint);
-type glCreateSamplers_t = unsafe extern "system" fn(n: GLsizei, samplers: *mut GLuint);
-type glCreateShader_t = unsafe extern "system" fn(ty: GLenum) -> GLuint;
-type glCreateShaderProgramv_t =
-  unsafe extern "system" fn(ty: GLenum, count: GLsizei, strings: *const *const GLchar) -> GLuint;
-type glCreateTextures_t =
-  unsafe extern "system" fn(target: GLenum, n: GLsizei, textures: *mut GLuint);
-type glCreateTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, ids: *mut GLuint);
-type glCreateVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *mut GLuint);
-type glCullFace_t = unsafe extern "system" fn(mode: GLenum);
-type glDebugMessageCallback_t =
-  unsafe extern "system" fn(callback: GLDEBUGPROC, userParam: *const c_void);
-type glDebugMessageControl_t = unsafe extern "system" fn(
-  source: GLenum,
-  ty: GLenum,
-  severity: GLenum,
-  count: GLsizei,
-  ids: *const GLuint,
-  enabled: GLboolean,
-);
-type glDebugMessageInsert_t = unsafe extern "system" fn(
-  source: GLenum,
-  ty: GLenum,
-  id: GLuint,
-  severity: GLenum,
-  length: GLsizei,
-  buf: *const GLchar,
-);
-type glDeleteBuffers_t = unsafe extern "system" fn(n: GLsizei, buffers: *const GLuint);
-type glDeleteFramebuffers_t = unsafe extern "system" fn(n: GLsizei, framebuffers: *const GLuint);
-type glDeleteProgram_t = unsafe extern "system" fn(program: GLuint);
-type glDeleteProgramPipelines_t = unsafe extern "system" fn(n: GLsizei, pipelines: *const GLuint);
-type glDeleteQueries_t = unsafe extern "system" fn(n: GLsizei, ids: *const GLuint);
-type glDeleteRenderbuffers_t = unsafe extern "system" fn(n: GLsizei, renderbuffers: *const GLuint);
-type glDeleteSamplers_t = unsafe extern "system" fn(count: GLsizei, samplers: *const GLuint);
-type glDeleteShader_t = unsafe extern "system" fn(shader: GLuint);
-type glDeleteSync_t = unsafe extern "system" fn(sync: GLsync);
-type glDeleteTextures_t = unsafe extern "system" fn(n: GLsizei, textures: *const GLuint);
-type glDeleteTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, ids: *const GLuint);
-type glDeleteVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *const GLuint);
-type glDepthFunc_t = unsafe extern "system" fn(func: GLenum);
-type glDepthMask_t = unsafe extern "system" fn(flag: GLboolean);
-type glDepthRange_t = unsafe extern "system" fn(n: GLdouble, f: GLdouble);
-type glDepthRangeArrayv_t =
-  unsafe extern "system" fn(first: GLuint, count: GLsizei, v: *const GLdouble);
-type glDepthRangeIndexed_t = unsafe extern "system" fn(index: GLuint, n: GLdouble, f: GLdouble);
-type glDepthRangef_t = unsafe extern "system" fn(n: GLfloat, f: GLfloat);
-type glDetachShader_t = unsafe extern "system" fn(program: GLuint, shader: GLuint);
-type glDisable_t = unsafe extern "system" fn(cap: GLenum);
-type glDisableVertexArrayAttrib_t = unsafe extern "system" fn(vaobj: GLuint, index: GLuint);
-type glDisableVertexAttribArray_t = unsafe extern "system" fn(index: GLuint);
-type glDisablei_t = unsafe extern "system" fn(target: GLenum, index: GLuint);
-type glDispatchCompute_t =
-  unsafe extern "system" fn(num_groups_x: GLuint, num_groups_y: GLuint, num_groups_z: GLuint);
-type glDispatchComputeIndirect_t = unsafe extern "system" fn(indirect: GLintptr);
-type glDrawArrays_t = unsafe extern "system" fn(mode: GLenum, first: GLint, count: GLsizei);
-type glDrawArraysIndirect_t = unsafe extern "system" fn(mode: GLenum, indirect: *const c_void);
-type glDrawArraysInstanced_t =
-  unsafe extern "system" fn(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei);
-type glDrawArraysInstancedBaseInstance_t = unsafe extern "system" fn(
-  mode: GLenum,
-  first: GLint,
-  count: GLsizei,
-  instancecount: GLsizei,
-  baseinstance: GLuint,
-);
-type glDrawBuffer_t = unsafe extern "system" fn(buf: GLenum);
-type glDrawBuffers_t = unsafe extern "system" fn(n: GLsizei, bufs: *const GLenum);
-type glDrawElements_t =
-  unsafe extern "system" fn(mode: GLenum, count: GLsizei, ty: GLenum, indices: *const c_void);
-type glDrawElementsBaseVertex_t = unsafe extern "system" fn(
-  mode: GLenum,
-  count: GLsizei,
-  ty: GLenum,
-  indices: *const c_void,
-  basevertex: GLint,
-);
-type glDrawElementsIndirect_t =
-  unsafe extern "system" fn(mode: GLenum, ty: GLenum, indirect: *const c_void);
-type glDrawElementsInstanced_t = unsafe extern "system" fn(
-  mode: GLenum,
-  count: GLsizei,
-  ty: GLenum,
-  indices: *const c_void,
-  instancecount: GLsizei,
-);
-type glDrawElementsInstancedBaseInstance_t = unsafe extern "system" fn(
-  mode: GLenum,
-  count: GLsizei,
-  ty: GLenum,
-  indices: *const c_void,
-  instancecount: GLsizei,
-  baseinstance: GLuint,
-);
-type glDrawElementsInstancedBaseVertex_t = unsafe extern "system" fn(
-  mode: GLenum,
-  count: GLsizei,
-  ty: GLenum,
-  indices: *const c_void,
-  instancecount: GLsizei,
-  basevertex: GLint,
-);
-type glDrawElementsInstancedBaseVertexBaseInstance_t = unsafe extern "system" fn(
-  mode: GLenum,
-  count: GLsizei,
-  ty: GLenum,
-  indices: *const c_void,
-  instancecount: GLsizei,
-  basevertex: GLint,
-  baseinstance: GLuint,
-);
-type glDrawRangeElements_t = unsafe extern "system" fn(
-  mode: GLenum,
-  start: GLuint,
-  end: GLuint,
-  count: GLsizei,
-  ty: GLenum,
-  indices: *const c_void,
-);
-type glDrawRangeElementsBaseVertex_t = unsafe extern "system" fn(
-  mode: GLenum,
-  start: GLuint,
-  end: GLuint,
-  count: GLsizei,
-  ty: GLenum,
-  indices: *const c_void,
-  basevertex: GLint,
-);
-type glDrawTransformFeedback_t = unsafe extern "system" fn(mode: GLenum, id: GLuint);
-type glDrawTransformFeedbackInstanced_t =
-  unsafe extern "system" fn(mode: GLenum, id: GLuint, instancecount: GLsizei);
-type glDrawTransformFeedbackStream_t =
-  unsafe extern "system" fn(mode: GLenum, id: GLuint, stream: GLuint);
-type glDrawTransformFeedbackStreamInstanced_t =
-  unsafe extern "system" fn(mode: GLenum, id: GLuint, stream: GLuint, instancecount: GLsizei);
-type glEnable_t = unsafe extern "system" fn(cap: GLenum);
-type glEnableVertexArrayAttrib_t = unsafe extern "system" fn(vaobj: GLuint, index: GLuint);
-type glEnableVertexAttribArray_t = unsafe extern "system" fn(index: GLuint);
-type glEnablei_t = unsafe extern "system" fn(target: GLenum, index: GLuint);
-type glEndConditionalRender_t = unsafe extern "system" fn();
-type glEndQuery_t = unsafe extern "system" fn(target: GLenum);
-type glEndQueryIndexed_t = unsafe extern "system" fn(target: GLenum, index: GLuint);
-type glEndTransformFeedback_t = unsafe extern "system" fn();
-type glFenceSync_t = unsafe extern "system" fn(condition: GLenum, flags: GLbitfield) -> GLsync;
-type glFinish_t = unsafe extern "system" fn();
-type glFlush_t = unsafe extern "system" fn();
-type glFlushMappedBufferRange_t =
-  unsafe extern "system" fn(target: GLenum, offset: GLintptr, length: GLsizeiptr);
-type glFlushMappedNamedBufferRange_t =
-  unsafe extern "system" fn(buffer: GLuint, offset: GLintptr, length: GLsizeiptr);
-type glFramebufferParameteri_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLint);
-type glFramebufferRenderbuffer_t = unsafe extern "system" fn(
-  target: GLenum,
-  attachment: GLenum,
-  renderbuffertarget: GLenum,
-  renderbuffer: GLuint,
-);
-type glFramebufferTexture_t =
-  unsafe extern "system" fn(target: GLenum, attachment: GLenum, texture: GLuint, level: GLint);
-type glFramebufferTexture1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  attachment: GLenum,
-  textarget: GLenum,
-  texture: GLuint,
-  level: GLint,
-);
-type glFramebufferTexture2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  attachment: GLenum,
-  textarget: GLenum,
-  texture: GLuint,
-  level: GLint,
-);
-type glFramebufferTexture3D_t = unsafe extern "system" fn(
-  target: GLenum,
-  attachment: GLenum,
-  textarget: GLenum,
-  texture: GLuint,
-  level: GLint,
-  zoffset: GLint,
-);
-type glFramebufferTextureLayer_t = unsafe extern "system" fn(
-  target: GLenum,
-  attachment: GLenum,
-  texture: GLuint,
-  level: GLint,
-  layer: GLint,
-);
-type glFrontFace_t = unsafe extern "system" fn(mode: GLenum);
-type glGenBuffers_t = unsafe extern "system" fn(n: GLsizei, buffers: *mut GLuint);
-type glGenFramebuffers_t = unsafe extern "system" fn(n: GLsizei, framebuffers: *mut GLuint);
-type glGenProgramPipelines_t = unsafe extern "system" fn(n: GLsizei, pipelines: *mut GLuint);
-type glGenQueries_t = unsafe extern "system" fn(n: GLsizei, ids: *mut GLuint);
-type glGenRenderbuffers_t = unsafe extern "system" fn(n: GLsizei, renderbuffers: *mut GLuint);
-type glGenSamplers_t = unsafe extern "system" fn(count: GLsizei, samplers: *mut GLuint);
-type glGenTextures_t = unsafe extern "system" fn(n: GLsizei, textures: *mut GLuint);
-type glGenTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, ids: *mut GLuint);
-type glGenVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *mut GLuint);
-type glGenerateMipmap_t = unsafe extern "system" fn(target: GLenum);
-type glGenerateTextureMipmap_t = unsafe extern "system" fn(texture: GLuint);
-type glGetActiveAtomicCounterBufferiv_t = unsafe extern "system" fn(
-  program: GLuint,
-  bufferIndex: GLuint,
-  pname: GLenum,
-  params: *mut GLint,
-);
-type glGetActiveAttrib_t = unsafe extern "system" fn(
-  program: GLuint,
-  index: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  size: *mut GLint,
-  ty: *mut GLenum,
-  name: *mut GLchar,
-);
-type glGetActiveSubroutineName_t = unsafe extern "system" fn(
-  program: GLuint,
-  shadertype: GLenum,
-  index: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  name: *mut GLchar,
-);
-type glGetActiveSubroutineUniformName_t = unsafe extern "system" fn(
-  program: GLuint,
-  shadertype: GLenum,
-  index: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  name: *mut GLchar,
-);
-type glGetActiveSubroutineUniformiv_t = unsafe extern "system" fn(
-  program: GLuint,
-  shadertype: GLenum,
-  index: GLuint,
-  pname: GLenum,
-  values: *mut GLint,
-);
-type glGetActiveUniform_t = unsafe extern "system" fn(
-  program: GLuint,
-  index: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  size: *mut GLint,
-  ty: *mut GLenum,
-  name: *mut GLchar,
-);
-type glGetActiveUniformBlockName_t = unsafe extern "system" fn(
-  program: GLuint,
-  uniformBlockIndex: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  uniformBlockName: *mut GLchar,
-);
-type glGetActiveUniformBlockiv_t = unsafe extern "system" fn(
-  program: GLuint,
-  uniformBlockIndex: GLuint,
-  pname: GLenum,
-  params: *mut GLint,
-);
-type glGetActiveUniformName_t = unsafe extern "system" fn(
-  program: GLuint,
-  uniformIndex: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  uniformName: *mut GLchar,
-);
-type glGetActiveUniformsiv_t = unsafe extern "system" fn(
-  program: GLuint,
-  uniformCount: GLsizei,
-  uniformIndices: *const GLuint,
-  pname: GLenum,
-  params: *mut GLint,
-);
-type glGetAttachedShaders_t = unsafe extern "system" fn(
-  program: GLuint,
-  maxCount: GLsizei,
-  count: *mut GLsizei,
-  shaders: *mut GLuint,
-);
-type glGetAttribLocation_t =
-  unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
-type glGetBooleani_v_t =
-  unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLboolean);
-type glGetBooleanv_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLboolean);
-type glGetBufferParameteri64v_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint64);
-type glGetBufferParameteriv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
-type glGetBufferPointerv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut *mut c_void);
-type glGetBufferSubData_t =
-  unsafe extern "system" fn(target: GLenum, offset: GLintptr, size: GLsizeiptr, data: *mut c_void);
-type glGetCompressedTexImage_t =
-  unsafe extern "system" fn(target: GLenum, level: GLint, img: *mut c_void);
-type glGetCompressedTextureImage_t =
-  unsafe extern "system" fn(texture: GLuint, level: GLint, bufSize: GLsizei, pixels: *mut c_void);
-type glGetCompressedTextureSubImage_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  bufSize: GLsizei,
-  pixels: *mut c_void,
-);
-type glGetDebugMessageLog_t = unsafe extern "system" fn(
-  count: GLuint,
-  bufSize: GLsizei,
-  sources: *mut GLenum,
-  types: *mut GLenum,
-  ids: *mut GLuint,
-  severities: *mut GLenum,
-  lengths: *mut GLsizei,
-  messageLog: *mut GLchar,
-) -> GLuint;
-type glGetDoublei_v_t =
-  unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLdouble);
-type glGetDoublev_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLdouble);
-type glGetError_t = unsafe extern "system" fn() -> GLenum;
-type glGetFloati_v_t = unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLfloat);
-type glGetFloatv_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLfloat);
-type glGetFragDataIndex_t =
-  unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
-type glGetFragDataLocation_t =
-  unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
-type glGetFramebufferAttachmentParameteriv_t =
-  unsafe extern "system" fn(target: GLenum, attachment: GLenum, pname: GLenum, params: *mut GLint);
-type glGetFramebufferParameteriv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
-type glGetGraphicsResetStatus_t = unsafe extern "system" fn() -> GLenum;
-type glGetInteger64i_v_t =
-  unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLint64);
-type glGetInteger64v_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLint64);
-type glGetIntegeri_v_t = unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLint);
-type glGetIntegerv_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLint);
-type glGetInternalformati64v_t = unsafe extern "system" fn(
-  target: GLenum,
-  internalformat: GLenum,
-  pname: GLenum,
-  count: GLsizei,
-  params: *mut GLint64,
-);
-type glGetInternalformativ_t = unsafe extern "system" fn(
-  target: GLenum,
-  internalformat: GLenum,
-  pname: GLenum,
-  count: GLsizei,
-  params: *mut GLint,
-);
-type glGetMultisamplefv_t =
-  unsafe extern "system" fn(pname: GLenum, index: GLuint, val: *mut GLfloat);
-type glGetNamedBufferParameteri64v_t =
-  unsafe extern "system" fn(buffer: GLuint, pname: GLenum, params: *mut GLint64);
-type glGetNamedBufferParameteriv_t =
-  unsafe extern "system" fn(buffer: GLuint, pname: GLenum, params: *mut GLint);
-type glGetNamedBufferPointerv_t =
-  unsafe extern "system" fn(buffer: GLuint, pname: GLenum, params: *mut *mut c_void);
-type glGetNamedBufferSubData_t =
-  unsafe extern "system" fn(buffer: GLuint, offset: GLintptr, size: GLsizeiptr, data: *mut c_void);
-type glGetNamedFramebufferAttachmentParameteriv_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  attachment: GLenum,
-  pname: GLenum,
-  params: *mut GLint,
-);
-type glGetNamedFramebufferParameteriv_t =
-  unsafe extern "system" fn(framebuffer: GLuint, pname: GLenum, param: *mut GLint);
-type glGetNamedRenderbufferParameteriv_t =
-  unsafe extern "system" fn(renderbuffer: GLuint, pname: GLenum, params: *mut GLint);
-type glGetObjectLabel_t = unsafe extern "system" fn(
-  identifier: GLenum,
-  name: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  label: *mut GLchar,
-);
-type glGetObjectPtrLabel_t = unsafe extern "system" fn(
-  ptr: *const c_void,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  label: *mut GLchar,
-);
-type glGetPointerv_t = unsafe extern "system" fn(pname: GLenum, params: *mut *mut c_void);
-type glGetProgramBinary_t = unsafe extern "system" fn(
-  program: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  binaryFormat: *mut GLenum,
-  binary: *mut c_void,
-);
-type glGetProgramInfoLog_t = unsafe extern "system" fn(
-  program: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  infoLog: *mut GLchar,
-);
-type glGetProgramInterfaceiv_t = unsafe extern "system" fn(
-  program: GLuint,
-  programInterface: GLenum,
-  pname: GLenum,
-  params: *mut GLint,
-);
-type glGetProgramPipelineInfoLog_t = unsafe extern "system" fn(
-  pipeline: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  infoLog: *mut GLchar,
-);
-type glGetProgramPipelineiv_t =
-  unsafe extern "system" fn(pipeline: GLuint, pname: GLenum, params: *mut GLint);
-type glGetProgramResourceIndex_t = unsafe extern "system" fn(
-  program: GLuint,
-  programInterface: GLenum,
-  name: *const GLchar,
-) -> GLuint;
-type glGetProgramResourceLocation_t = unsafe extern "system" fn(
-  program: GLuint,
-  programInterface: GLenum,
-  name: *const GLchar,
-) -> GLint;
-type glGetProgramResourceLocationIndex_t = unsafe extern "system" fn(
-  program: GLuint,
-  programInterface: GLenum,
-  name: *const GLchar,
-) -> GLint;
-type glGetProgramResourceName_t = unsafe extern "system" fn(
-  program: GLuint,
-  programInterface: GLenum,
-  index: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  name: *mut GLchar,
-);
-type glGetProgramResourceiv_t = unsafe extern "system" fn(
-  program: GLuint,
-  programInterface: GLenum,
-  index: GLuint,
-  propCount: GLsizei,
-  props: *const GLenum,
-  count: GLsizei,
-  length: *mut GLsizei,
-  params: *mut GLint,
-);
-type glGetProgramStageiv_t =
-  unsafe extern "system" fn(program: GLuint, shadertype: GLenum, pname: GLenum, values: *mut GLint);
-type glGetProgramiv_t =
-  unsafe extern "system" fn(program: GLuint, pname: GLenum, params: *mut GLint);
-type glGetQueryBufferObjecti64v_t =
-  unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
-type glGetQueryBufferObjectiv_t =
-  unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
-type glGetQueryBufferObjectui64v_t =
-  unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
-type glGetQueryBufferObjectuiv_t =
-  unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
-type glGetQueryIndexediv_t =
-  unsafe extern "system" fn(target: GLenum, index: GLuint, pname: GLenum, params: *mut GLint);
-type glGetQueryObjecti64v_t =
-  unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLint64);
-type glGetQueryObjectiv_t =
-  unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLint);
-type glGetQueryObjectui64v_t =
-  unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLuint64);
-type glGetQueryObjectuiv_t =
-  unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLuint);
-type glGetQueryiv_t = unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
-type glGetRenderbufferParameteriv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
-type glGetSamplerParameterIiv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLint);
-type glGetSamplerParameterIuiv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLuint);
-type glGetSamplerParameterfv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLfloat);
-type glGetSamplerParameteriv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLint);
-type glGetShaderInfoLog_t = unsafe extern "system" fn(
-  shader: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  infoLog: *mut GLchar,
-);
-type glGetShaderPrecisionFormat_t = unsafe extern "system" fn(
-  shadertype: GLenum,
-  precisiontype: GLenum,
-  range: *mut GLint,
-  precision: *mut GLint,
-);
-type glGetShaderSource_t = unsafe extern "system" fn(
-  shader: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  source: *mut GLchar,
-);
-type glGetShaderiv_t = unsafe extern "system" fn(shader: GLuint, pname: GLenum, params: *mut GLint);
-type glGetString_t = unsafe extern "system" fn(name: GLenum) -> *const GLubyte;
-type glGetStringi_t = unsafe extern "system" fn(name: GLenum, index: GLuint) -> *const GLubyte;
-type glGetSubroutineIndex_t =
-  unsafe extern "system" fn(program: GLuint, shadertype: GLenum, name: *const GLchar) -> GLuint;
-type glGetSubroutineUniformLocation_t =
-  unsafe extern "system" fn(program: GLuint, shadertype: GLenum, name: *const GLchar) -> GLint;
-type glGetSynciv_t = unsafe extern "system" fn(
-  sync: GLsync,
-  pname: GLenum,
-  count: GLsizei,
-  length: *mut GLsizei,
-  values: *mut GLint,
-);
-type glGetTexImage_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *mut c_void,
-);
-type glGetTexLevelParameterfv_t =
-  unsafe extern "system" fn(target: GLenum, level: GLint, pname: GLenum, params: *mut GLfloat);
-type glGetTexLevelParameteriv_t =
-  unsafe extern "system" fn(target: GLenum, level: GLint, pname: GLenum, params: *mut GLint);
-type glGetTexParameterIiv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
-type glGetTexParameterIuiv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLuint);
-type glGetTexParameterfv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLfloat);
-type glGetTexParameteriv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
-type glGetTextureImage_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  pixels: *mut c_void,
-);
-type glGetTextureLevelParameterfv_t =
-  unsafe extern "system" fn(texture: GLuint, level: GLint, pname: GLenum, params: *mut GLfloat);
-type glGetTextureLevelParameteriv_t =
-  unsafe extern "system" fn(texture: GLuint, level: GLint, pname: GLenum, params: *mut GLint);
-type glGetTextureParameterIiv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLint);
-type glGetTextureParameterIuiv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLuint);
-type glGetTextureParameterfv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLfloat);
-type glGetTextureParameteriv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLint);
-type glGetTextureSubImage_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  pixels: *mut c_void,
-);
-type glGetTransformFeedbackVarying_t = unsafe extern "system" fn(
-  program: GLuint,
-  index: GLuint,
-  bufSize: GLsizei,
-  length: *mut GLsizei,
-  size: *mut GLsizei,
-  ty: *mut GLenum,
-  name: *mut GLchar,
-);
-type glGetTransformFeedbacki64_v_t =
-  unsafe extern "system" fn(xfb: GLuint, pname: GLenum, index: GLuint, param: *mut GLint64);
-type glGetTransformFeedbacki_v_t =
-  unsafe extern "system" fn(xfb: GLuint, pname: GLenum, index: GLuint, param: *mut GLint);
-type glGetTransformFeedbackiv_t =
-  unsafe extern "system" fn(xfb: GLuint, pname: GLenum, param: *mut GLint);
-type glGetUniformBlockIndex_t =
-  unsafe extern "system" fn(program: GLuint, uniformBlockName: *const GLchar) -> GLuint;
-type glGetUniformIndices_t = unsafe extern "system" fn(
-  program: GLuint,
-  uniformCount: GLsizei,
-  uniformNames: *const *const GLchar,
-  uniformIndices: *mut GLuint,
-);
-type glGetUniformLocation_t =
-  unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
-type glGetUniformSubroutineuiv_t =
-  unsafe extern "system" fn(shadertype: GLenum, location: GLint, params: *mut GLuint);
-type glGetUniformdv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLdouble);
-type glGetUniformfv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLfloat);
-type glGetUniformiv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLint);
-type glGetUniformuiv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLuint);
-type glGetVertexArrayIndexed64iv_t =
-  unsafe extern "system" fn(vaobj: GLuint, index: GLuint, pname: GLenum, param: *mut GLint64);
-type glGetVertexArrayIndexediv_t =
-  unsafe extern "system" fn(vaobj: GLuint, index: GLuint, pname: GLenum, param: *mut GLint);
-type glGetVertexArrayiv_t =
-  unsafe extern "system" fn(vaobj: GLuint, pname: GLenum, param: *mut GLint);
-type glGetVertexAttribIiv_t =
-  unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLint);
-type glGetVertexAttribIuiv_t =
-  unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLuint);
-type glGetVertexAttribLdv_t =
-  unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLdouble);
-type glGetVertexAttribPointerv_t =
-  unsafe extern "system" fn(index: GLuint, pname: GLenum, pointer: *mut *mut c_void);
-type glGetVertexAttribdv_t =
-  unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLdouble);
-type glGetVertexAttribfv_t =
-  unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLfloat);
-type glGetVertexAttribiv_t =
-  unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLint);
-type glGetnColorTable_t = unsafe extern "system" fn(
-  target: GLenum,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  table: *mut c_void,
-);
-type glGetnCompressedTexImage_t =
-  unsafe extern "system" fn(target: GLenum, lod: GLint, bufSize: GLsizei, pixels: *mut c_void);
-type glGetnConvolutionFilter_t = unsafe extern "system" fn(
-  target: GLenum,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  image: *mut c_void,
-);
-type glGetnHistogram_t = unsafe extern "system" fn(
-  target: GLenum,
-  reset: GLboolean,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  values: *mut c_void,
-);
-type glGetnMapdv_t =
-  unsafe extern "system" fn(target: GLenum, query: GLenum, bufSize: GLsizei, v: *mut GLdouble);
-type glGetnMapfv_t =
-  unsafe extern "system" fn(target: GLenum, query: GLenum, bufSize: GLsizei, v: *mut GLfloat);
-type glGetnMapiv_t =
-  unsafe extern "system" fn(target: GLenum, query: GLenum, bufSize: GLsizei, v: *mut GLint);
-type glGetnMinmax_t = unsafe extern "system" fn(
-  target: GLenum,
-  reset: GLboolean,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  values: *mut c_void,
-);
-type glGetnPixelMapfv_t =
-  unsafe extern "system" fn(map: GLenum, bufSize: GLsizei, values: *mut GLfloat);
-type glGetnPixelMapuiv_t =
-  unsafe extern "system" fn(map: GLenum, bufSize: GLsizei, values: *mut GLuint);
-type glGetnPixelMapusv_t =
-  unsafe extern "system" fn(map: GLenum, bufSize: GLsizei, values: *mut GLushort);
-type glGetnPolygonStipple_t = unsafe extern "system" fn(bufSize: GLsizei, pattern: *mut GLubyte);
-type glGetnSeparableFilter_t = unsafe extern "system" fn(
-  target: GLenum,
-  format: GLenum,
-  ty: GLenum,
-  rowBufSize: GLsizei,
-  row: *mut c_void,
-  columnBufSize: GLsizei,
-  column: *mut c_void,
-  span: *mut c_void,
-);
-type glGetnTexImage_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  pixels: *mut c_void,
-);
-type glGetnUniformdv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  bufSize: GLsizei,
-  params: *mut GLdouble,
-);
-type glGetnUniformfv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  bufSize: GLsizei,
-  params: *mut GLfloat,
-);
-type glGetnUniformiv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, bufSize: GLsizei, params: *mut GLint);
-type glGetnUniformuiv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  bufSize: GLsizei,
-  params: *mut GLuint,
-);
-type glHint_t = unsafe extern "system" fn(target: GLenum, mode: GLenum);
-type glInvalidateBufferData_t = unsafe extern "system" fn(buffer: GLuint);
-type glInvalidateBufferSubData_t =
-  unsafe extern "system" fn(buffer: GLuint, offset: GLintptr, length: GLsizeiptr);
-type glInvalidateFramebuffer_t =
-  unsafe extern "system" fn(target: GLenum, numAttachments: GLsizei, attachments: *const GLenum);
-type glInvalidateNamedFramebufferData_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  numAttachments: GLsizei,
-  attachments: *const GLenum,
-);
-type glInvalidateNamedFramebufferSubData_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  numAttachments: GLsizei,
-  attachments: *const GLenum,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glInvalidateSubFramebuffer_t = unsafe extern "system" fn(
-  target: GLenum,
-  numAttachments: GLsizei,
-  attachments: *const GLenum,
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glInvalidateTexImage_t = unsafe extern "system" fn(texture: GLuint, level: GLint);
-type glInvalidateTexSubImage_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-);
-type glIsBuffer_t = unsafe extern "system" fn(buffer: GLuint) -> GLboolean;
-type glIsEnabled_t = unsafe extern "system" fn(cap: GLenum) -> GLboolean;
-type glIsEnabledi_t = unsafe extern "system" fn(target: GLenum, index: GLuint) -> GLboolean;
-type glIsFramebuffer_t = unsafe extern "system" fn(framebuffer: GLuint) -> GLboolean;
-type glIsProgram_t = unsafe extern "system" fn(program: GLuint) -> GLboolean;
-type glIsProgramPipeline_t = unsafe extern "system" fn(pipeline: GLuint) -> GLboolean;
-type glIsQuery_t = unsafe extern "system" fn(id: GLuint) -> GLboolean;
-type glIsRenderbuffer_t = unsafe extern "system" fn(renderbuffer: GLuint) -> GLboolean;
-type glIsSampler_t = unsafe extern "system" fn(sampler: GLuint) -> GLboolean;
-type glIsShader_t = unsafe extern "system" fn(shader: GLuint) -> GLboolean;
-type glIsSync_t = unsafe extern "system" fn(sync: GLsync) -> GLboolean;
-type glIsTexture_t = unsafe extern "system" fn(texture: GLuint) -> GLboolean;
-type glIsTransformFeedback_t = unsafe extern "system" fn(id: GLuint) -> GLboolean;
-type glIsVertexArray_t = unsafe extern "system" fn(array: GLuint) -> GLboolean;
-type glLineWidth_t = unsafe extern "system" fn(width: GLfloat);
-type glLinkProgram_t = unsafe extern "system" fn(program: GLuint);
-type glLogicOp_t = unsafe extern "system" fn(opcode: GLenum);
-type glMapBuffer_t = unsafe extern "system" fn(target: GLenum, access: GLenum) -> *mut c_void;
-type glMapBufferRange_t = unsafe extern "system" fn(
-  target: GLenum,
-  offset: GLintptr,
-  length: GLsizeiptr,
-  access: GLbitfield,
-) -> *mut c_void;
-type glMapNamedBuffer_t = unsafe extern "system" fn(buffer: GLuint, access: GLenum) -> *mut c_void;
-type glMapNamedBufferRange_t = unsafe extern "system" fn(
-  buffer: GLuint,
-  offset: GLintptr,
-  length: GLsizeiptr,
-  access: GLbitfield,
-) -> *mut c_void;
-type glMemoryBarrier_t = unsafe extern "system" fn(barriers: GLbitfield);
-type glMemoryBarrierByRegion_t = unsafe extern "system" fn(barriers: GLbitfield);
-type glMinSampleShading_t = unsafe extern "system" fn(value: GLfloat);
-type glMultiDrawArrays_t = unsafe extern "system" fn(
-  mode: GLenum,
-  first: *const GLint,
-  count: *const GLsizei,
-  drawcount: GLsizei,
-);
-type glMultiDrawArraysIndirect_t = unsafe extern "system" fn(
-  mode: GLenum,
-  indirect: *const c_void,
-  drawcount: GLsizei,
-  stride: GLsizei,
-);
-type glMultiDrawArraysIndirectCount_t = unsafe extern "system" fn(
-  mode: GLenum,
-  indirect: *const c_void,
-  drawcount: GLintptr,
-  maxdrawcount: GLsizei,
-  stride: GLsizei,
-);
-type glMultiDrawElements_t = unsafe extern "system" fn(
-  mode: GLenum,
-  count: *const GLsizei,
-  ty: GLenum,
-  indices: *const *const c_void,
-  drawcount: GLsizei,
-);
-type glMultiDrawElementsBaseVertex_t = unsafe extern "system" fn(
-  mode: GLenum,
-  count: *const GLsizei,
-  ty: GLenum,
-  indices: *const *const c_void,
-  drawcount: GLsizei,
-  basevertex: *const GLint,
-);
-type glMultiDrawElementsIndirect_t = unsafe extern "system" fn(
-  mode: GLenum,
-  ty: GLenum,
-  indirect: *const c_void,
-  drawcount: GLsizei,
-  stride: GLsizei,
-);
-type glMultiDrawElementsIndirectCount_t = unsafe extern "system" fn(
-  mode: GLenum,
-  ty: GLenum,
-  indirect: *const c_void,
-  drawcount: GLintptr,
-  maxdrawcount: GLsizei,
-  stride: GLsizei,
-);
-type glMultiTexCoordP1ui_t = unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
-type glMultiTexCoordP1uiv_t =
-  unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
-type glMultiTexCoordP2ui_t = unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
-type glMultiTexCoordP2uiv_t =
-  unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
-type glMultiTexCoordP3ui_t = unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
-type glMultiTexCoordP3uiv_t =
-  unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
-type glMultiTexCoordP4ui_t = unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
-type glMultiTexCoordP4uiv_t =
-  unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
-type glNamedBufferData_t =
-  unsafe extern "system" fn(buffer: GLuint, size: GLsizeiptr, data: *const c_void, usage: GLenum);
-type glNamedBufferStorage_t = unsafe extern "system" fn(
-  buffer: GLuint,
-  size: GLsizeiptr,
-  data: *const c_void,
-  flags: GLbitfield,
-);
-type glNamedBufferSubData_t = unsafe extern "system" fn(
-  buffer: GLuint,
-  offset: GLintptr,
-  size: GLsizeiptr,
-  data: *const c_void,
-);
-type glNamedFramebufferDrawBuffer_t = unsafe extern "system" fn(framebuffer: GLuint, buf: GLenum);
-type glNamedFramebufferDrawBuffers_t =
-  unsafe extern "system" fn(framebuffer: GLuint, n: GLsizei, bufs: *const GLenum);
-type glNamedFramebufferParameteri_t =
-  unsafe extern "system" fn(framebuffer: GLuint, pname: GLenum, param: GLint);
-type glNamedFramebufferReadBuffer_t = unsafe extern "system" fn(framebuffer: GLuint, src: GLenum);
-type glNamedFramebufferRenderbuffer_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  attachment: GLenum,
-  renderbuffertarget: GLenum,
-  renderbuffer: GLuint,
-);
-type glNamedFramebufferTexture_t =
-  unsafe extern "system" fn(framebuffer: GLuint, attachment: GLenum, texture: GLuint, level: GLint);
-type glNamedFramebufferTextureLayer_t = unsafe extern "system" fn(
-  framebuffer: GLuint,
-  attachment: GLenum,
-  texture: GLuint,
-  level: GLint,
-  layer: GLint,
-);
-type glNamedRenderbufferStorage_t = unsafe extern "system" fn(
-  renderbuffer: GLuint,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glNamedRenderbufferStorageMultisample_t = unsafe extern "system" fn(
-  renderbuffer: GLuint,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glNormalP3ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
-type glNormalP3uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
-type glObjectLabel_t = unsafe extern "system" fn(
-  identifier: GLenum,
-  name: GLuint,
-  length: GLsizei,
-  label: *const GLchar,
-);
-type glObjectPtrLabel_t =
-  unsafe extern "system" fn(ptr: *const c_void, length: GLsizei, label: *const GLchar);
-type glPatchParameterfv_t = unsafe extern "system" fn(pname: GLenum, values: *const GLfloat);
-type glPatchParameteri_t = unsafe extern "system" fn(pname: GLenum, value: GLint);
-type glPauseTransformFeedback_t = unsafe extern "system" fn();
-type glPixelStoref_t = unsafe extern "system" fn(pname: GLenum, param: GLfloat);
-type glPixelStorei_t = unsafe extern "system" fn(pname: GLenum, param: GLint);
-type glPointParameterf_t = unsafe extern "system" fn(pname: GLenum, param: GLfloat);
-type glPointParameterfv_t = unsafe extern "system" fn(pname: GLenum, params: *const GLfloat);
-type glPointParameteri_t = unsafe extern "system" fn(pname: GLenum, param: GLint);
-type glPointParameteriv_t = unsafe extern "system" fn(pname: GLenum, params: *const GLint);
-type glPointSize_t = unsafe extern "system" fn(size: GLfloat);
-type glPolygonMode_t = unsafe extern "system" fn(face: GLenum, mode: GLenum);
-type glPolygonOffset_t = unsafe extern "system" fn(factor: GLfloat, units: GLfloat);
-type glPolygonOffsetClamp_t =
-  unsafe extern "system" fn(factor: GLfloat, units: GLfloat, clamp: GLfloat);
-type glPopDebugGroup_t = unsafe extern "system" fn();
-type glPrimitiveBoundingBox_t = unsafe extern "system" fn(
-  minX: GLfloat,
-  minY: GLfloat,
-  minZ: GLfloat,
-  minW: GLfloat,
-  maxX: GLfloat,
-  maxY: GLfloat,
-  maxZ: GLfloat,
-  maxW: GLfloat,
-);
-type glPrimitiveRestartIndex_t = unsafe extern "system" fn(index: GLuint);
-type glProgramBinary_t = unsafe extern "system" fn(
-  program: GLuint,
-  binaryFormat: GLenum,
-  binary: *const c_void,
-  length: GLsizei,
-);
-type glProgramParameteri_t =
-  unsafe extern "system" fn(program: GLuint, pname: GLenum, value: GLint);
-type glProgramUniform1d_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLdouble);
-type glProgramUniform1dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLdouble,
-);
-type glProgramUniform1f_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLfloat);
-type glProgramUniform1fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLfloat,
-);
-type glProgramUniform1i_t = unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLint);
-type glProgramUniform1iv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLint);
-type glProgramUniform1ui_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLuint);
-type glProgramUniform1uiv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLuint);
-type glProgramUniform2d_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble);
-type glProgramUniform2dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLdouble,
-);
-type glProgramUniform2f_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat);
-type glProgramUniform2fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLfloat,
-);
-type glProgramUniform2i_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLint, v1: GLint);
-type glProgramUniform2iv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLint);
-type glProgramUniform2ui_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLuint, v1: GLuint);
-type glProgramUniform2uiv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLuint);
-type glProgramUniform3d_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  v0: GLdouble,
-  v1: GLdouble,
-  v2: GLdouble,
-);
-type glProgramUniform3dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLdouble,
-);
-type glProgramUniform3f_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  v0: GLfloat,
-  v1: GLfloat,
-  v2: GLfloat,
-);
-type glProgramUniform3fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLfloat,
-);
-type glProgramUniform3i_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLint, v1: GLint, v2: GLint);
-type glProgramUniform3iv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLint);
-type glProgramUniform3ui_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLuint, v1: GLuint, v2: GLuint);
-type glProgramUniform3uiv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLuint);
-type glProgramUniform4d_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  v0: GLdouble,
-  v1: GLdouble,
-  v2: GLdouble,
-  v3: GLdouble,
-);
-type glProgramUniform4dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLdouble,
-);
-type glProgramUniform4f_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  v0: GLfloat,
-  v1: GLfloat,
-  v2: GLfloat,
-  v3: GLfloat,
-);
-type glProgramUniform4fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  value: *const GLfloat,
-);
-type glProgramUniform4i_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  v0: GLint,
-  v1: GLint,
-  v2: GLint,
-  v3: GLint,
-);
-type glProgramUniform4iv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLint);
-type glProgramUniform4ui_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  v0: GLuint,
-  v1: GLuint,
-  v2: GLuint,
-  v3: GLuint,
-);
-type glProgramUniform4uiv_t =
-  unsafe extern "system" fn(program: GLuint, location: GLint, count: GLsizei, value: *const GLuint);
-type glProgramUniformMatrix2dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix2fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix2x3dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix2x3fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix2x4dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix2x4fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix3dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix3fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix3x2dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix3x2fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix3x4dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix3x4fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix4dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix4fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix4x2dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix4x2fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProgramUniformMatrix4x3dv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glProgramUniformMatrix4x3fv_t = unsafe extern "system" fn(
-  program: GLuint,
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glProvokingVertex_t = unsafe extern "system" fn(mode: GLenum);
-type glPushDebugGroup_t =
-  unsafe extern "system" fn(source: GLenum, id: GLuint, length: GLsizei, message: *const GLchar);
-type glQueryCounter_t = unsafe extern "system" fn(id: GLuint, target: GLenum);
-type glReadBuffer_t = unsafe extern "system" fn(src: GLenum);
-type glReadPixels_t = unsafe extern "system" fn(
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *mut c_void,
-);
-type glReadnPixels_t = unsafe extern "system" fn(
-  x: GLint,
-  y: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  bufSize: GLsizei,
-  data: *mut c_void,
-);
-type glReleaseShaderCompiler_t = unsafe extern "system" fn();
-type glRenderbufferStorage_t = unsafe extern "system" fn(
-  target: GLenum,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glRenderbufferStorageMultisample_t = unsafe extern "system" fn(
-  target: GLenum,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glResumeTransformFeedback_t = unsafe extern "system" fn();
-type glSampleCoverage_t = unsafe extern "system" fn(value: GLfloat, invert: GLboolean);
-type glSampleMaski_t = unsafe extern "system" fn(maskNumber: GLuint, mask: GLbitfield);
-type glSamplerParameterIiv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLint);
-type glSamplerParameterIuiv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLuint);
-type glSamplerParameterf_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: GLfloat);
-type glSamplerParameterfv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLfloat);
-type glSamplerParameteri_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: GLint);
-type glSamplerParameteriv_t =
-  unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLint);
-type glScissor_t = unsafe extern "system" fn(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
-type glScissorArrayv_t = unsafe extern "system" fn(first: GLuint, count: GLsizei, v: *const GLint);
-type glScissorIndexed_t = unsafe extern "system" fn(
-  index: GLuint,
-  left: GLint,
-  bottom: GLint,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glScissorIndexedv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
-type glSecondaryColorP3ui_t = unsafe extern "system" fn(ty: GLenum, color: GLuint);
-type glSecondaryColorP3uiv_t = unsafe extern "system" fn(ty: GLenum, color: *const GLuint);
-type glShaderBinary_t = unsafe extern "system" fn(
-  count: GLsizei,
-  shaders: *const GLuint,
-  binaryFormat: GLenum,
-  binary: *const c_void,
-  length: GLsizei,
-);
-type glShaderSource_t = unsafe extern "system" fn(
-  shader: GLuint,
-  count: GLsizei,
-  string: *const *const GLchar,
-  length: *const GLint,
-);
-type glShaderStorageBlockBinding_t = unsafe extern "system" fn(
-  program: GLuint,
-  storageBlockIndex: GLuint,
-  storageBlockBinding: GLuint,
-);
-type glSpecializeShader_t = unsafe extern "system" fn(
-  shader: GLuint,
-  pEntryPoint: *const GLchar,
-  numSpecializationConstants: GLuint,
-  pConstantIndex: *const GLuint,
-  pConstantValue: *const GLuint,
-);
-type glStencilFunc_t = unsafe extern "system" fn(func: GLenum, reference: GLint, mask: GLuint);
-type glStencilFuncSeparate_t =
-  unsafe extern "system" fn(face: GLenum, func: GLenum, reference: GLint, mask: GLuint);
-type glStencilMask_t = unsafe extern "system" fn(mask: GLuint);
-type glStencilMaskSeparate_t = unsafe extern "system" fn(face: GLenum, mask: GLuint);
-type glStencilOp_t = unsafe extern "system" fn(fail: GLenum, zfail: GLenum, zpass: GLenum);
-type glStencilOpSeparate_t =
-  unsafe extern "system" fn(face: GLenum, sfail: GLenum, dpfail: GLenum, dppass: GLenum);
-type glTexBuffer_t =
-  unsafe extern "system" fn(target: GLenum, internalformat: GLenum, buffer: GLuint);
-type glTexBufferRange_t = unsafe extern "system" fn(
-  target: GLenum,
-  internalformat: GLenum,
-  buffer: GLuint,
-  offset: GLintptr,
-  size: GLsizeiptr,
-);
-type glTexCoordP1ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
-type glTexCoordP1uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
-type glTexCoordP2ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
-type glTexCoordP2uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
-type glTexCoordP3ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
-type glTexCoordP3uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
-type glTexCoordP4ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
-type glTexCoordP4uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
-type glTexImage1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLint,
-  width: GLsizei,
-  border: GLint,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTexImage2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  border: GLint,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTexImage2DMultisample_t = unsafe extern "system" fn(
-  target: GLenum,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  fixedsamplelocations: GLboolean,
-);
-type glTexImage3D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  internalformat: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  border: GLint,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTexImage3DMultisample_t = unsafe extern "system" fn(
-  target: GLenum,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  fixedsamplelocations: GLboolean,
-);
-type glTexParameterIiv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLint);
-type glTexParameterIuiv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLuint);
-type glTexParameterf_t = unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLfloat);
-type glTexParameterfv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLfloat);
-type glTexParameteri_t = unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLint);
-type glTexParameteriv_t =
-  unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLint);
-type glTexStorage1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  levels: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-);
-type glTexStorage2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  levels: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glTexStorage2DMultisample_t = unsafe extern "system" fn(
-  target: GLenum,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  fixedsamplelocations: GLboolean,
-);
-type glTexStorage3D_t = unsafe extern "system" fn(
-  target: GLenum,
-  levels: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-);
-type glTexStorage3DMultisample_t = unsafe extern "system" fn(
-  target: GLenum,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  fixedsamplelocations: GLboolean,
-);
-type glTexSubImage1D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  width: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTexSubImage2D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTexSubImage3D_t = unsafe extern "system" fn(
-  target: GLenum,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTextureBarrier_t = unsafe extern "system" fn();
-type glTextureBuffer_t =
-  unsafe extern "system" fn(texture: GLuint, internalformat: GLenum, buffer: GLuint);
-type glTextureBufferRange_t = unsafe extern "system" fn(
-  texture: GLuint,
-  internalformat: GLenum,
-  buffer: GLuint,
-  offset: GLintptr,
-  size: GLsizeiptr,
-);
-type glTextureParameterIiv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *const GLint);
-type glTextureParameterIuiv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *const GLuint);
-type glTextureParameterf_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: GLfloat);
-type glTextureParameterfv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: *const GLfloat);
-type glTextureParameteri_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: GLint);
-type glTextureParameteriv_t =
-  unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: *const GLint);
-type glTextureStorage1D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  levels: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-);
-type glTextureStorage2D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  levels: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-);
-type glTextureStorage2DMultisample_t = unsafe extern "system" fn(
-  texture: GLuint,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  fixedsamplelocations: GLboolean,
-);
-type glTextureStorage3D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  levels: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-);
-type glTextureStorage3DMultisample_t = unsafe extern "system" fn(
-  texture: GLuint,
-  samples: GLsizei,
-  internalformat: GLenum,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  fixedsamplelocations: GLboolean,
-);
-type glTextureSubImage1D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  width: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTextureSubImage2D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTextureSubImage3D_t = unsafe extern "system" fn(
-  texture: GLuint,
-  level: GLint,
-  xoffset: GLint,
-  yoffset: GLint,
-  zoffset: GLint,
-  width: GLsizei,
-  height: GLsizei,
-  depth: GLsizei,
-  format: GLenum,
-  ty: GLenum,
-  pixels: *const c_void,
-);
-type glTextureView_t = unsafe extern "system" fn(
-  texture: GLuint,
-  target: GLenum,
-  origtexture: GLuint,
-  internalformat: GLenum,
-  minlevel: GLuint,
-  numlevels: GLuint,
-  minlayer: GLuint,
-  numlayers: GLuint,
-);
-type glTransformFeedbackBufferBase_t =
-  unsafe extern "system" fn(xfb: GLuint, index: GLuint, buffer: GLuint);
-type glTransformFeedbackBufferRange_t = unsafe extern "system" fn(
-  xfb: GLuint,
-  index: GLuint,
-  buffer: GLuint,
-  offset: GLintptr,
-  size: GLsizeiptr,
-);
-type glTransformFeedbackVaryings_t = unsafe extern "system" fn(
-  program: GLuint,
-  count: GLsizei,
-  varyings: *const *const GLchar,
-  bufferMode: GLenum,
-);
-type glUniform1d_t = unsafe extern "system" fn(location: GLint, x: GLdouble);
-type glUniform1dv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
-type glUniform1f_t = unsafe extern "system" fn(location: GLint, v0: GLfloat);
-type glUniform1fv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
-type glUniform1i_t = unsafe extern "system" fn(location: GLint, v0: GLint);
-type glUniform1iv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
-type glUniform1ui_t = unsafe extern "system" fn(location: GLint, v0: GLuint);
-type glUniform1uiv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
-type glUniform2d_t = unsafe extern "system" fn(location: GLint, x: GLdouble, y: GLdouble);
-type glUniform2dv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
-type glUniform2f_t = unsafe extern "system" fn(location: GLint, v0: GLfloat, v1: GLfloat);
-type glUniform2fv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
-type glUniform2i_t = unsafe extern "system" fn(location: GLint, v0: GLint, v1: GLint);
-type glUniform2iv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
-type glUniform2ui_t = unsafe extern "system" fn(location: GLint, v0: GLuint, v1: GLuint);
-type glUniform2uiv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
-type glUniform3d_t =
-  unsafe extern "system" fn(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble);
-type glUniform3dv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
-type glUniform3f_t =
-  unsafe extern "system" fn(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat);
-type glUniform3fv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
-type glUniform3i_t = unsafe extern "system" fn(location: GLint, v0: GLint, v1: GLint, v2: GLint);
-type glUniform3iv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
-type glUniform3ui_t =
-  unsafe extern "system" fn(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint);
-type glUniform3uiv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
-type glUniform4d_t =
-  unsafe extern "system" fn(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble);
-type glUniform4dv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
-type glUniform4f_t =
-  unsafe extern "system" fn(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat);
-type glUniform4fv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
-type glUniform4i_t =
-  unsafe extern "system" fn(location: GLint, v0: GLint, v1: GLint, v2: GLint, v3: GLint);
-type glUniform4iv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
-type glUniform4ui_t =
-  unsafe extern "system" fn(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint, v3: GLuint);
-type glUniform4uiv_t =
-  unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
-type glUniformBlockBinding_t = unsafe extern "system" fn(
-  program: GLuint,
-  uniformBlockIndex: GLuint,
-  uniformBlockBinding: GLuint,
-);
-type glUniformMatrix2dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix2fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix2x3dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix2x3fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix2x4dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix2x4fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix3dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix3fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix3x2dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix3x2fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix3x4dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix3x4fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix4dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix4fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix4x2dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix4x2fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformMatrix4x3dv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLdouble,
-);
-type glUniformMatrix4x3fv_t = unsafe extern "system" fn(
-  location: GLint,
-  count: GLsizei,
-  transpose: GLboolean,
-  value: *const GLfloat,
-);
-type glUniformSubroutinesuiv_t =
-  unsafe extern "system" fn(shadertype: GLenum, count: GLsizei, indices: *const GLuint);
-type glUnmapBuffer_t = unsafe extern "system" fn(target: GLenum) -> GLboolean;
-type glUnmapNamedBuffer_t = unsafe extern "system" fn(buffer: GLuint) -> GLboolean;
-type glUseProgram_t = unsafe extern "system" fn(program: GLuint);
-type glUseProgramStages_t =
-  unsafe extern "system" fn(pipeline: GLuint, stages: GLbitfield, program: GLuint);
-type glValidateProgram_t = unsafe extern "system" fn(program: GLuint);
-type glValidateProgramPipeline_t = unsafe extern "system" fn(pipeline: GLuint);
-type glVertexArrayAttribBinding_t =
-  unsafe extern "system" fn(vaobj: GLuint, attribindex: GLuint, bindingindex: GLuint);
-type glVertexArrayAttribFormat_t = unsafe extern "system" fn(
-  vaobj: GLuint,
-  attribindex: GLuint,
-  size: GLint,
-  ty: GLenum,
-  normalized: GLboolean,
-  relativeoffset: GLuint,
-);
-type glVertexArrayAttribIFormat_t = unsafe extern "system" fn(
-  vaobj: GLuint,
-  attribindex: GLuint,
-  size: GLint,
-  ty: GLenum,
-  relativeoffset: GLuint,
-);
-type glVertexArrayAttribLFormat_t = unsafe extern "system" fn(
-  vaobj: GLuint,
-  attribindex: GLuint,
-  size: GLint,
-  ty: GLenum,
-  relativeoffset: GLuint,
-);
-type glVertexArrayBindingDivisor_t =
-  unsafe extern "system" fn(vaobj: GLuint, bindingindex: GLuint, divisor: GLuint);
-type glVertexArrayElementBuffer_t = unsafe extern "system" fn(vaobj: GLuint, buffer: GLuint);
-type glVertexArrayVertexBuffer_t = unsafe extern "system" fn(
-  vaobj: GLuint,
-  bindingindex: GLuint,
-  buffer: GLuint,
-  offset: GLintptr,
-  stride: GLsizei,
-);
-type glVertexArrayVertexBuffers_t = unsafe extern "system" fn(
-  vaobj: GLuint,
-  first: GLuint,
-  count: GLsizei,
-  buffers: *const GLuint,
-  offsets: *const GLintptr,
-  strides: *const GLsizei,
-);
-type glVertexAttrib1d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble);
-type glVertexAttrib1dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttrib1f_t = unsafe extern "system" fn(index: GLuint, x: GLfloat);
-type glVertexAttrib1fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
-type glVertexAttrib1s_t = unsafe extern "system" fn(index: GLuint, x: GLshort);
-type glVertexAttrib1sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
-type glVertexAttrib2d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble);
-type glVertexAttrib2dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttrib2f_t = unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat);
-type glVertexAttrib2fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
-type glVertexAttrib2s_t = unsafe extern "system" fn(index: GLuint, x: GLshort, y: GLshort);
-type glVertexAttrib2sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
-type glVertexAttrib3d_t =
-  unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble);
-type glVertexAttrib3dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttrib3f_t =
-  unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat);
-type glVertexAttrib3fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
-type glVertexAttrib3s_t =
-  unsafe extern "system" fn(index: GLuint, x: GLshort, y: GLshort, z: GLshort);
-type glVertexAttrib3sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
-type glVertexAttrib4Nbv_t = unsafe extern "system" fn(index: GLuint, v: *const GLbyte);
-type glVertexAttrib4Niv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
-type glVertexAttrib4Nsv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
-type glVertexAttrib4Nub_t =
-  unsafe extern "system" fn(index: GLuint, x: GLubyte, y: GLubyte, z: GLubyte, w: GLubyte);
-type glVertexAttrib4Nubv_t = unsafe extern "system" fn(index: GLuint, v: *const GLubyte);
-type glVertexAttrib4Nuiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
-type glVertexAttrib4Nusv_t = unsafe extern "system" fn(index: GLuint, v: *const GLushort);
-type glVertexAttrib4bv_t = unsafe extern "system" fn(index: GLuint, v: *const GLbyte);
-type glVertexAttrib4d_t =
-  unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble);
-type glVertexAttrib4dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttrib4f_t =
-  unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat);
-type glVertexAttrib4fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
-type glVertexAttrib4iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
-type glVertexAttrib4s_t =
-  unsafe extern "system" fn(index: GLuint, x: GLshort, y: GLshort, z: GLshort, w: GLshort);
-type glVertexAttrib4sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
-type glVertexAttrib4ubv_t = unsafe extern "system" fn(index: GLuint, v: *const GLubyte);
-type glVertexAttrib4uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
-type glVertexAttrib4usv_t = unsafe extern "system" fn(index: GLuint, v: *const GLushort);
-type glVertexAttribBinding_t = unsafe extern "system" fn(attribindex: GLuint, bindingindex: GLuint);
-type glVertexAttribDivisor_t = unsafe extern "system" fn(index: GLuint, divisor: GLuint);
-type glVertexAttribFormat_t = unsafe extern "system" fn(
-  attribindex: GLuint,
-  size: GLint,
-  ty: GLenum,
-  normalized: GLboolean,
-  relativeoffset: GLuint,
-);
-type glVertexAttribI1i_t = unsafe extern "system" fn(index: GLuint, x: GLint);
-type glVertexAttribI1iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
-type glVertexAttribI1ui_t = unsafe extern "system" fn(index: GLuint, x: GLuint);
-type glVertexAttribI1uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
-type glVertexAttribI2i_t = unsafe extern "system" fn(index: GLuint, x: GLint, y: GLint);
-type glVertexAttribI2iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
-type glVertexAttribI2ui_t = unsafe extern "system" fn(index: GLuint, x: GLuint, y: GLuint);
-type glVertexAttribI2uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
-type glVertexAttribI3i_t = unsafe extern "system" fn(index: GLuint, x: GLint, y: GLint, z: GLint);
-type glVertexAttribI3iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
-type glVertexAttribI3ui_t =
-  unsafe extern "system" fn(index: GLuint, x: GLuint, y: GLuint, z: GLuint);
-type glVertexAttribI3uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
-type glVertexAttribI4bv_t = unsafe extern "system" fn(index: GLuint, v: *const GLbyte);
-type glVertexAttribI4i_t =
-  unsafe extern "system" fn(index: GLuint, x: GLint, y: GLint, z: GLint, w: GLint);
-type glVertexAttribI4iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
-type glVertexAttribI4sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
-type glVertexAttribI4ubv_t = unsafe extern "system" fn(index: GLuint, v: *const GLubyte);
-type glVertexAttribI4ui_t =
-  unsafe extern "system" fn(index: GLuint, x: GLuint, y: GLuint, z: GLuint, w: GLuint);
-type glVertexAttribI4uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
-type glVertexAttribI4usv_t = unsafe extern "system" fn(index: GLuint, v: *const GLushort);
-type glVertexAttribIFormat_t =
-  unsafe extern "system" fn(attribindex: GLuint, size: GLint, ty: GLenum, relativeoffset: GLuint);
-type glVertexAttribIPointer_t = unsafe extern "system" fn(
-  index: GLuint,
-  size: GLint,
-  ty: GLenum,
-  stride: GLsizei,
-  pointer: *const c_void,
-);
-type glVertexAttribL1d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble);
-type glVertexAttribL1dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttribL2d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble);
-type glVertexAttribL2dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttribL3d_t =
-  unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble);
-type glVertexAttribL3dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttribL4d_t =
-  unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble);
-type glVertexAttribL4dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
-type glVertexAttribLFormat_t =
-  unsafe extern "system" fn(attribindex: GLuint, size: GLint, ty: GLenum, relativeoffset: GLuint);
-type glVertexAttribLPointer_t = unsafe extern "system" fn(
-  index: GLuint,
-  size: GLint,
-  ty: GLenum,
-  stride: GLsizei,
-  pointer: *const c_void,
-);
-type glVertexAttribP1ui_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
-type glVertexAttribP1uiv_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: *const GLuint);
-type glVertexAttribP2ui_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
-type glVertexAttribP2uiv_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: *const GLuint);
-type glVertexAttribP3ui_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
-type glVertexAttribP3uiv_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: *const GLuint);
-type glVertexAttribP4ui_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
-type glVertexAttribP4uiv_t =
-  unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: *const GLuint);
-type glVertexAttribPointer_t = unsafe extern "system" fn(
-  index: GLuint,
-  size: GLint,
-  ty: GLenum,
-  normalized: GLboolean,
-  stride: GLsizei,
-  pointer: *const c_void,
-);
-type glVertexBindingDivisor_t = unsafe extern "system" fn(bindingindex: GLuint, divisor: GLuint);
-type glVertexP2ui_t = unsafe extern "system" fn(ty: GLenum, value: GLuint);
-type glVertexP2uiv_t = unsafe extern "system" fn(ty: GLenum, value: *const GLuint);
-type glVertexP3ui_t = unsafe extern "system" fn(ty: GLenum, value: GLuint);
-type glVertexP3uiv_t = unsafe extern "system" fn(ty: GLenum, value: *const GLuint);
-type glVertexP4ui_t = unsafe extern "system" fn(ty: GLenum, value: GLuint);
-type glVertexP4uiv_t = unsafe extern "system" fn(ty: GLenum, value: *const GLuint);
-type glViewport_t = unsafe extern "system" fn(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
-type glViewportArrayv_t =
-  unsafe extern "system" fn(first: GLuint, count: GLsizei, v: *const GLfloat);
-type glViewportIndexedf_t =
-  unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat, w: GLfloat, h: GLfloat);
-type glViewportIndexedfv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
-type glWaitSync_t = unsafe extern "system" fn(sync: GLsync, flags: GLbitfield, timeout: GLuint64);
+use fn_ty_aliases::*;
+mod fn_ty_aliases {
+  use super::*;
+  pub type glActiveShaderProgram_t = unsafe extern "system" fn(pipeline: GLuint, program: GLuint);
+  pub type glActiveTexture_t = unsafe extern "system" fn(texture: GLenum);
+  pub type glAttachShader_t = unsafe extern "system" fn(program: GLuint, shader: GLuint);
+  pub type glBeginConditionalRender_t = unsafe extern "system" fn(id: GLuint, mode: GLenum);
+  pub type glBeginQuery_t = unsafe extern "system" fn(target: GLenum, id: GLuint);
+  pub type glBeginQueryIndexed_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, id: GLuint);
+  pub type glBeginTransformFeedback_t = unsafe extern "system" fn(primitiveMode: GLenum);
+  pub type glBindAttribLocation_t =
+    unsafe extern "system" fn(program: GLuint, index: GLuint, name: *const GLchar);
+  pub type glBindBuffer_t = unsafe extern "system" fn(target: GLenum, buffer: GLuint);
+  pub type glBindBufferBase_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, buffer: GLuint);
+  pub type glBindBufferRange_t = unsafe extern "system" fn(
+    target: GLenum,
+    index: GLuint,
+    buffer: GLuint,
+    offset: GLintptr,
+    size: GLsizeiptr,
+  );
+  pub type glBindBuffersBase_t = unsafe extern "system" fn(
+    target: GLenum,
+    first: GLuint,
+    count: GLsizei,
+    buffers: *const GLuint,
+  );
+  pub type glBindBuffersRange_t = unsafe extern "system" fn(
+    target: GLenum,
+    first: GLuint,
+    count: GLsizei,
+    buffers: *const GLuint,
+    offsets: *const GLintptr,
+    sizes: *const GLsizeiptr,
+  );
+  pub type glBindFragDataLocation_t =
+    unsafe extern "system" fn(program: GLuint, color: GLuint, name: *const GLchar);
+  pub type glBindFragDataLocationIndexed_t = unsafe extern "system" fn(
+    program: GLuint,
+    colorNumber: GLuint,
+    index: GLuint,
+    name: *const GLchar,
+  );
+  pub type glBindFramebuffer_t = unsafe extern "system" fn(target: GLenum, framebuffer: GLuint);
+  pub type glBindImageTexture_t = unsafe extern "system" fn(
+    unit: GLuint,
+    texture: GLuint,
+    level: GLint,
+    layered: GLboolean,
+    layer: GLint,
+    access: GLenum,
+    format: GLenum,
+  );
+  pub type glBindImageTextures_t =
+    unsafe extern "system" fn(first: GLuint, count: GLsizei, textures: *const GLuint);
+  pub type glBindProgramPipeline_t = unsafe extern "system" fn(pipeline: GLuint);
+  pub type glBindRenderbuffer_t = unsafe extern "system" fn(target: GLenum, renderbuffer: GLuint);
+  pub type glBindSampler_t = unsafe extern "system" fn(unit: GLuint, sampler: GLuint);
+  pub type glBindSamplers_t =
+    unsafe extern "system" fn(first: GLuint, count: GLsizei, samplers: *const GLuint);
+  pub type glBindTexture_t = unsafe extern "system" fn(target: GLenum, texture: GLuint);
+  pub type glBindTextureUnit_t = unsafe extern "system" fn(unit: GLuint, texture: GLuint);
+  pub type glBindTextures_t =
+    unsafe extern "system" fn(first: GLuint, count: GLsizei, textures: *const GLuint);
+  pub type glBindTransformFeedback_t = unsafe extern "system" fn(target: GLenum, id: GLuint);
+  pub type glBindVertexArray_t = unsafe extern "system" fn(array: GLuint);
+  pub type glBindVertexBuffer_t = unsafe extern "system" fn(
+    bindingindex: GLuint,
+    buffer: GLuint,
+    offset: GLintptr,
+    stride: GLsizei,
+  );
+  pub type glBindVertexBuffers_t = unsafe extern "system" fn(
+    first: GLuint,
+    count: GLsizei,
+    buffers: *const GLuint,
+    offsets: *const GLintptr,
+    strides: *const GLsizei,
+  );
+  pub type glBlendBarrier_t = unsafe extern "system" fn();
+  pub type glBlendColor_t =
+    unsafe extern "system" fn(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
+  pub type glBlendEquation_t = unsafe extern "system" fn(mode: GLenum);
+  pub type glBlendEquationSeparate_t =
+    unsafe extern "system" fn(modeRGB: GLenum, modeAlpha: GLenum);
+  pub type glBlendEquationSeparatei_t =
+    unsafe extern "system" fn(buf: GLuint, modeRGB: GLenum, modeAlpha: GLenum);
+  pub type glBlendEquationi_t = unsafe extern "system" fn(buf: GLuint, mode: GLenum);
+  pub type glBlendFunc_t = unsafe extern "system" fn(sfactor: GLenum, dfactor: GLenum);
+  pub type glBlendFuncSeparate_t = unsafe extern "system" fn(
+    sfactorRGB: GLenum,
+    dfactorRGB: GLenum,
+    sfactorAlpha: GLenum,
+    dfactorAlpha: GLenum,
+  );
+  pub type glBlendFuncSeparatei_t = unsafe extern "system" fn(
+    buf: GLuint,
+    srcRGB: GLenum,
+    dstRGB: GLenum,
+    srcAlpha: GLenum,
+    dstAlpha: GLenum,
+  );
+  pub type glBlendFunci_t = unsafe extern "system" fn(buf: GLuint, src: GLenum, dst: GLenum);
+  pub type glBlitFramebuffer_t = unsafe extern "system" fn(
+    srcX0: GLint,
+    srcY0: GLint,
+    srcX1: GLint,
+    srcY1: GLint,
+    dstX0: GLint,
+    dstY0: GLint,
+    dstX1: GLint,
+    dstY1: GLint,
+    mask: GLbitfield,
+    filter: GLenum,
+  );
+  pub type glBlitNamedFramebuffer_t = unsafe extern "system" fn(
+    readFramebuffer: GLuint,
+    drawFramebuffer: GLuint,
+    srcX0: GLint,
+    srcY0: GLint,
+    srcX1: GLint,
+    srcY1: GLint,
+    dstX0: GLint,
+    dstY0: GLint,
+    dstX1: GLint,
+    dstY1: GLint,
+    mask: GLbitfield,
+    filter: GLenum,
+  );
+  pub type glBufferData_t =
+    unsafe extern "system" fn(target: GLenum, size: GLsizeiptr, data: *const c_void, usage: GLenum);
+  pub type glBufferStorage_t = unsafe extern "system" fn(
+    target: GLenum,
+    size: GLsizeiptr,
+    data: *const c_void,
+    flags: GLbitfield,
+  );
+  pub type glBufferSubData_t = unsafe extern "system" fn(
+    target: GLenum,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    data: *const c_void,
+  );
+  pub type glCheckFramebufferStatus_t = unsafe extern "system" fn(target: GLenum) -> GLenum;
+  pub type glCheckNamedFramebufferStatus_t =
+    unsafe extern "system" fn(framebuffer: GLuint, target: GLenum) -> GLenum;
+  pub type glClampColor_t = unsafe extern "system" fn(target: GLenum, clamp: GLenum);
+  pub type glClear_t = unsafe extern "system" fn(mask: GLbitfield);
+  pub type glClearBufferData_t = unsafe extern "system" fn(
+    target: GLenum,
+    internalformat: GLenum,
+    format: GLenum,
+    ty: GLenum,
+    data: *const c_void,
+  );
+  pub type glClearBufferSubData_t = unsafe extern "system" fn(
+    target: GLenum,
+    internalformat: GLenum,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    format: GLenum,
+    ty: GLenum,
+    data: *const c_void,
+  );
+  pub type glClearBufferfi_t =
+    unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, depth: GLfloat, stencil: GLint);
+  pub type glClearBufferfv_t =
+    unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, value: *const GLfloat);
+  pub type glClearBufferiv_t =
+    unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, value: *const GLint);
+  pub type glClearBufferuiv_t =
+    unsafe extern "system" fn(buffer: GLenum, drawbuffer: GLint, value: *const GLuint);
+  pub type glClearColor_t =
+    unsafe extern "system" fn(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
+  pub type glClearDepth_t = unsafe extern "system" fn(depth: GLdouble);
+  pub type glClearDepthf_t = unsafe extern "system" fn(d: GLfloat);
+  pub type glClearNamedBufferData_t = unsafe extern "system" fn(
+    buffer: GLuint,
+    internalformat: GLenum,
+    format: GLenum,
+    ty: GLenum,
+    data: *const c_void,
+  );
+  pub type glClearNamedBufferSubData_t = unsafe extern "system" fn(
+    buffer: GLuint,
+    internalformat: GLenum,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    format: GLenum,
+    ty: GLenum,
+    data: *const c_void,
+  );
+  pub type glClearNamedFramebufferfi_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    buffer: GLenum,
+    drawbuffer: GLint,
+    depth: GLfloat,
+    stencil: GLint,
+  );
+  pub type glClearNamedFramebufferfv_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    buffer: GLenum,
+    drawbuffer: GLint,
+    value: *const GLfloat,
+  );
+  pub type glClearNamedFramebufferiv_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    buffer: GLenum,
+    drawbuffer: GLint,
+    value: *const GLint,
+  );
+  pub type glClearNamedFramebufferuiv_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    buffer: GLenum,
+    drawbuffer: GLint,
+    value: *const GLuint,
+  );
+  pub type glClearStencil_t = unsafe extern "system" fn(s: GLint);
+  pub type glClearTexImage_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    format: GLenum,
+    ty: GLenum,
+    data: *const c_void,
+  );
+  pub type glClearTexSubImage_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    data: *const c_void,
+  );
+  pub type glClientWaitSync_t =
+    unsafe extern "system" fn(sync: GLsync, flags: GLbitfield, timeout: GLuint64) -> GLenum;
+  pub type glClipControl_t = unsafe extern "system" fn(origin: GLenum, depth: GLenum);
+  pub type glColorMask_t =
+    unsafe extern "system" fn(red: GLboolean, green: GLboolean, blue: GLboolean, alpha: GLboolean);
+  pub type glColorMaski_t = unsafe extern "system" fn(
+    index: GLuint,
+    r: GLboolean,
+    g: GLboolean,
+    b: GLboolean,
+    a: GLboolean,
+  );
+  pub type glColorP3ui_t = unsafe extern "system" fn(ty: GLenum, color: GLuint);
+  pub type glColorP3uiv_t = unsafe extern "system" fn(ty: GLenum, color: *const GLuint);
+  pub type glColorP4ui_t = unsafe extern "system" fn(ty: GLenum, color: GLuint);
+  pub type glColorP4uiv_t = unsafe extern "system" fn(ty: GLenum, color: *const GLuint);
+  pub type glCompileShader_t = unsafe extern "system" fn(shader: GLuint);
+  pub type glCompressedTexImage1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLenum,
+    width: GLsizei,
+    border: GLint,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTexImage2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTexImage3D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    border: GLint,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTexSubImage1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    width: GLsizei,
+    format: GLenum,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTexSubImage2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: GLenum,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTexSubImage3D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: GLenum,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTextureSubImage1D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    width: GLsizei,
+    format: GLenum,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTextureSubImage2D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: GLenum,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCompressedTextureSubImage3D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: GLenum,
+    imageSize: GLsizei,
+    data: *const c_void,
+  );
+  pub type glCopyBufferSubData_t = unsafe extern "system" fn(
+    readTarget: GLenum,
+    writeTarget: GLenum,
+    readOffset: GLintptr,
+    writeOffset: GLintptr,
+    size: GLsizeiptr,
+  );
+  pub type glCopyImageSubData_t = unsafe extern "system" fn(
+    srcName: GLuint,
+    srcTarget: GLenum,
+    srcLevel: GLint,
+    srcX: GLint,
+    srcY: GLint,
+    srcZ: GLint,
+    dstName: GLuint,
+    dstTarget: GLenum,
+    dstLevel: GLint,
+    dstX: GLint,
+    dstY: GLint,
+    dstZ: GLint,
+    srcWidth: GLsizei,
+    srcHeight: GLsizei,
+    srcDepth: GLsizei,
+  );
+  pub type glCopyNamedBufferSubData_t = unsafe extern "system" fn(
+    readBuffer: GLuint,
+    writeBuffer: GLuint,
+    readOffset: GLintptr,
+    writeOffset: GLintptr,
+    size: GLsizeiptr,
+  );
+  pub type glCopyTexImage1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLenum,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    border: GLint,
+  );
+  pub type glCopyTexImage2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLenum,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+  );
+  pub type glCopyTexSubImage1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+  );
+  pub type glCopyTexSubImage2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glCopyTexSubImage3D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glCopyTextureSubImage1D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+  );
+  pub type glCopyTextureSubImage2D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glCopyTextureSubImage3D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glCreateBuffers_t = unsafe extern "system" fn(n: GLsizei, buffers: *mut GLuint);
+  pub type glCreateFramebuffers_t =
+    unsafe extern "system" fn(n: GLsizei, framebuffers: *mut GLuint);
+  pub type glCreateProgram_t = unsafe extern "system" fn() -> GLuint;
+  pub type glCreateProgramPipelines_t =
+    unsafe extern "system" fn(n: GLsizei, pipelines: *mut GLuint);
+  pub type glCreateQueries_t =
+    unsafe extern "system" fn(target: GLenum, n: GLsizei, ids: *mut GLuint);
+  pub type glCreateRenderbuffers_t =
+    unsafe extern "system" fn(n: GLsizei, renderbuffers: *mut GLuint);
+  pub type glCreateSamplers_t = unsafe extern "system" fn(n: GLsizei, samplers: *mut GLuint);
+  pub type glCreateShader_t = unsafe extern "system" fn(ty: GLenum) -> GLuint;
+  pub type glCreateShaderProgramv_t =
+    unsafe extern "system" fn(ty: GLenum, count: GLsizei, strings: *const *const GLchar) -> GLuint;
+  pub type glCreateTextures_t =
+    unsafe extern "system" fn(target: GLenum, n: GLsizei, textures: *mut GLuint);
+  pub type glCreateTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, ids: *mut GLuint);
+  pub type glCreateVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *mut GLuint);
+  pub type glCullFace_t = unsafe extern "system" fn(mode: GLenum);
+  pub type glDebugMessageCallback_t =
+    unsafe extern "system" fn(callback: GLDEBUGPROC, userParam: *const c_void);
+  pub type glDebugMessageCallbackKHR_t =
+    unsafe extern "system" fn(callback: GLDEBUGPROCKHR, userParam: *const c_void);
+  pub type glDebugMessageControl_t = unsafe extern "system" fn(
+    source: GLenum,
+    ty: GLenum,
+    severity: GLenum,
+    count: GLsizei,
+    ids: *const GLuint,
+    enabled: GLboolean,
+  );
+  pub type glDebugMessageControlKHR_t = unsafe extern "system" fn(
+    source: GLenum,
+    ty: GLenum,
+    severity: GLenum,
+    count: GLsizei,
+    ids: *const GLuint,
+    enabled: GLboolean,
+  );
+  pub type glDebugMessageInsert_t = unsafe extern "system" fn(
+    source: GLenum,
+    ty: GLenum,
+    id: GLuint,
+    severity: GLenum,
+    length: GLsizei,
+    buf: *const GLchar,
+  );
+  pub type glDebugMessageInsertKHR_t = unsafe extern "system" fn(
+    source: GLenum,
+    ty: GLenum,
+    id: GLuint,
+    severity: GLenum,
+    length: GLsizei,
+    buf: *const GLchar,
+  );
+  pub type glDeleteBuffers_t = unsafe extern "system" fn(n: GLsizei, buffers: *const GLuint);
+  pub type glDeleteFramebuffers_t =
+    unsafe extern "system" fn(n: GLsizei, framebuffers: *const GLuint);
+  pub type glDeleteProgram_t = unsafe extern "system" fn(program: GLuint);
+  pub type glDeleteProgramPipelines_t =
+    unsafe extern "system" fn(n: GLsizei, pipelines: *const GLuint);
+  pub type glDeleteQueries_t = unsafe extern "system" fn(n: GLsizei, ids: *const GLuint);
+  pub type glDeleteRenderbuffers_t =
+    unsafe extern "system" fn(n: GLsizei, renderbuffers: *const GLuint);
+  pub type glDeleteSamplers_t = unsafe extern "system" fn(count: GLsizei, samplers: *const GLuint);
+  pub type glDeleteShader_t = unsafe extern "system" fn(shader: GLuint);
+  pub type glDeleteSync_t = unsafe extern "system" fn(sync: GLsync);
+  pub type glDeleteTextures_t = unsafe extern "system" fn(n: GLsizei, textures: *const GLuint);
+  pub type glDeleteTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, ids: *const GLuint);
+  pub type glDeleteVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *const GLuint);
+  pub type glDepthFunc_t = unsafe extern "system" fn(func: GLenum);
+  pub type glDepthMask_t = unsafe extern "system" fn(flag: GLboolean);
+  pub type glDepthRange_t = unsafe extern "system" fn(n: GLdouble, f: GLdouble);
+  pub type glDepthRangeArrayv_t =
+    unsafe extern "system" fn(first: GLuint, count: GLsizei, v: *const GLdouble);
+  pub type glDepthRangeIndexed_t =
+    unsafe extern "system" fn(index: GLuint, n: GLdouble, f: GLdouble);
+  pub type glDepthRangef_t = unsafe extern "system" fn(n: GLfloat, f: GLfloat);
+  pub type glDetachShader_t = unsafe extern "system" fn(program: GLuint, shader: GLuint);
+  pub type glDisable_t = unsafe extern "system" fn(cap: GLenum);
+  pub type glDisableVertexArrayAttrib_t = unsafe extern "system" fn(vaobj: GLuint, index: GLuint);
+  pub type glDisableVertexAttribArray_t = unsafe extern "system" fn(index: GLuint);
+  pub type glDisablei_t = unsafe extern "system" fn(target: GLenum, index: GLuint);
+  pub type glDispatchCompute_t =
+    unsafe extern "system" fn(num_groups_x: GLuint, num_groups_y: GLuint, num_groups_z: GLuint);
+  pub type glDispatchComputeIndirect_t = unsafe extern "system" fn(indirect: GLintptr);
+  pub type glDrawArrays_t = unsafe extern "system" fn(mode: GLenum, first: GLint, count: GLsizei);
+  pub type glDrawArraysIndirect_t =
+    unsafe extern "system" fn(mode: GLenum, indirect: *const c_void);
+  pub type glDrawArraysInstanced_t =
+    unsafe extern "system" fn(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei);
+  pub type glDrawArraysInstancedBaseInstance_t = unsafe extern "system" fn(
+    mode: GLenum,
+    first: GLint,
+    count: GLsizei,
+    instancecount: GLsizei,
+    baseinstance: GLuint,
+  );
+  pub type glDrawBuffer_t = unsafe extern "system" fn(buf: GLenum);
+  pub type glDrawBuffers_t = unsafe extern "system" fn(n: GLsizei, bufs: *const GLenum);
+  pub type glDrawElements_t =
+    unsafe extern "system" fn(mode: GLenum, count: GLsizei, ty: GLenum, indices: *const c_void);
+  pub type glDrawElementsBaseVertex_t = unsafe extern "system" fn(
+    mode: GLenum,
+    count: GLsizei,
+    ty: GLenum,
+    indices: *const c_void,
+    basevertex: GLint,
+  );
+  pub type glDrawElementsIndirect_t =
+    unsafe extern "system" fn(mode: GLenum, ty: GLenum, indirect: *const c_void);
+  pub type glDrawElementsInstanced_t = unsafe extern "system" fn(
+    mode: GLenum,
+    count: GLsizei,
+    ty: GLenum,
+    indices: *const c_void,
+    instancecount: GLsizei,
+  );
+  pub type glDrawElementsInstancedBaseInstance_t = unsafe extern "system" fn(
+    mode: GLenum,
+    count: GLsizei,
+    ty: GLenum,
+    indices: *const c_void,
+    instancecount: GLsizei,
+    baseinstance: GLuint,
+  );
+  pub type glDrawElementsInstancedBaseVertex_t = unsafe extern "system" fn(
+    mode: GLenum,
+    count: GLsizei,
+    ty: GLenum,
+    indices: *const c_void,
+    instancecount: GLsizei,
+    basevertex: GLint,
+  );
+  pub type glDrawElementsInstancedBaseVertexBaseInstance_t = unsafe extern "system" fn(
+    mode: GLenum,
+    count: GLsizei,
+    ty: GLenum,
+    indices: *const c_void,
+    instancecount: GLsizei,
+    basevertex: GLint,
+    baseinstance: GLuint,
+  );
+  pub type glDrawRangeElements_t = unsafe extern "system" fn(
+    mode: GLenum,
+    start: GLuint,
+    end: GLuint,
+    count: GLsizei,
+    ty: GLenum,
+    indices: *const c_void,
+  );
+  pub type glDrawRangeElementsBaseVertex_t = unsafe extern "system" fn(
+    mode: GLenum,
+    start: GLuint,
+    end: GLuint,
+    count: GLsizei,
+    ty: GLenum,
+    indices: *const c_void,
+    basevertex: GLint,
+  );
+  pub type glDrawTransformFeedback_t = unsafe extern "system" fn(mode: GLenum, id: GLuint);
+  pub type glDrawTransformFeedbackInstanced_t =
+    unsafe extern "system" fn(mode: GLenum, id: GLuint, instancecount: GLsizei);
+  pub type glDrawTransformFeedbackStream_t =
+    unsafe extern "system" fn(mode: GLenum, id: GLuint, stream: GLuint);
+  pub type glDrawTransformFeedbackStreamInstanced_t =
+    unsafe extern "system" fn(mode: GLenum, id: GLuint, stream: GLuint, instancecount: GLsizei);
+  pub type glEnable_t = unsafe extern "system" fn(cap: GLenum);
+  pub type glEnableVertexArrayAttrib_t = unsafe extern "system" fn(vaobj: GLuint, index: GLuint);
+  pub type glEnableVertexAttribArray_t = unsafe extern "system" fn(index: GLuint);
+  pub type glEnablei_t = unsafe extern "system" fn(target: GLenum, index: GLuint);
+  pub type glEndConditionalRender_t = unsafe extern "system" fn();
+  pub type glEndQuery_t = unsafe extern "system" fn(target: GLenum);
+  pub type glEndQueryIndexed_t = unsafe extern "system" fn(target: GLenum, index: GLuint);
+  pub type glEndTransformFeedback_t = unsafe extern "system" fn();
+  pub type glFenceSync_t =
+    unsafe extern "system" fn(condition: GLenum, flags: GLbitfield) -> GLsync;
+  pub type glFinish_t = unsafe extern "system" fn();
+  pub type glFlush_t = unsafe extern "system" fn();
+  pub type glFlushMappedBufferRange_t =
+    unsafe extern "system" fn(target: GLenum, offset: GLintptr, length: GLsizeiptr);
+  pub type glFlushMappedNamedBufferRange_t =
+    unsafe extern "system" fn(buffer: GLuint, offset: GLintptr, length: GLsizeiptr);
+  pub type glFramebufferParameteri_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLint);
+  pub type glFramebufferRenderbuffer_t = unsafe extern "system" fn(
+    target: GLenum,
+    attachment: GLenum,
+    renderbuffertarget: GLenum,
+    renderbuffer: GLuint,
+  );
+  pub type glFramebufferTexture_t =
+    unsafe extern "system" fn(target: GLenum, attachment: GLenum, texture: GLuint, level: GLint);
+  pub type glFramebufferTexture1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    attachment: GLenum,
+    textarget: GLenum,
+    texture: GLuint,
+    level: GLint,
+  );
+  pub type glFramebufferTexture2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    attachment: GLenum,
+    textarget: GLenum,
+    texture: GLuint,
+    level: GLint,
+  );
+  pub type glFramebufferTexture3D_t = unsafe extern "system" fn(
+    target: GLenum,
+    attachment: GLenum,
+    textarget: GLenum,
+    texture: GLuint,
+    level: GLint,
+    zoffset: GLint,
+  );
+  pub type glFramebufferTextureLayer_t = unsafe extern "system" fn(
+    target: GLenum,
+    attachment: GLenum,
+    texture: GLuint,
+    level: GLint,
+    layer: GLint,
+  );
+  pub type glFrontFace_t = unsafe extern "system" fn(mode: GLenum);
+  pub type glGenBuffers_t = unsafe extern "system" fn(n: GLsizei, buffers: *mut GLuint);
+  pub type glGenFramebuffers_t = unsafe extern "system" fn(n: GLsizei, framebuffers: *mut GLuint);
+  pub type glGenProgramPipelines_t = unsafe extern "system" fn(n: GLsizei, pipelines: *mut GLuint);
+  pub type glGenQueries_t = unsafe extern "system" fn(n: GLsizei, ids: *mut GLuint);
+  pub type glGenRenderbuffers_t = unsafe extern "system" fn(n: GLsizei, renderbuffers: *mut GLuint);
+  pub type glGenSamplers_t = unsafe extern "system" fn(count: GLsizei, samplers: *mut GLuint);
+  pub type glGenTextures_t = unsafe extern "system" fn(n: GLsizei, textures: *mut GLuint);
+  pub type glGenTransformFeedbacks_t = unsafe extern "system" fn(n: GLsizei, ids: *mut GLuint);
+  pub type glGenVertexArrays_t = unsafe extern "system" fn(n: GLsizei, arrays: *mut GLuint);
+  pub type glGenerateMipmap_t = unsafe extern "system" fn(target: GLenum);
+  pub type glGenerateTextureMipmap_t = unsafe extern "system" fn(texture: GLuint);
+  pub type glGetActiveAtomicCounterBufferiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    bufferIndex: GLuint,
+    pname: GLenum,
+    params: *mut GLint,
+  );
+  pub type glGetActiveAttrib_t = unsafe extern "system" fn(
+    program: GLuint,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    size: *mut GLint,
+    ty: *mut GLenum,
+    name: *mut GLchar,
+  );
+  pub type glGetActiveSubroutineName_t = unsafe extern "system" fn(
+    program: GLuint,
+    shadertype: GLenum,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    name: *mut GLchar,
+  );
+  pub type glGetActiveSubroutineUniformName_t = unsafe extern "system" fn(
+    program: GLuint,
+    shadertype: GLenum,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    name: *mut GLchar,
+  );
+  pub type glGetActiveSubroutineUniformiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    shadertype: GLenum,
+    index: GLuint,
+    pname: GLenum,
+    values: *mut GLint,
+  );
+  pub type glGetActiveUniform_t = unsafe extern "system" fn(
+    program: GLuint,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    size: *mut GLint,
+    ty: *mut GLenum,
+    name: *mut GLchar,
+  );
+  pub type glGetActiveUniformBlockName_t = unsafe extern "system" fn(
+    program: GLuint,
+    uniformBlockIndex: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    uniformBlockName: *mut GLchar,
+  );
+  pub type glGetActiveUniformBlockiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    uniformBlockIndex: GLuint,
+    pname: GLenum,
+    params: *mut GLint,
+  );
+  pub type glGetActiveUniformName_t = unsafe extern "system" fn(
+    program: GLuint,
+    uniformIndex: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    uniformName: *mut GLchar,
+  );
+  pub type glGetActiveUniformsiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    uniformCount: GLsizei,
+    uniformIndices: *const GLuint,
+    pname: GLenum,
+    params: *mut GLint,
+  );
+  pub type glGetAttachedShaders_t = unsafe extern "system" fn(
+    program: GLuint,
+    maxCount: GLsizei,
+    count: *mut GLsizei,
+    shaders: *mut GLuint,
+  );
+  pub type glGetAttribLocation_t =
+    unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
+  pub type glGetBooleani_v_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLboolean);
+  pub type glGetBooleanv_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLboolean);
+  pub type glGetBufferParameteri64v_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint64);
+  pub type glGetBufferParameteriv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
+  pub type glGetBufferPointerv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut *mut c_void);
+  pub type glGetBufferSubData_t = unsafe extern "system" fn(
+    target: GLenum,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    data: *mut c_void,
+  );
+  pub type glGetCompressedTexImage_t =
+    unsafe extern "system" fn(target: GLenum, level: GLint, img: *mut c_void);
+  pub type glGetCompressedTextureImage_t =
+    unsafe extern "system" fn(texture: GLuint, level: GLint, bufSize: GLsizei, pixels: *mut c_void);
+  pub type glGetCompressedTextureSubImage_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    bufSize: GLsizei,
+    pixels: *mut c_void,
+  );
+  pub type glGetDebugMessageLog_t = unsafe extern "system" fn(
+    count: GLuint,
+    bufSize: GLsizei,
+    sources: *mut GLenum,
+    types: *mut GLenum,
+    ids: *mut GLuint,
+    severities: *mut GLenum,
+    lengths: *mut GLsizei,
+    messageLog: *mut GLchar,
+  ) -> GLuint;
+  pub type glGetDebugMessageLogKHR_t = unsafe extern "system" fn(
+    count: GLuint,
+    bufSize: GLsizei,
+    sources: *mut GLenum,
+    types: *mut GLenum,
+    ids: *mut GLuint,
+    severities: *mut GLenum,
+    lengths: *mut GLsizei,
+    messageLog: *mut GLchar,
+  ) -> GLuint;
+  pub type glGetDoublei_v_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLdouble);
+  pub type glGetDoublev_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLdouble);
+  pub type glGetError_t = unsafe extern "system" fn() -> GLenum;
+  pub type glGetFloati_v_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLfloat);
+  pub type glGetFloatv_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLfloat);
+  pub type glGetFragDataIndex_t =
+    unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
+  pub type glGetFragDataLocation_t =
+    unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
+  pub type glGetFramebufferAttachmentParameteriv_t = unsafe extern "system" fn(
+    target: GLenum,
+    attachment: GLenum,
+    pname: GLenum,
+    params: *mut GLint,
+  );
+  pub type glGetFramebufferParameteriv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
+  pub type glGetGraphicsResetStatus_t = unsafe extern "system" fn() -> GLenum;
+  pub type glGetInteger64i_v_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLint64);
+  pub type glGetInteger64v_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLint64);
+  pub type glGetIntegeri_v_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, data: *mut GLint);
+  pub type glGetIntegerv_t = unsafe extern "system" fn(pname: GLenum, data: *mut GLint);
+  pub type glGetInternalformati64v_t = unsafe extern "system" fn(
+    target: GLenum,
+    internalformat: GLenum,
+    pname: GLenum,
+    count: GLsizei,
+    params: *mut GLint64,
+  );
+  pub type glGetInternalformativ_t = unsafe extern "system" fn(
+    target: GLenum,
+    internalformat: GLenum,
+    pname: GLenum,
+    count: GLsizei,
+    params: *mut GLint,
+  );
+  pub type glGetMultisamplefv_t =
+    unsafe extern "system" fn(pname: GLenum, index: GLuint, val: *mut GLfloat);
+  pub type glGetNamedBufferParameteri64v_t =
+    unsafe extern "system" fn(buffer: GLuint, pname: GLenum, params: *mut GLint64);
+  pub type glGetNamedBufferParameteriv_t =
+    unsafe extern "system" fn(buffer: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetNamedBufferPointerv_t =
+    unsafe extern "system" fn(buffer: GLuint, pname: GLenum, params: *mut *mut c_void);
+  pub type glGetNamedBufferSubData_t = unsafe extern "system" fn(
+    buffer: GLuint,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    data: *mut c_void,
+  );
+  pub type glGetNamedFramebufferAttachmentParameteriv_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    attachment: GLenum,
+    pname: GLenum,
+    params: *mut GLint,
+  );
+  pub type glGetNamedFramebufferParameteriv_t =
+    unsafe extern "system" fn(framebuffer: GLuint, pname: GLenum, param: *mut GLint);
+  pub type glGetNamedRenderbufferParameteriv_t =
+    unsafe extern "system" fn(renderbuffer: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetObjectLabel_t = unsafe extern "system" fn(
+    identifier: GLenum,
+    name: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    label: *mut GLchar,
+  );
+  pub type glGetObjectLabelKHR_t = unsafe extern "system" fn(
+    identifier: GLenum,
+    name: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    label: *mut GLchar,
+  );
+  pub type glGetObjectPtrLabel_t = unsafe extern "system" fn(
+    ptr: *const c_void,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    label: *mut GLchar,
+  );
+  pub type glGetObjectPtrLabelKHR_t = unsafe extern "system" fn(
+    ptr: *const c_void,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    label: *mut GLchar,
+  );
+  pub type glGetPointerv_t = unsafe extern "system" fn(pname: GLenum, params: *mut *mut c_void);
+  pub type glGetPointervKHR_t = unsafe extern "system" fn(pname: GLenum, params: *mut *mut c_void);
+  pub type glGetProgramBinary_t = unsafe extern "system" fn(
+    program: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    binaryFormat: *mut GLenum,
+    binary: *mut c_void,
+  );
+  pub type glGetProgramInfoLog_t = unsafe extern "system" fn(
+    program: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    infoLog: *mut GLchar,
+  );
+  pub type glGetProgramInterfaceiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    programInterface: GLenum,
+    pname: GLenum,
+    params: *mut GLint,
+  );
+  pub type glGetProgramPipelineInfoLog_t = unsafe extern "system" fn(
+    pipeline: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    infoLog: *mut GLchar,
+  );
+  pub type glGetProgramPipelineiv_t =
+    unsafe extern "system" fn(pipeline: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetProgramResourceIndex_t = unsafe extern "system" fn(
+    program: GLuint,
+    programInterface: GLenum,
+    name: *const GLchar,
+  ) -> GLuint;
+  pub type glGetProgramResourceLocation_t = unsafe extern "system" fn(
+    program: GLuint,
+    programInterface: GLenum,
+    name: *const GLchar,
+  ) -> GLint;
+  pub type glGetProgramResourceLocationIndex_t = unsafe extern "system" fn(
+    program: GLuint,
+    programInterface: GLenum,
+    name: *const GLchar,
+  ) -> GLint;
+  pub type glGetProgramResourceName_t = unsafe extern "system" fn(
+    program: GLuint,
+    programInterface: GLenum,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    name: *mut GLchar,
+  );
+  pub type glGetProgramResourceiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    programInterface: GLenum,
+    index: GLuint,
+    propCount: GLsizei,
+    props: *const GLenum,
+    count: GLsizei,
+    length: *mut GLsizei,
+    params: *mut GLint,
+  );
+  pub type glGetProgramStageiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    shadertype: GLenum,
+    pname: GLenum,
+    values: *mut GLint,
+  );
+  pub type glGetProgramiv_t =
+    unsafe extern "system" fn(program: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetQueryBufferObjecti64v_t =
+    unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
+  pub type glGetQueryBufferObjectiv_t =
+    unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
+  pub type glGetQueryBufferObjectui64v_t =
+    unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
+  pub type glGetQueryBufferObjectuiv_t =
+    unsafe extern "system" fn(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr);
+  pub type glGetQueryIndexediv_t =
+    unsafe extern "system" fn(target: GLenum, index: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetQueryObjecti64v_t =
+    unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLint64);
+  pub type glGetQueryObjectiv_t =
+    unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetQueryObjectui64v_t =
+    unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLuint64);
+  pub type glGetQueryObjectuiv_t =
+    unsafe extern "system" fn(id: GLuint, pname: GLenum, params: *mut GLuint);
+  pub type glGetQueryiv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
+  pub type glGetRenderbufferParameteriv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
+  pub type glGetSamplerParameterIiv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetSamplerParameterIuiv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLuint);
+  pub type glGetSamplerParameterfv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLfloat);
+  pub type glGetSamplerParameteriv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetShaderInfoLog_t = unsafe extern "system" fn(
+    shader: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    infoLog: *mut GLchar,
+  );
+  pub type glGetShaderPrecisionFormat_t = unsafe extern "system" fn(
+    shadertype: GLenum,
+    precisiontype: GLenum,
+    range: *mut GLint,
+    precision: *mut GLint,
+  );
+  pub type glGetShaderSource_t = unsafe extern "system" fn(
+    shader: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    source: *mut GLchar,
+  );
+  pub type glGetShaderiv_t =
+    unsafe extern "system" fn(shader: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetString_t = unsafe extern "system" fn(name: GLenum) -> *const GLubyte;
+  pub type glGetStringi_t =
+    unsafe extern "system" fn(name: GLenum, index: GLuint) -> *const GLubyte;
+  pub type glGetSubroutineIndex_t =
+    unsafe extern "system" fn(program: GLuint, shadertype: GLenum, name: *const GLchar) -> GLuint;
+  pub type glGetSubroutineUniformLocation_t =
+    unsafe extern "system" fn(program: GLuint, shadertype: GLenum, name: *const GLchar) -> GLint;
+  pub type glGetSynciv_t = unsafe extern "system" fn(
+    sync: GLsync,
+    pname: GLenum,
+    count: GLsizei,
+    length: *mut GLsizei,
+    values: *mut GLint,
+  );
+  pub type glGetTexImage_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *mut c_void,
+  );
+  pub type glGetTexLevelParameterfv_t =
+    unsafe extern "system" fn(target: GLenum, level: GLint, pname: GLenum, params: *mut GLfloat);
+  pub type glGetTexLevelParameteriv_t =
+    unsafe extern "system" fn(target: GLenum, level: GLint, pname: GLenum, params: *mut GLint);
+  pub type glGetTexParameterIiv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
+  pub type glGetTexParameterIuiv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLuint);
+  pub type glGetTexParameterfv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLfloat);
+  pub type glGetTexParameteriv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *mut GLint);
+  pub type glGetTextureImage_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    pixels: *mut c_void,
+  );
+  pub type glGetTextureLevelParameterfv_t =
+    unsafe extern "system" fn(texture: GLuint, level: GLint, pname: GLenum, params: *mut GLfloat);
+  pub type glGetTextureLevelParameteriv_t =
+    unsafe extern "system" fn(texture: GLuint, level: GLint, pname: GLenum, params: *mut GLint);
+  pub type glGetTextureParameterIiv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetTextureParameterIuiv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLuint);
+  pub type glGetTextureParameterfv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLfloat);
+  pub type glGetTextureParameteriv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetTextureSubImage_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    pixels: *mut c_void,
+  );
+  pub type glGetTransformFeedbackVarying_t = unsafe extern "system" fn(
+    program: GLuint,
+    index: GLuint,
+    bufSize: GLsizei,
+    length: *mut GLsizei,
+    size: *mut GLsizei,
+    ty: *mut GLenum,
+    name: *mut GLchar,
+  );
+  pub type glGetTransformFeedbacki64_v_t =
+    unsafe extern "system" fn(xfb: GLuint, pname: GLenum, index: GLuint, param: *mut GLint64);
+  pub type glGetTransformFeedbacki_v_t =
+    unsafe extern "system" fn(xfb: GLuint, pname: GLenum, index: GLuint, param: *mut GLint);
+  pub type glGetTransformFeedbackiv_t =
+    unsafe extern "system" fn(xfb: GLuint, pname: GLenum, param: *mut GLint);
+  pub type glGetUniformBlockIndex_t =
+    unsafe extern "system" fn(program: GLuint, uniformBlockName: *const GLchar) -> GLuint;
+  pub type glGetUniformIndices_t = unsafe extern "system" fn(
+    program: GLuint,
+    uniformCount: GLsizei,
+    uniformNames: *const *const GLchar,
+    uniformIndices: *mut GLuint,
+  );
+  pub type glGetUniformLocation_t =
+    unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
+  pub type glGetUniformSubroutineuiv_t =
+    unsafe extern "system" fn(shadertype: GLenum, location: GLint, params: *mut GLuint);
+  pub type glGetUniformdv_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLdouble);
+  pub type glGetUniformfv_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLfloat);
+  pub type glGetUniformiv_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLint);
+  pub type glGetUniformuiv_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, params: *mut GLuint);
+  pub type glGetVertexArrayIndexed64iv_t =
+    unsafe extern "system" fn(vaobj: GLuint, index: GLuint, pname: GLenum, param: *mut GLint64);
+  pub type glGetVertexArrayIndexediv_t =
+    unsafe extern "system" fn(vaobj: GLuint, index: GLuint, pname: GLenum, param: *mut GLint);
+  pub type glGetVertexArrayiv_t =
+    unsafe extern "system" fn(vaobj: GLuint, pname: GLenum, param: *mut GLint);
+  pub type glGetVertexAttribIiv_t =
+    unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetVertexAttribIuiv_t =
+    unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLuint);
+  pub type glGetVertexAttribLdv_t =
+    unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLdouble);
+  pub type glGetVertexAttribPointerv_t =
+    unsafe extern "system" fn(index: GLuint, pname: GLenum, pointer: *mut *mut c_void);
+  pub type glGetVertexAttribdv_t =
+    unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLdouble);
+  pub type glGetVertexAttribfv_t =
+    unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLfloat);
+  pub type glGetVertexAttribiv_t =
+    unsafe extern "system" fn(index: GLuint, pname: GLenum, params: *mut GLint);
+  pub type glGetnColorTable_t = unsafe extern "system" fn(
+    target: GLenum,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    table: *mut c_void,
+  );
+  pub type glGetnCompressedTexImage_t =
+    unsafe extern "system" fn(target: GLenum, lod: GLint, bufSize: GLsizei, pixels: *mut c_void);
+  pub type glGetnConvolutionFilter_t = unsafe extern "system" fn(
+    target: GLenum,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    image: *mut c_void,
+  );
+  pub type glGetnHistogram_t = unsafe extern "system" fn(
+    target: GLenum,
+    reset: GLboolean,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    values: *mut c_void,
+  );
+  pub type glGetnMapdv_t =
+    unsafe extern "system" fn(target: GLenum, query: GLenum, bufSize: GLsizei, v: *mut GLdouble);
+  pub type glGetnMapfv_t =
+    unsafe extern "system" fn(target: GLenum, query: GLenum, bufSize: GLsizei, v: *mut GLfloat);
+  pub type glGetnMapiv_t =
+    unsafe extern "system" fn(target: GLenum, query: GLenum, bufSize: GLsizei, v: *mut GLint);
+  pub type glGetnMinmax_t = unsafe extern "system" fn(
+    target: GLenum,
+    reset: GLboolean,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    values: *mut c_void,
+  );
+  pub type glGetnPixelMapfv_t =
+    unsafe extern "system" fn(map: GLenum, bufSize: GLsizei, values: *mut GLfloat);
+  pub type glGetnPixelMapuiv_t =
+    unsafe extern "system" fn(map: GLenum, bufSize: GLsizei, values: *mut GLuint);
+  pub type glGetnPixelMapusv_t =
+    unsafe extern "system" fn(map: GLenum, bufSize: GLsizei, values: *mut GLushort);
+  pub type glGetnPolygonStipple_t =
+    unsafe extern "system" fn(bufSize: GLsizei, pattern: *mut GLubyte);
+  pub type glGetnSeparableFilter_t = unsafe extern "system" fn(
+    target: GLenum,
+    format: GLenum,
+    ty: GLenum,
+    rowBufSize: GLsizei,
+    row: *mut c_void,
+    columnBufSize: GLsizei,
+    column: *mut c_void,
+    span: *mut c_void,
+  );
+  pub type glGetnTexImage_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    pixels: *mut c_void,
+  );
+  pub type glGetnUniformdv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    bufSize: GLsizei,
+    params: *mut GLdouble,
+  );
+  pub type glGetnUniformfv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    bufSize: GLsizei,
+    params: *mut GLfloat,
+  );
+  pub type glGetnUniformiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    bufSize: GLsizei,
+    params: *mut GLint,
+  );
+  pub type glGetnUniformuiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    bufSize: GLsizei,
+    params: *mut GLuint,
+  );
+  pub type glHint_t = unsafe extern "system" fn(target: GLenum, mode: GLenum);
+  pub type glInvalidateBufferData_t = unsafe extern "system" fn(buffer: GLuint);
+  pub type glInvalidateBufferSubData_t =
+    unsafe extern "system" fn(buffer: GLuint, offset: GLintptr, length: GLsizeiptr);
+  pub type glInvalidateFramebuffer_t =
+    unsafe extern "system" fn(target: GLenum, numAttachments: GLsizei, attachments: *const GLenum);
+  pub type glInvalidateNamedFramebufferData_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    numAttachments: GLsizei,
+    attachments: *const GLenum,
+  );
+  pub type glInvalidateNamedFramebufferSubData_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    numAttachments: GLsizei,
+    attachments: *const GLenum,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glInvalidateSubFramebuffer_t = unsafe extern "system" fn(
+    target: GLenum,
+    numAttachments: GLsizei,
+    attachments: *const GLenum,
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glInvalidateTexImage_t = unsafe extern "system" fn(texture: GLuint, level: GLint);
+  pub type glInvalidateTexSubImage_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+  );
+  pub type glIsBuffer_t = unsafe extern "system" fn(buffer: GLuint) -> GLboolean;
+  pub type glIsEnabled_t = unsafe extern "system" fn(cap: GLenum) -> GLboolean;
+  pub type glIsEnabledi_t = unsafe extern "system" fn(target: GLenum, index: GLuint) -> GLboolean;
+  pub type glIsFramebuffer_t = unsafe extern "system" fn(framebuffer: GLuint) -> GLboolean;
+  pub type glIsProgram_t = unsafe extern "system" fn(program: GLuint) -> GLboolean;
+  pub type glIsProgramPipeline_t = unsafe extern "system" fn(pipeline: GLuint) -> GLboolean;
+  pub type glIsQuery_t = unsafe extern "system" fn(id: GLuint) -> GLboolean;
+  pub type glIsRenderbuffer_t = unsafe extern "system" fn(renderbuffer: GLuint) -> GLboolean;
+  pub type glIsSampler_t = unsafe extern "system" fn(sampler: GLuint) -> GLboolean;
+  pub type glIsShader_t = unsafe extern "system" fn(shader: GLuint) -> GLboolean;
+  pub type glIsSync_t = unsafe extern "system" fn(sync: GLsync) -> GLboolean;
+  pub type glIsTexture_t = unsafe extern "system" fn(texture: GLuint) -> GLboolean;
+  pub type glIsTransformFeedback_t = unsafe extern "system" fn(id: GLuint) -> GLboolean;
+  pub type glIsVertexArray_t = unsafe extern "system" fn(array: GLuint) -> GLboolean;
+  pub type glLineWidth_t = unsafe extern "system" fn(width: GLfloat);
+  pub type glLinkProgram_t = unsafe extern "system" fn(program: GLuint);
+  pub type glLogicOp_t = unsafe extern "system" fn(opcode: GLenum);
+  pub type glMapBuffer_t = unsafe extern "system" fn(target: GLenum, access: GLenum) -> *mut c_void;
+  pub type glMapBufferRange_t = unsafe extern "system" fn(
+    target: GLenum,
+    offset: GLintptr,
+    length: GLsizeiptr,
+    access: GLbitfield,
+  ) -> *mut c_void;
+  pub type glMapNamedBuffer_t =
+    unsafe extern "system" fn(buffer: GLuint, access: GLenum) -> *mut c_void;
+  pub type glMapNamedBufferRange_t = unsafe extern "system" fn(
+    buffer: GLuint,
+    offset: GLintptr,
+    length: GLsizeiptr,
+    access: GLbitfield,
+  ) -> *mut c_void;
+  pub type glMemoryBarrier_t = unsafe extern "system" fn(barriers: GLbitfield);
+  pub type glMemoryBarrierByRegion_t = unsafe extern "system" fn(barriers: GLbitfield);
+  pub type glMinSampleShading_t = unsafe extern "system" fn(value: GLfloat);
+  pub type glMultiDrawArrays_t = unsafe extern "system" fn(
+    mode: GLenum,
+    first: *const GLint,
+    count: *const GLsizei,
+    drawcount: GLsizei,
+  );
+  pub type glMultiDrawArraysIndirect_t = unsafe extern "system" fn(
+    mode: GLenum,
+    indirect: *const c_void,
+    drawcount: GLsizei,
+    stride: GLsizei,
+  );
+  pub type glMultiDrawArraysIndirectCount_t = unsafe extern "system" fn(
+    mode: GLenum,
+    indirect: *const c_void,
+    drawcount: GLintptr,
+    maxdrawcount: GLsizei,
+    stride: GLsizei,
+  );
+  pub type glMultiDrawElements_t = unsafe extern "system" fn(
+    mode: GLenum,
+    count: *const GLsizei,
+    ty: GLenum,
+    indices: *const *const c_void,
+    drawcount: GLsizei,
+  );
+  pub type glMultiDrawElementsBaseVertex_t = unsafe extern "system" fn(
+    mode: GLenum,
+    count: *const GLsizei,
+    ty: GLenum,
+    indices: *const *const c_void,
+    drawcount: GLsizei,
+    basevertex: *const GLint,
+  );
+  pub type glMultiDrawElementsIndirect_t = unsafe extern "system" fn(
+    mode: GLenum,
+    ty: GLenum,
+    indirect: *const c_void,
+    drawcount: GLsizei,
+    stride: GLsizei,
+  );
+  pub type glMultiDrawElementsIndirectCount_t = unsafe extern "system" fn(
+    mode: GLenum,
+    ty: GLenum,
+    indirect: *const c_void,
+    drawcount: GLintptr,
+    maxdrawcount: GLsizei,
+    stride: GLsizei,
+  );
+  pub type glMultiTexCoordP1ui_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
+  pub type glMultiTexCoordP1uiv_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
+  pub type glMultiTexCoordP2ui_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
+  pub type glMultiTexCoordP2uiv_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
+  pub type glMultiTexCoordP3ui_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
+  pub type glMultiTexCoordP3uiv_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
+  pub type glMultiTexCoordP4ui_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: GLuint);
+  pub type glMultiTexCoordP4uiv_t =
+    unsafe extern "system" fn(texture: GLenum, ty: GLenum, coords: *const GLuint);
+  pub type glNamedBufferData_t =
+    unsafe extern "system" fn(buffer: GLuint, size: GLsizeiptr, data: *const c_void, usage: GLenum);
+  pub type glNamedBufferStorage_t = unsafe extern "system" fn(
+    buffer: GLuint,
+    size: GLsizeiptr,
+    data: *const c_void,
+    flags: GLbitfield,
+  );
+  pub type glNamedBufferSubData_t = unsafe extern "system" fn(
+    buffer: GLuint,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    data: *const c_void,
+  );
+  pub type glNamedFramebufferDrawBuffer_t =
+    unsafe extern "system" fn(framebuffer: GLuint, buf: GLenum);
+  pub type glNamedFramebufferDrawBuffers_t =
+    unsafe extern "system" fn(framebuffer: GLuint, n: GLsizei, bufs: *const GLenum);
+  pub type glNamedFramebufferParameteri_t =
+    unsafe extern "system" fn(framebuffer: GLuint, pname: GLenum, param: GLint);
+  pub type glNamedFramebufferReadBuffer_t =
+    unsafe extern "system" fn(framebuffer: GLuint, src: GLenum);
+  pub type glNamedFramebufferRenderbuffer_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    attachment: GLenum,
+    renderbuffertarget: GLenum,
+    renderbuffer: GLuint,
+  );
+  pub type glNamedFramebufferTexture_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    attachment: GLenum,
+    texture: GLuint,
+    level: GLint,
+  );
+  pub type glNamedFramebufferTextureLayer_t = unsafe extern "system" fn(
+    framebuffer: GLuint,
+    attachment: GLenum,
+    texture: GLuint,
+    level: GLint,
+    layer: GLint,
+  );
+  pub type glNamedRenderbufferStorage_t = unsafe extern "system" fn(
+    renderbuffer: GLuint,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glNamedRenderbufferStorageMultisample_t = unsafe extern "system" fn(
+    renderbuffer: GLuint,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glNormalP3ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
+  pub type glNormalP3uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
+  pub type glObjectLabel_t = unsafe extern "system" fn(
+    identifier: GLenum,
+    name: GLuint,
+    length: GLsizei,
+    label: *const GLchar,
+  );
+  pub type glObjectLabelKHR_t = unsafe extern "system" fn(
+    identifier: GLenum,
+    name: GLuint,
+    length: GLsizei,
+    label: *const GLchar,
+  );
+  pub type glObjectPtrLabel_t =
+    unsafe extern "system" fn(ptr: *const c_void, length: GLsizei, label: *const GLchar);
+  pub type glObjectPtrLabelKHR_t =
+    unsafe extern "system" fn(ptr: *const c_void, length: GLsizei, label: *const GLchar);
+  pub type glPatchParameterfv_t = unsafe extern "system" fn(pname: GLenum, values: *const GLfloat);
+  pub type glPatchParameteri_t = unsafe extern "system" fn(pname: GLenum, value: GLint);
+  pub type glPauseTransformFeedback_t = unsafe extern "system" fn();
+  pub type glPixelStoref_t = unsafe extern "system" fn(pname: GLenum, param: GLfloat);
+  pub type glPixelStorei_t = unsafe extern "system" fn(pname: GLenum, param: GLint);
+  pub type glPointParameterf_t = unsafe extern "system" fn(pname: GLenum, param: GLfloat);
+  pub type glPointParameterfv_t = unsafe extern "system" fn(pname: GLenum, params: *const GLfloat);
+  pub type glPointParameteri_t = unsafe extern "system" fn(pname: GLenum, param: GLint);
+  pub type glPointParameteriv_t = unsafe extern "system" fn(pname: GLenum, params: *const GLint);
+  pub type glPointSize_t = unsafe extern "system" fn(size: GLfloat);
+  pub type glPolygonMode_t = unsafe extern "system" fn(face: GLenum, mode: GLenum);
+  pub type glPolygonOffset_t = unsafe extern "system" fn(factor: GLfloat, units: GLfloat);
+  pub type glPolygonOffsetClamp_t =
+    unsafe extern "system" fn(factor: GLfloat, units: GLfloat, clamp: GLfloat);
+  pub type glPopDebugGroup_t = unsafe extern "system" fn();
+  pub type glPopDebugGroupKHR_t = unsafe extern "system" fn();
+  pub type glPrimitiveBoundingBox_t = unsafe extern "system" fn(
+    minX: GLfloat,
+    minY: GLfloat,
+    minZ: GLfloat,
+    minW: GLfloat,
+    maxX: GLfloat,
+    maxY: GLfloat,
+    maxZ: GLfloat,
+    maxW: GLfloat,
+  );
+  pub type glPrimitiveRestartIndex_t = unsafe extern "system" fn(index: GLuint);
+  pub type glProgramBinary_t = unsafe extern "system" fn(
+    program: GLuint,
+    binaryFormat: GLenum,
+    binary: *const c_void,
+    length: GLsizei,
+  );
+  pub type glProgramParameteri_t =
+    unsafe extern "system" fn(program: GLuint, pname: GLenum, value: GLint);
+  pub type glProgramUniform1d_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLdouble);
+  pub type glProgramUniform1dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniform1f_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLfloat);
+  pub type glProgramUniform1fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniform1i_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLint);
+  pub type glProgramUniform1iv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  );
+  pub type glProgramUniform1ui_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLuint);
+  pub type glProgramUniform1uiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  );
+  pub type glProgramUniform2d_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble);
+  pub type glProgramUniform2dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniform2f_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat);
+  pub type glProgramUniform2fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniform2i_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLint, v1: GLint);
+  pub type glProgramUniform2iv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  );
+  pub type glProgramUniform2ui_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLuint, v1: GLuint);
+  pub type glProgramUniform2uiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  );
+  pub type glProgramUniform3d_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    v0: GLdouble,
+    v1: GLdouble,
+    v2: GLdouble,
+  );
+  pub type glProgramUniform3dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniform3f_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    v0: GLfloat,
+    v1: GLfloat,
+    v2: GLfloat,
+  );
+  pub type glProgramUniform3fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniform3i_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLint, v1: GLint, v2: GLint);
+  pub type glProgramUniform3iv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  );
+  pub type glProgramUniform3ui_t =
+    unsafe extern "system" fn(program: GLuint, location: GLint, v0: GLuint, v1: GLuint, v2: GLuint);
+  pub type glProgramUniform3uiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  );
+  pub type glProgramUniform4d_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    v0: GLdouble,
+    v1: GLdouble,
+    v2: GLdouble,
+    v3: GLdouble,
+  );
+  pub type glProgramUniform4dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniform4f_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    v0: GLfloat,
+    v1: GLfloat,
+    v2: GLfloat,
+    v3: GLfloat,
+  );
+  pub type glProgramUniform4fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniform4i_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    v0: GLint,
+    v1: GLint,
+    v2: GLint,
+    v3: GLint,
+  );
+  pub type glProgramUniform4iv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLint,
+  );
+  pub type glProgramUniform4ui_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    v0: GLuint,
+    v1: GLuint,
+    v2: GLuint,
+    v3: GLuint,
+  );
+  pub type glProgramUniform4uiv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    value: *const GLuint,
+  );
+  pub type glProgramUniformMatrix2dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix2fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix2x3dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix2x3fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix2x4dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix2x4fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix3dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix3fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix3x2dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix3x2fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix3x4dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix3x4fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix4dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix4fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix4x2dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix4x2fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProgramUniformMatrix4x3dv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glProgramUniformMatrix4x3fv_t = unsafe extern "system" fn(
+    program: GLuint,
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glProvokingVertex_t = unsafe extern "system" fn(mode: GLenum);
+  pub type glPushDebugGroup_t =
+    unsafe extern "system" fn(source: GLenum, id: GLuint, length: GLsizei, message: *const GLchar);
+  pub type glPushDebugGroupKHR_t =
+    unsafe extern "system" fn(source: GLenum, id: GLuint, length: GLsizei, message: *const GLchar);
+  pub type glQueryCounter_t = unsafe extern "system" fn(id: GLuint, target: GLenum);
+  pub type glReadBuffer_t = unsafe extern "system" fn(src: GLenum);
+  pub type glReadPixels_t = unsafe extern "system" fn(
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *mut c_void,
+  );
+  pub type glReadnPixels_t = unsafe extern "system" fn(
+    x: GLint,
+    y: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    bufSize: GLsizei,
+    data: *mut c_void,
+  );
+  pub type glReleaseShaderCompiler_t = unsafe extern "system" fn();
+  pub type glRenderbufferStorage_t = unsafe extern "system" fn(
+    target: GLenum,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glRenderbufferStorageMultisample_t = unsafe extern "system" fn(
+    target: GLenum,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glResumeTransformFeedback_t = unsafe extern "system" fn();
+  pub type glSampleCoverage_t = unsafe extern "system" fn(value: GLfloat, invert: GLboolean);
+  pub type glSampleMaski_t = unsafe extern "system" fn(maskNumber: GLuint, mask: GLbitfield);
+  pub type glSamplerParameterIiv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLint);
+  pub type glSamplerParameterIuiv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLuint);
+  pub type glSamplerParameterf_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: GLfloat);
+  pub type glSamplerParameterfv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLfloat);
+  pub type glSamplerParameteri_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: GLint);
+  pub type glSamplerParameteriv_t =
+    unsafe extern "system" fn(sampler: GLuint, pname: GLenum, param: *const GLint);
+  pub type glScissor_t =
+    unsafe extern "system" fn(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
+  pub type glScissorArrayv_t =
+    unsafe extern "system" fn(first: GLuint, count: GLsizei, v: *const GLint);
+  pub type glScissorIndexed_t = unsafe extern "system" fn(
+    index: GLuint,
+    left: GLint,
+    bottom: GLint,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glScissorIndexedv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
+  pub type glSecondaryColorP3ui_t = unsafe extern "system" fn(ty: GLenum, color: GLuint);
+  pub type glSecondaryColorP3uiv_t = unsafe extern "system" fn(ty: GLenum, color: *const GLuint);
+  pub type glShaderBinary_t = unsafe extern "system" fn(
+    count: GLsizei,
+    shaders: *const GLuint,
+    binaryFormat: GLenum,
+    binary: *const c_void,
+    length: GLsizei,
+  );
+  pub type glShaderSource_t = unsafe extern "system" fn(
+    shader: GLuint,
+    count: GLsizei,
+    string: *const *const GLchar,
+    length: *const GLint,
+  );
+  pub type glShaderStorageBlockBinding_t = unsafe extern "system" fn(
+    program: GLuint,
+    storageBlockIndex: GLuint,
+    storageBlockBinding: GLuint,
+  );
+  pub type glSpecializeShader_t = unsafe extern "system" fn(
+    shader: GLuint,
+    pEntryPoint: *const GLchar,
+    numSpecializationConstants: GLuint,
+    pConstantIndex: *const GLuint,
+    pConstantValue: *const GLuint,
+  );
+  pub type glStencilFunc_t =
+    unsafe extern "system" fn(func: GLenum, reference: GLint, mask: GLuint);
+  pub type glStencilFuncSeparate_t =
+    unsafe extern "system" fn(face: GLenum, func: GLenum, reference: GLint, mask: GLuint);
+  pub type glStencilMask_t = unsafe extern "system" fn(mask: GLuint);
+  pub type glStencilMaskSeparate_t = unsafe extern "system" fn(face: GLenum, mask: GLuint);
+  pub type glStencilOp_t = unsafe extern "system" fn(fail: GLenum, zfail: GLenum, zpass: GLenum);
+  pub type glStencilOpSeparate_t =
+    unsafe extern "system" fn(face: GLenum, sfail: GLenum, dpfail: GLenum, dppass: GLenum);
+  pub type glTexBuffer_t =
+    unsafe extern "system" fn(target: GLenum, internalformat: GLenum, buffer: GLuint);
+  pub type glTexBufferRange_t = unsafe extern "system" fn(
+    target: GLenum,
+    internalformat: GLenum,
+    buffer: GLuint,
+    offset: GLintptr,
+    size: GLsizeiptr,
+  );
+  pub type glTexCoordP1ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
+  pub type glTexCoordP1uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
+  pub type glTexCoordP2ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
+  pub type glTexCoordP2uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
+  pub type glTexCoordP3ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
+  pub type glTexCoordP3uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
+  pub type glTexCoordP4ui_t = unsafe extern "system" fn(ty: GLenum, coords: GLuint);
+  pub type glTexCoordP4uiv_t = unsafe extern "system" fn(ty: GLenum, coords: *const GLuint);
+  pub type glTexImage1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLint,
+    width: GLsizei,
+    border: GLint,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTexImage2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTexImage2DMultisample_t = unsafe extern "system" fn(
+    target: GLenum,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    fixedsamplelocations: GLboolean,
+  );
+  pub type glTexImage3D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internalformat: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    border: GLint,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTexImage3DMultisample_t = unsafe extern "system" fn(
+    target: GLenum,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    fixedsamplelocations: GLboolean,
+  );
+  pub type glTexParameterIiv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLint);
+  pub type glTexParameterIuiv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLuint);
+  pub type glTexParameterf_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLfloat);
+  pub type glTexParameterfv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLfloat);
+  pub type glTexParameteri_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLint);
+  pub type glTexParameteriv_t =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, params: *const GLint);
+  pub type glTexStorage1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    levels: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+  );
+  pub type glTexStorage2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    levels: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glTexStorage2DMultisample_t = unsafe extern "system" fn(
+    target: GLenum,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    fixedsamplelocations: GLboolean,
+  );
+  pub type glTexStorage3D_t = unsafe extern "system" fn(
+    target: GLenum,
+    levels: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+  );
+  pub type glTexStorage3DMultisample_t = unsafe extern "system" fn(
+    target: GLenum,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    fixedsamplelocations: GLboolean,
+  );
+  pub type glTexSubImage1D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    width: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTexSubImage2D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTexSubImage3D_t = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTextureBarrier_t = unsafe extern "system" fn();
+  pub type glTextureBuffer_t =
+    unsafe extern "system" fn(texture: GLuint, internalformat: GLenum, buffer: GLuint);
+  pub type glTextureBufferRange_t = unsafe extern "system" fn(
+    texture: GLuint,
+    internalformat: GLenum,
+    buffer: GLuint,
+    offset: GLintptr,
+    size: GLsizeiptr,
+  );
+  pub type glTextureParameterIiv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *const GLint);
+  pub type glTextureParameterIuiv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, params: *const GLuint);
+  pub type glTextureParameterf_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: GLfloat);
+  pub type glTextureParameterfv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: *const GLfloat);
+  pub type glTextureParameteri_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: GLint);
+  pub type glTextureParameteriv_t =
+    unsafe extern "system" fn(texture: GLuint, pname: GLenum, param: *const GLint);
+  pub type glTextureStorage1D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    levels: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+  );
+  pub type glTextureStorage2D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    levels: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+  );
+  pub type glTextureStorage2DMultisample_t = unsafe extern "system" fn(
+    texture: GLuint,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    fixedsamplelocations: GLboolean,
+  );
+  pub type glTextureStorage3D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    levels: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+  );
+  pub type glTextureStorage3DMultisample_t = unsafe extern "system" fn(
+    texture: GLuint,
+    samples: GLsizei,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    fixedsamplelocations: GLboolean,
+  );
+  pub type glTextureSubImage1D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    width: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTextureSubImage2D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTextureSubImage3D_t = unsafe extern "system" fn(
+    texture: GLuint,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    zoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    depth: GLsizei,
+    format: GLenum,
+    ty: GLenum,
+    pixels: *const c_void,
+  );
+  pub type glTextureView_t = unsafe extern "system" fn(
+    texture: GLuint,
+    target: GLenum,
+    origtexture: GLuint,
+    internalformat: GLenum,
+    minlevel: GLuint,
+    numlevels: GLuint,
+    minlayer: GLuint,
+    numlayers: GLuint,
+  );
+  pub type glTransformFeedbackBufferBase_t =
+    unsafe extern "system" fn(xfb: GLuint, index: GLuint, buffer: GLuint);
+  pub type glTransformFeedbackBufferRange_t = unsafe extern "system" fn(
+    xfb: GLuint,
+    index: GLuint,
+    buffer: GLuint,
+    offset: GLintptr,
+    size: GLsizeiptr,
+  );
+  pub type glTransformFeedbackVaryings_t = unsafe extern "system" fn(
+    program: GLuint,
+    count: GLsizei,
+    varyings: *const *const GLchar,
+    bufferMode: GLenum,
+  );
+  pub type glUniform1d_t = unsafe extern "system" fn(location: GLint, x: GLdouble);
+  pub type glUniform1dv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
+  pub type glUniform1f_t = unsafe extern "system" fn(location: GLint, v0: GLfloat);
+  pub type glUniform1fv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
+  pub type glUniform1i_t = unsafe extern "system" fn(location: GLint, v0: GLint);
+  pub type glUniform1iv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
+  pub type glUniform1ui_t = unsafe extern "system" fn(location: GLint, v0: GLuint);
+  pub type glUniform1uiv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
+  pub type glUniform2d_t = unsafe extern "system" fn(location: GLint, x: GLdouble, y: GLdouble);
+  pub type glUniform2dv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
+  pub type glUniform2f_t = unsafe extern "system" fn(location: GLint, v0: GLfloat, v1: GLfloat);
+  pub type glUniform2fv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
+  pub type glUniform2i_t = unsafe extern "system" fn(location: GLint, v0: GLint, v1: GLint);
+  pub type glUniform2iv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
+  pub type glUniform2ui_t = unsafe extern "system" fn(location: GLint, v0: GLuint, v1: GLuint);
+  pub type glUniform2uiv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
+  pub type glUniform3d_t =
+    unsafe extern "system" fn(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble);
+  pub type glUniform3dv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
+  pub type glUniform3f_t =
+    unsafe extern "system" fn(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat);
+  pub type glUniform3fv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
+  pub type glUniform3i_t =
+    unsafe extern "system" fn(location: GLint, v0: GLint, v1: GLint, v2: GLint);
+  pub type glUniform3iv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
+  pub type glUniform3ui_t =
+    unsafe extern "system" fn(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint);
+  pub type glUniform3uiv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
+  pub type glUniform4d_t =
+    unsafe extern "system" fn(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble);
+  pub type glUniform4dv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLdouble);
+  pub type glUniform4f_t =
+    unsafe extern "system" fn(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat);
+  pub type glUniform4fv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLfloat);
+  pub type glUniform4i_t =
+    unsafe extern "system" fn(location: GLint, v0: GLint, v1: GLint, v2: GLint, v3: GLint);
+  pub type glUniform4iv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLint);
+  pub type glUniform4ui_t =
+    unsafe extern "system" fn(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint, v3: GLuint);
+  pub type glUniform4uiv_t =
+    unsafe extern "system" fn(location: GLint, count: GLsizei, value: *const GLuint);
+  pub type glUniformBlockBinding_t = unsafe extern "system" fn(
+    program: GLuint,
+    uniformBlockIndex: GLuint,
+    uniformBlockBinding: GLuint,
+  );
+  pub type glUniformMatrix2dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix2fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix2x3dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix2x3fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix2x4dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix2x4fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix3dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix3fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix3x2dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix3x2fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix3x4dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix3x4fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix4dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix4fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix4x2dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix4x2fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformMatrix4x3dv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLdouble,
+  );
+  pub type glUniformMatrix4x3fv_t = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+  );
+  pub type glUniformSubroutinesuiv_t =
+    unsafe extern "system" fn(shadertype: GLenum, count: GLsizei, indices: *const GLuint);
+  pub type glUnmapBuffer_t = unsafe extern "system" fn(target: GLenum) -> GLboolean;
+  pub type glUnmapNamedBuffer_t = unsafe extern "system" fn(buffer: GLuint) -> GLboolean;
+  pub type glUseProgram_t = unsafe extern "system" fn(program: GLuint);
+  pub type glUseProgramStages_t =
+    unsafe extern "system" fn(pipeline: GLuint, stages: GLbitfield, program: GLuint);
+  pub type glValidateProgram_t = unsafe extern "system" fn(program: GLuint);
+  pub type glValidateProgramPipeline_t = unsafe extern "system" fn(pipeline: GLuint);
+  pub type glVertexArrayAttribBinding_t =
+    unsafe extern "system" fn(vaobj: GLuint, attribindex: GLuint, bindingindex: GLuint);
+  pub type glVertexArrayAttribFormat_t = unsafe extern "system" fn(
+    vaobj: GLuint,
+    attribindex: GLuint,
+    size: GLint,
+    ty: GLenum,
+    normalized: GLboolean,
+    relativeoffset: GLuint,
+  );
+  pub type glVertexArrayAttribIFormat_t = unsafe extern "system" fn(
+    vaobj: GLuint,
+    attribindex: GLuint,
+    size: GLint,
+    ty: GLenum,
+    relativeoffset: GLuint,
+  );
+  pub type glVertexArrayAttribLFormat_t = unsafe extern "system" fn(
+    vaobj: GLuint,
+    attribindex: GLuint,
+    size: GLint,
+    ty: GLenum,
+    relativeoffset: GLuint,
+  );
+  pub type glVertexArrayBindingDivisor_t =
+    unsafe extern "system" fn(vaobj: GLuint, bindingindex: GLuint, divisor: GLuint);
+  pub type glVertexArrayElementBuffer_t = unsafe extern "system" fn(vaobj: GLuint, buffer: GLuint);
+  pub type glVertexArrayVertexBuffer_t = unsafe extern "system" fn(
+    vaobj: GLuint,
+    bindingindex: GLuint,
+    buffer: GLuint,
+    offset: GLintptr,
+    stride: GLsizei,
+  );
+  pub type glVertexArrayVertexBuffers_t = unsafe extern "system" fn(
+    vaobj: GLuint,
+    first: GLuint,
+    count: GLsizei,
+    buffers: *const GLuint,
+    offsets: *const GLintptr,
+    strides: *const GLsizei,
+  );
+  pub type glVertexAttrib1d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble);
+  pub type glVertexAttrib1dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttrib1f_t = unsafe extern "system" fn(index: GLuint, x: GLfloat);
+  pub type glVertexAttrib1fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
+  pub type glVertexAttrib1s_t = unsafe extern "system" fn(index: GLuint, x: GLshort);
+  pub type glVertexAttrib1sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
+  pub type glVertexAttrib2d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble);
+  pub type glVertexAttrib2dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttrib2f_t = unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat);
+  pub type glVertexAttrib2fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
+  pub type glVertexAttrib2s_t = unsafe extern "system" fn(index: GLuint, x: GLshort, y: GLshort);
+  pub type glVertexAttrib2sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
+  pub type glVertexAttrib3d_t =
+    unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble);
+  pub type glVertexAttrib3dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttrib3f_t =
+    unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat);
+  pub type glVertexAttrib3fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
+  pub type glVertexAttrib3s_t =
+    unsafe extern "system" fn(index: GLuint, x: GLshort, y: GLshort, z: GLshort);
+  pub type glVertexAttrib3sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
+  pub type glVertexAttrib4Nbv_t = unsafe extern "system" fn(index: GLuint, v: *const GLbyte);
+  pub type glVertexAttrib4Niv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
+  pub type glVertexAttrib4Nsv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
+  pub type glVertexAttrib4Nub_t =
+    unsafe extern "system" fn(index: GLuint, x: GLubyte, y: GLubyte, z: GLubyte, w: GLubyte);
+  pub type glVertexAttrib4Nubv_t = unsafe extern "system" fn(index: GLuint, v: *const GLubyte);
+  pub type glVertexAttrib4Nuiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
+  pub type glVertexAttrib4Nusv_t = unsafe extern "system" fn(index: GLuint, v: *const GLushort);
+  pub type glVertexAttrib4bv_t = unsafe extern "system" fn(index: GLuint, v: *const GLbyte);
+  pub type glVertexAttrib4d_t =
+    unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble);
+  pub type glVertexAttrib4dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttrib4f_t =
+    unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat);
+  pub type glVertexAttrib4fv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
+  pub type glVertexAttrib4iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
+  pub type glVertexAttrib4s_t =
+    unsafe extern "system" fn(index: GLuint, x: GLshort, y: GLshort, z: GLshort, w: GLshort);
+  pub type glVertexAttrib4sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
+  pub type glVertexAttrib4ubv_t = unsafe extern "system" fn(index: GLuint, v: *const GLubyte);
+  pub type glVertexAttrib4uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
+  pub type glVertexAttrib4usv_t = unsafe extern "system" fn(index: GLuint, v: *const GLushort);
+  pub type glVertexAttribBinding_t =
+    unsafe extern "system" fn(attribindex: GLuint, bindingindex: GLuint);
+  pub type glVertexAttribDivisor_t = unsafe extern "system" fn(index: GLuint, divisor: GLuint);
+  pub type glVertexAttribFormat_t = unsafe extern "system" fn(
+    attribindex: GLuint,
+    size: GLint,
+    ty: GLenum,
+    normalized: GLboolean,
+    relativeoffset: GLuint,
+  );
+  pub type glVertexAttribI1i_t = unsafe extern "system" fn(index: GLuint, x: GLint);
+  pub type glVertexAttribI1iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
+  pub type glVertexAttribI1ui_t = unsafe extern "system" fn(index: GLuint, x: GLuint);
+  pub type glVertexAttribI1uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
+  pub type glVertexAttribI2i_t = unsafe extern "system" fn(index: GLuint, x: GLint, y: GLint);
+  pub type glVertexAttribI2iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
+  pub type glVertexAttribI2ui_t = unsafe extern "system" fn(index: GLuint, x: GLuint, y: GLuint);
+  pub type glVertexAttribI2uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
+  pub type glVertexAttribI3i_t =
+    unsafe extern "system" fn(index: GLuint, x: GLint, y: GLint, z: GLint);
+  pub type glVertexAttribI3iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
+  pub type glVertexAttribI3ui_t =
+    unsafe extern "system" fn(index: GLuint, x: GLuint, y: GLuint, z: GLuint);
+  pub type glVertexAttribI3uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
+  pub type glVertexAttribI4bv_t = unsafe extern "system" fn(index: GLuint, v: *const GLbyte);
+  pub type glVertexAttribI4i_t =
+    unsafe extern "system" fn(index: GLuint, x: GLint, y: GLint, z: GLint, w: GLint);
+  pub type glVertexAttribI4iv_t = unsafe extern "system" fn(index: GLuint, v: *const GLint);
+  pub type glVertexAttribI4sv_t = unsafe extern "system" fn(index: GLuint, v: *const GLshort);
+  pub type glVertexAttribI4ubv_t = unsafe extern "system" fn(index: GLuint, v: *const GLubyte);
+  pub type glVertexAttribI4ui_t =
+    unsafe extern "system" fn(index: GLuint, x: GLuint, y: GLuint, z: GLuint, w: GLuint);
+  pub type glVertexAttribI4uiv_t = unsafe extern "system" fn(index: GLuint, v: *const GLuint);
+  pub type glVertexAttribI4usv_t = unsafe extern "system" fn(index: GLuint, v: *const GLushort);
+  pub type glVertexAttribIFormat_t =
+    unsafe extern "system" fn(attribindex: GLuint, size: GLint, ty: GLenum, relativeoffset: GLuint);
+  pub type glVertexAttribIPointer_t = unsafe extern "system" fn(
+    index: GLuint,
+    size: GLint,
+    ty: GLenum,
+    stride: GLsizei,
+    pointer: *const c_void,
+  );
+  pub type glVertexAttribL1d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble);
+  pub type glVertexAttribL1dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttribL2d_t = unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble);
+  pub type glVertexAttribL2dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttribL3d_t =
+    unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble);
+  pub type glVertexAttribL3dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttribL4d_t =
+    unsafe extern "system" fn(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble);
+  pub type glVertexAttribL4dv_t = unsafe extern "system" fn(index: GLuint, v: *const GLdouble);
+  pub type glVertexAttribLFormat_t =
+    unsafe extern "system" fn(attribindex: GLuint, size: GLint, ty: GLenum, relativeoffset: GLuint);
+  pub type glVertexAttribLPointer_t = unsafe extern "system" fn(
+    index: GLuint,
+    size: GLint,
+    ty: GLenum,
+    stride: GLsizei,
+    pointer: *const c_void,
+  );
+  pub type glVertexAttribP1ui_t =
+    unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
+  pub type glVertexAttribP1uiv_t = unsafe extern "system" fn(
+    index: GLuint,
+    ty: GLenum,
+    normalized: GLboolean,
+    value: *const GLuint,
+  );
+  pub type glVertexAttribP2ui_t =
+    unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
+  pub type glVertexAttribP2uiv_t = unsafe extern "system" fn(
+    index: GLuint,
+    ty: GLenum,
+    normalized: GLboolean,
+    value: *const GLuint,
+  );
+  pub type glVertexAttribP3ui_t =
+    unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
+  pub type glVertexAttribP3uiv_t = unsafe extern "system" fn(
+    index: GLuint,
+    ty: GLenum,
+    normalized: GLboolean,
+    value: *const GLuint,
+  );
+  pub type glVertexAttribP4ui_t =
+    unsafe extern "system" fn(index: GLuint, ty: GLenum, normalized: GLboolean, value: GLuint);
+  pub type glVertexAttribP4uiv_t = unsafe extern "system" fn(
+    index: GLuint,
+    ty: GLenum,
+    normalized: GLboolean,
+    value: *const GLuint,
+  );
+  pub type glVertexAttribPointer_t = unsafe extern "system" fn(
+    index: GLuint,
+    size: GLint,
+    ty: GLenum,
+    normalized: GLboolean,
+    stride: GLsizei,
+    pointer: *const c_void,
+  );
+  pub type glVertexBindingDivisor_t =
+    unsafe extern "system" fn(bindingindex: GLuint, divisor: GLuint);
+  pub type glVertexP2ui_t = unsafe extern "system" fn(ty: GLenum, value: GLuint);
+  pub type glVertexP2uiv_t = unsafe extern "system" fn(ty: GLenum, value: *const GLuint);
+  pub type glVertexP3ui_t = unsafe extern "system" fn(ty: GLenum, value: GLuint);
+  pub type glVertexP3uiv_t = unsafe extern "system" fn(ty: GLenum, value: *const GLuint);
+  pub type glVertexP4ui_t = unsafe extern "system" fn(ty: GLenum, value: GLuint);
+  pub type glVertexP4uiv_t = unsafe extern "system" fn(ty: GLenum, value: *const GLuint);
+  pub type glViewport_t =
+    unsafe extern "system" fn(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
+  pub type glViewportArrayv_t =
+    unsafe extern "system" fn(first: GLuint, count: GLsizei, v: *const GLfloat);
+  pub type glViewportIndexedf_t =
+    unsafe extern "system" fn(index: GLuint, x: GLfloat, y: GLfloat, w: GLfloat, h: GLfloat);
+  pub type glViewportIndexedfv_t = unsafe extern "system" fn(index: GLuint, v: *const GLfloat);
+  pub type glWaitSync_t =
+    unsafe extern "system" fn(sync: GLsync, flags: GLbitfield, timeout: GLuint64);
+}
 impl GlFns {
   pub fn has_loaded(&self) -> FnLoadedChecker<'_> {
     FnLoadedChecker(self)
   }
 }
+
+macro_rules! mk_load_checker_method {
+  ($full_name:ident, $short_name:ident) => {
+    #[inline]
+    #[must_use]
+    pub fn $short_name(&self) -> bool {
+      {
+        self.0.$full_name.is_some()
+      }
+    }
+  };
+}
+
 pub struct FnLoadedChecker<'g>(&'g GlFns);
 impl FnLoadedChecker<'_> {
-  #[inline]
-  #[must_use]
-  pub fn ActiveShaderProgram(&self) -> bool {
-    self.0.glActiveShaderProgram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ActiveTexture(&self) -> bool {
-    self.0.glActiveTexture.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn AttachShader(&self) -> bool {
-    self.0.glAttachShader.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BeginConditionalRender(&self) -> bool {
-    self.0.glBeginConditionalRender.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BeginQuery(&self) -> bool {
-    self.0.glBeginQuery.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BeginQueryIndexed(&self) -> bool {
-    self.0.glBeginQueryIndexed.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BeginTransformFeedback(&self) -> bool {
-    self.0.glBeginTransformFeedback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindAttribLocation(&self) -> bool {
-    self.0.glBindAttribLocation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindBuffer(&self) -> bool {
-    self.0.glBindBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindBufferBase(&self) -> bool {
-    self.0.glBindBufferBase.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindBufferRange(&self) -> bool {
-    self.0.glBindBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindBuffersBase(&self) -> bool {
-    self.0.glBindBuffersBase.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindBuffersRange(&self) -> bool {
-    self.0.glBindBuffersRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindFragDataLocation(&self) -> bool {
-    self.0.glBindFragDataLocation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindFragDataLocationIndexed(&self) -> bool {
-    self.0.glBindFragDataLocationIndexed.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindFramebuffer(&self) -> bool {
-    self.0.glBindFramebuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindImageTexture(&self) -> bool {
-    self.0.glBindImageTexture.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindImageTextures(&self) -> bool {
-    self.0.glBindImageTextures.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindProgramPipeline(&self) -> bool {
-    self.0.glBindProgramPipeline.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindRenderbuffer(&self) -> bool {
-    self.0.glBindRenderbuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindSampler(&self) -> bool {
-    self.0.glBindSampler.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindSamplers(&self) -> bool {
-    self.0.glBindSamplers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindTexture(&self) -> bool {
-    self.0.glBindTexture.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindTextureUnit(&self) -> bool {
-    self.0.glBindTextureUnit.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindTextures(&self) -> bool {
-    self.0.glBindTextures.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindTransformFeedback(&self) -> bool {
-    self.0.glBindTransformFeedback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindVertexArray(&self) -> bool {
-    self.0.glBindVertexArray.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindVertexBuffer(&self) -> bool {
-    self.0.glBindVertexBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BindVertexBuffers(&self) -> bool {
-    self.0.glBindVertexBuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendBarrier(&self) -> bool {
-    self.0.glBlendBarrier.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendColor(&self) -> bool {
-    self.0.glBlendColor.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendEquation(&self) -> bool {
-    self.0.glBlendEquation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendEquationSeparate(&self) -> bool {
-    self.0.glBlendEquationSeparate.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendEquationSeparatei(&self) -> bool {
-    self.0.glBlendEquationSeparatei.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendEquationi(&self) -> bool {
-    self.0.glBlendEquationi.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendFunc(&self) -> bool {
-    self.0.glBlendFunc.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendFuncSeparate(&self) -> bool {
-    self.0.glBlendFuncSeparate.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendFuncSeparatei(&self) -> bool {
-    self.0.glBlendFuncSeparatei.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlendFunci(&self) -> bool {
-    self.0.glBlendFunci.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlitFramebuffer(&self) -> bool {
-    self.0.glBlitFramebuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BlitNamedFramebuffer(&self) -> bool {
-    self.0.glBlitNamedFramebuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BufferData(&self) -> bool {
-    self.0.glBufferData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BufferStorage(&self) -> bool {
-    self.0.glBufferStorage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn BufferSubData(&self) -> bool {
-    self.0.glBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CheckFramebufferStatus(&self) -> bool {
-    self.0.glCheckFramebufferStatus.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CheckNamedFramebufferStatus(&self) -> bool {
-    self.0.glCheckNamedFramebufferStatus.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClampColor(&self) -> bool {
-    self.0.glClampColor.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Clear(&self) -> bool {
-    self.0.glClear.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearBufferData(&self) -> bool {
-    self.0.glClearBufferData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearBufferSubData(&self) -> bool {
-    self.0.glClearBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearBufferfi(&self) -> bool {
-    self.0.glClearBufferfi.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearBufferfv(&self) -> bool {
-    self.0.glClearBufferfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearBufferiv(&self) -> bool {
-    self.0.glClearBufferiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearBufferuiv(&self) -> bool {
-    self.0.glClearBufferuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearColor(&self) -> bool {
-    self.0.glClearColor.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearDepth(&self) -> bool {
-    self.0.glClearDepth.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearDepthf(&self) -> bool {
-    self.0.glClearDepthf.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearNamedBufferData(&self) -> bool {
-    self.0.glClearNamedBufferData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearNamedBufferSubData(&self) -> bool {
-    self.0.glClearNamedBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearNamedFramebufferfi(&self) -> bool {
-    self.0.glClearNamedFramebufferfi.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearNamedFramebufferfv(&self) -> bool {
-    self.0.glClearNamedFramebufferfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearNamedFramebufferiv(&self) -> bool {
-    self.0.glClearNamedFramebufferiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearNamedFramebufferuiv(&self) -> bool {
-    self.0.glClearNamedFramebufferuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearStencil(&self) -> bool {
-    self.0.glClearStencil.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearTexImage(&self) -> bool {
-    self.0.glClearTexImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClearTexSubImage(&self) -> bool {
-    self.0.glClearTexSubImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClientWaitSync(&self) -> bool {
-    self.0.glClientWaitSync.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ClipControl(&self) -> bool {
-    self.0.glClipControl.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ColorMask(&self) -> bool {
-    self.0.glColorMask.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ColorMaski(&self) -> bool {
-    self.0.glColorMaski.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ColorP3ui(&self) -> bool {
-    self.0.glColorP3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ColorP3uiv(&self) -> bool {
-    self.0.glColorP3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ColorP4ui(&self) -> bool {
-    self.0.glColorP4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ColorP4uiv(&self) -> bool {
-    self.0.glColorP4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompileShader(&self) -> bool {
-    self.0.glCompileShader.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTexImage1D(&self) -> bool {
-    self.0.glCompressedTexImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTexImage2D(&self) -> bool {
-    self.0.glCompressedTexImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTexImage3D(&self) -> bool {
-    self.0.glCompressedTexImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTexSubImage1D(&self) -> bool {
-    self.0.glCompressedTexSubImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTexSubImage2D(&self) -> bool {
-    self.0.glCompressedTexSubImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTexSubImage3D(&self) -> bool {
-    self.0.glCompressedTexSubImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTextureSubImage1D(&self) -> bool {
-    self.0.glCompressedTextureSubImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTextureSubImage2D(&self) -> bool {
-    self.0.glCompressedTextureSubImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CompressedTextureSubImage3D(&self) -> bool {
-    self.0.glCompressedTextureSubImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyBufferSubData(&self) -> bool {
-    self.0.glCopyBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyImageSubData(&self) -> bool {
-    self.0.glCopyImageSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyNamedBufferSubData(&self) -> bool {
-    self.0.glCopyNamedBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTexImage1D(&self) -> bool {
-    self.0.glCopyTexImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTexImage2D(&self) -> bool {
-    self.0.glCopyTexImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTexSubImage1D(&self) -> bool {
-    self.0.glCopyTexSubImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTexSubImage2D(&self) -> bool {
-    self.0.glCopyTexSubImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTexSubImage3D(&self) -> bool {
-    self.0.glCopyTexSubImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTextureSubImage1D(&self) -> bool {
-    self.0.glCopyTextureSubImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTextureSubImage2D(&self) -> bool {
-    self.0.glCopyTextureSubImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CopyTextureSubImage3D(&self) -> bool {
-    self.0.glCopyTextureSubImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateBuffers(&self) -> bool {
-    self.0.glCreateBuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateFramebuffers(&self) -> bool {
-    self.0.glCreateFramebuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateProgram(&self) -> bool {
-    self.0.glCreateProgram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateProgramPipelines(&self) -> bool {
-    self.0.glCreateProgramPipelines.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateQueries(&self) -> bool {
-    self.0.glCreateQueries.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateRenderbuffers(&self) -> bool {
-    self.0.glCreateRenderbuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateSamplers(&self) -> bool {
-    self.0.glCreateSamplers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateShader(&self) -> bool {
-    self.0.glCreateShader.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateShaderProgramv(&self) -> bool {
-    self.0.glCreateShaderProgramv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateTextures(&self) -> bool {
-    self.0.glCreateTextures.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateTransformFeedbacks(&self) -> bool {
-    self.0.glCreateTransformFeedbacks.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CreateVertexArrays(&self) -> bool {
-    self.0.glCreateVertexArrays.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn CullFace(&self) -> bool {
-    self.0.glCullFace.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DebugMessageCallback(&self) -> bool {
-    self.0.glDebugMessageCallback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DebugMessageControl(&self) -> bool {
-    self.0.glDebugMessageControl.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DebugMessageInsert(&self) -> bool {
-    self.0.glDebugMessageInsert.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteBuffers(&self) -> bool {
-    self.0.glDeleteBuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteFramebuffers(&self) -> bool {
-    self.0.glDeleteFramebuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteProgram(&self) -> bool {
-    self.0.glDeleteProgram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteProgramPipelines(&self) -> bool {
-    self.0.glDeleteProgramPipelines.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteQueries(&self) -> bool {
-    self.0.glDeleteQueries.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteRenderbuffers(&self) -> bool {
-    self.0.glDeleteRenderbuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteSamplers(&self) -> bool {
-    self.0.glDeleteSamplers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteShader(&self) -> bool {
-    self.0.glDeleteShader.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteSync(&self) -> bool {
-    self.0.glDeleteSync.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteTextures(&self) -> bool {
-    self.0.glDeleteTextures.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteTransformFeedbacks(&self) -> bool {
-    self.0.glDeleteTransformFeedbacks.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DeleteVertexArrays(&self) -> bool {
-    self.0.glDeleteVertexArrays.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DepthFunc(&self) -> bool {
-    self.0.glDepthFunc.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DepthMask(&self) -> bool {
-    self.0.glDepthMask.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DepthRange(&self) -> bool {
-    self.0.glDepthRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DepthRangeArrayv(&self) -> bool {
-    self.0.glDepthRangeArrayv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DepthRangeIndexed(&self) -> bool {
-    self.0.glDepthRangeIndexed.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DepthRangef(&self) -> bool {
-    self.0.glDepthRangef.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DetachShader(&self) -> bool {
-    self.0.glDetachShader.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Disable(&self) -> bool {
-    self.0.glDisable.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DisableVertexArrayAttrib(&self) -> bool {
-    self.0.glDisableVertexArrayAttrib.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DisableVertexAttribArray(&self) -> bool {
-    self.0.glDisableVertexAttribArray.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Disablei(&self) -> bool {
-    self.0.glDisablei.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DispatchCompute(&self) -> bool {
-    self.0.glDispatchCompute.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DispatchComputeIndirect(&self) -> bool {
-    self.0.glDispatchComputeIndirect.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawArrays(&self) -> bool {
-    self.0.glDrawArrays.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawArraysIndirect(&self) -> bool {
-    self.0.glDrawArraysIndirect.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawArraysInstanced(&self) -> bool {
-    self.0.glDrawArraysInstanced.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawArraysInstancedBaseInstance(&self) -> bool {
-    self.0.glDrawArraysInstancedBaseInstance.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawBuffer(&self) -> bool {
-    self.0.glDrawBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawBuffers(&self) -> bool {
-    self.0.glDrawBuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawElements(&self) -> bool {
-    self.0.glDrawElements.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawElementsBaseVertex(&self) -> bool {
-    self.0.glDrawElementsBaseVertex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawElementsIndirect(&self) -> bool {
-    self.0.glDrawElementsIndirect.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawElementsInstanced(&self) -> bool {
-    self.0.glDrawElementsInstanced.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawElementsInstancedBaseInstance(&self) -> bool {
-    self.0.glDrawElementsInstancedBaseInstance.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawElementsInstancedBaseVertex(&self) -> bool {
-    self.0.glDrawElementsInstancedBaseVertex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawElementsInstancedBaseVertexBaseInstance(&self) -> bool {
-    self.0.glDrawElementsInstancedBaseVertexBaseInstance.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawRangeElements(&self) -> bool {
-    self.0.glDrawRangeElements.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawRangeElementsBaseVertex(&self) -> bool {
-    self.0.glDrawRangeElementsBaseVertex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawTransformFeedback(&self) -> bool {
-    self.0.glDrawTransformFeedback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawTransformFeedbackInstanced(&self) -> bool {
-    self.0.glDrawTransformFeedbackInstanced.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawTransformFeedbackStream(&self) -> bool {
-    self.0.glDrawTransformFeedbackStream.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn DrawTransformFeedbackStreamInstanced(&self) -> bool {
-    self.0.glDrawTransformFeedbackStreamInstanced.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Enable(&self) -> bool {
-    self.0.glEnable.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn EnableVertexArrayAttrib(&self) -> bool {
-    self.0.glEnableVertexArrayAttrib.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn EnableVertexAttribArray(&self) -> bool {
-    self.0.glEnableVertexAttribArray.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Enablei(&self) -> bool {
-    self.0.glEnablei.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn EndConditionalRender(&self) -> bool {
-    self.0.glEndConditionalRender.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn EndQuery(&self) -> bool {
-    self.0.glEndQuery.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn EndQueryIndexed(&self) -> bool {
-    self.0.glEndQueryIndexed.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn EndTransformFeedback(&self) -> bool {
-    self.0.glEndTransformFeedback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FenceSync(&self) -> bool {
-    self.0.glFenceSync.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Finish(&self) -> bool {
-    self.0.glFinish.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Flush(&self) -> bool {
-    self.0.glFlush.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FlushMappedBufferRange(&self) -> bool {
-    self.0.glFlushMappedBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FlushMappedNamedBufferRange(&self) -> bool {
-    self.0.glFlushMappedNamedBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FramebufferParameteri(&self) -> bool {
-    self.0.glFramebufferParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FramebufferRenderbuffer(&self) -> bool {
-    self.0.glFramebufferRenderbuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FramebufferTexture(&self) -> bool {
-    self.0.glFramebufferTexture.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FramebufferTexture1D(&self) -> bool {
-    self.0.glFramebufferTexture1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FramebufferTexture2D(&self) -> bool {
-    self.0.glFramebufferTexture2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FramebufferTexture3D(&self) -> bool {
-    self.0.glFramebufferTexture3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FramebufferTextureLayer(&self) -> bool {
-    self.0.glFramebufferTextureLayer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn FrontFace(&self) -> bool {
-    self.0.glFrontFace.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenBuffers(&self) -> bool {
-    self.0.glGenBuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenFramebuffers(&self) -> bool {
-    self.0.glGenFramebuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenProgramPipelines(&self) -> bool {
-    self.0.glGenProgramPipelines.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenQueries(&self) -> bool {
-    self.0.glGenQueries.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenRenderbuffers(&self) -> bool {
-    self.0.glGenRenderbuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenSamplers(&self) -> bool {
-    self.0.glGenSamplers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenTextures(&self) -> bool {
-    self.0.glGenTextures.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenTransformFeedbacks(&self) -> bool {
-    self.0.glGenTransformFeedbacks.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenVertexArrays(&self) -> bool {
-    self.0.glGenVertexArrays.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenerateMipmap(&self) -> bool {
-    self.0.glGenerateMipmap.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GenerateTextureMipmap(&self) -> bool {
-    self.0.glGenerateTextureMipmap.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveAtomicCounterBufferiv(&self) -> bool {
-    self.0.glGetActiveAtomicCounterBufferiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveAttrib(&self) -> bool {
-    self.0.glGetActiveAttrib.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveSubroutineName(&self) -> bool {
-    self.0.glGetActiveSubroutineName.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveSubroutineUniformName(&self) -> bool {
-    self.0.glGetActiveSubroutineUniformName.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveSubroutineUniformiv(&self) -> bool {
-    self.0.glGetActiveSubroutineUniformiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveUniform(&self) -> bool {
-    self.0.glGetActiveUniform.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveUniformBlockName(&self) -> bool {
-    self.0.glGetActiveUniformBlockName.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveUniformBlockiv(&self) -> bool {
-    self.0.glGetActiveUniformBlockiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveUniformName(&self) -> bool {
-    self.0.glGetActiveUniformName.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetActiveUniformsiv(&self) -> bool {
-    self.0.glGetActiveUniformsiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetAttachedShaders(&self) -> bool {
-    self.0.glGetAttachedShaders.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetAttribLocation(&self) -> bool {
-    self.0.glGetAttribLocation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetBooleani_v(&self) -> bool {
-    self.0.glGetBooleani_v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetBooleanv(&self) -> bool {
-    self.0.glGetBooleanv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetBufferParameteri64v(&self) -> bool {
-    self.0.glGetBufferParameteri64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetBufferParameteriv(&self) -> bool {
-    self.0.glGetBufferParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetBufferPointerv(&self) -> bool {
-    self.0.glGetBufferPointerv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetBufferSubData(&self) -> bool {
-    self.0.glGetBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetCompressedTexImage(&self) -> bool {
-    self.0.glGetCompressedTexImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetCompressedTextureImage(&self) -> bool {
-    self.0.glGetCompressedTextureImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetCompressedTextureSubImage(&self) -> bool {
-    self.0.glGetCompressedTextureSubImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetDebugMessageLog(&self) -> bool {
-    self.0.glGetDebugMessageLog.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetDoublei_v(&self) -> bool {
-    self.0.glGetDoublei_v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetDoublev(&self) -> bool {
-    self.0.glGetDoublev.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetError(&self) -> bool {
-    self.0.glGetError.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetFloati_v(&self) -> bool {
-    self.0.glGetFloati_v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetFloatv(&self) -> bool {
-    self.0.glGetFloatv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetFragDataIndex(&self) -> bool {
-    self.0.glGetFragDataIndex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetFragDataLocation(&self) -> bool {
-    self.0.glGetFragDataLocation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetFramebufferAttachmentParameteriv(&self) -> bool {
-    self.0.glGetFramebufferAttachmentParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetFramebufferParameteriv(&self) -> bool {
-    self.0.glGetFramebufferParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetGraphicsResetStatus(&self) -> bool {
-    self.0.glGetGraphicsResetStatus.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetInteger64i_v(&self) -> bool {
-    self.0.glGetInteger64i_v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetInteger64v(&self) -> bool {
-    self.0.glGetInteger64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetIntegeri_v(&self) -> bool {
-    self.0.glGetIntegeri_v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetIntegerv(&self) -> bool {
-    self.0.glGetIntegerv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetInternalformati64v(&self) -> bool {
-    self.0.glGetInternalformati64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetInternalformativ(&self) -> bool {
-    self.0.glGetInternalformativ.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetMultisamplefv(&self) -> bool {
-    self.0.glGetMultisamplefv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetNamedBufferParameteri64v(&self) -> bool {
-    self.0.glGetNamedBufferParameteri64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetNamedBufferParameteriv(&self) -> bool {
-    self.0.glGetNamedBufferParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetNamedBufferPointerv(&self) -> bool {
-    self.0.glGetNamedBufferPointerv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetNamedBufferSubData(&self) -> bool {
-    self.0.glGetNamedBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetNamedFramebufferAttachmentParameteriv(&self) -> bool {
-    self.0.glGetNamedFramebufferAttachmentParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetNamedFramebufferParameteriv(&self) -> bool {
-    self.0.glGetNamedFramebufferParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetNamedRenderbufferParameteriv(&self) -> bool {
-    self.0.glGetNamedRenderbufferParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetObjectLabel(&self) -> bool {
-    self.0.glGetObjectLabel.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetObjectPtrLabel(&self) -> bool {
-    self.0.glGetObjectPtrLabel.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetPointerv(&self) -> bool {
-    self.0.glGetPointerv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramBinary(&self) -> bool {
-    self.0.glGetProgramBinary.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramInfoLog(&self) -> bool {
-    self.0.glGetProgramInfoLog.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramInterfaceiv(&self) -> bool {
-    self.0.glGetProgramInterfaceiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramPipelineInfoLog(&self) -> bool {
-    self.0.glGetProgramPipelineInfoLog.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramPipelineiv(&self) -> bool {
-    self.0.glGetProgramPipelineiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramResourceIndex(&self) -> bool {
-    self.0.glGetProgramResourceIndex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramResourceLocation(&self) -> bool {
-    self.0.glGetProgramResourceLocation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramResourceLocationIndex(&self) -> bool {
-    self.0.glGetProgramResourceLocationIndex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramResourceName(&self) -> bool {
-    self.0.glGetProgramResourceName.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramResourceiv(&self) -> bool {
-    self.0.glGetProgramResourceiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramStageiv(&self) -> bool {
-    self.0.glGetProgramStageiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetProgramiv(&self) -> bool {
-    self.0.glGetProgramiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryBufferObjecti64v(&self) -> bool {
-    self.0.glGetQueryBufferObjecti64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryBufferObjectiv(&self) -> bool {
-    self.0.glGetQueryBufferObjectiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryBufferObjectui64v(&self) -> bool {
-    self.0.glGetQueryBufferObjectui64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryBufferObjectuiv(&self) -> bool {
-    self.0.glGetQueryBufferObjectuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryIndexediv(&self) -> bool {
-    self.0.glGetQueryIndexediv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryObjecti64v(&self) -> bool {
-    self.0.glGetQueryObjecti64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryObjectiv(&self) -> bool {
-    self.0.glGetQueryObjectiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryObjectui64v(&self) -> bool {
-    self.0.glGetQueryObjectui64v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryObjectuiv(&self) -> bool {
-    self.0.glGetQueryObjectuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetQueryiv(&self) -> bool {
-    self.0.glGetQueryiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetRenderbufferParameteriv(&self) -> bool {
-    self.0.glGetRenderbufferParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetSamplerParameterIiv(&self) -> bool {
-    self.0.glGetSamplerParameterIiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetSamplerParameterIuiv(&self) -> bool {
-    self.0.glGetSamplerParameterIuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetSamplerParameterfv(&self) -> bool {
-    self.0.glGetSamplerParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetSamplerParameteriv(&self) -> bool {
-    self.0.glGetSamplerParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetShaderInfoLog(&self) -> bool {
-    self.0.glGetShaderInfoLog.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetShaderPrecisionFormat(&self) -> bool {
-    self.0.glGetShaderPrecisionFormat.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetShaderSource(&self) -> bool {
-    self.0.glGetShaderSource.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetShaderiv(&self) -> bool {
-    self.0.glGetShaderiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetString(&self) -> bool {
-    self.0.glGetString.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetStringi(&self) -> bool {
-    self.0.glGetStringi.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetSubroutineIndex(&self) -> bool {
-    self.0.glGetSubroutineIndex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetSubroutineUniformLocation(&self) -> bool {
-    self.0.glGetSubroutineUniformLocation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetSynciv(&self) -> bool {
-    self.0.glGetSynciv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTexImage(&self) -> bool {
-    self.0.glGetTexImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTexLevelParameterfv(&self) -> bool {
-    self.0.glGetTexLevelParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTexLevelParameteriv(&self) -> bool {
-    self.0.glGetTexLevelParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTexParameterIiv(&self) -> bool {
-    self.0.glGetTexParameterIiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTexParameterIuiv(&self) -> bool {
-    self.0.glGetTexParameterIuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTexParameterfv(&self) -> bool {
-    self.0.glGetTexParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTexParameteriv(&self) -> bool {
-    self.0.glGetTexParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureImage(&self) -> bool {
-    self.0.glGetTextureImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureLevelParameterfv(&self) -> bool {
-    self.0.glGetTextureLevelParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureLevelParameteriv(&self) -> bool {
-    self.0.glGetTextureLevelParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureParameterIiv(&self) -> bool {
-    self.0.glGetTextureParameterIiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureParameterIuiv(&self) -> bool {
-    self.0.glGetTextureParameterIuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureParameterfv(&self) -> bool {
-    self.0.glGetTextureParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureParameteriv(&self) -> bool {
-    self.0.glGetTextureParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTextureSubImage(&self) -> bool {
-    self.0.glGetTextureSubImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTransformFeedbackVarying(&self) -> bool {
-    self.0.glGetTransformFeedbackVarying.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTransformFeedbacki64_v(&self) -> bool {
-    self.0.glGetTransformFeedbacki64_v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTransformFeedbacki_v(&self) -> bool {
-    self.0.glGetTransformFeedbacki_v.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetTransformFeedbackiv(&self) -> bool {
-    self.0.glGetTransformFeedbackiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformBlockIndex(&self) -> bool {
-    self.0.glGetUniformBlockIndex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformIndices(&self) -> bool {
-    self.0.glGetUniformIndices.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformLocation(&self) -> bool {
-    self.0.glGetUniformLocation.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformSubroutineuiv(&self) -> bool {
-    self.0.glGetUniformSubroutineuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformdv(&self) -> bool {
-    self.0.glGetUniformdv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformfv(&self) -> bool {
-    self.0.glGetUniformfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformiv(&self) -> bool {
-    self.0.glGetUniformiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetUniformuiv(&self) -> bool {
-    self.0.glGetUniformuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexArrayIndexed64iv(&self) -> bool {
-    self.0.glGetVertexArrayIndexed64iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexArrayIndexediv(&self) -> bool {
-    self.0.glGetVertexArrayIndexediv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexArrayiv(&self) -> bool {
-    self.0.glGetVertexArrayiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexAttribIiv(&self) -> bool {
-    self.0.glGetVertexAttribIiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexAttribIuiv(&self) -> bool {
-    self.0.glGetVertexAttribIuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexAttribLdv(&self) -> bool {
-    self.0.glGetVertexAttribLdv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexAttribPointerv(&self) -> bool {
-    self.0.glGetVertexAttribPointerv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexAttribdv(&self) -> bool {
-    self.0.glGetVertexAttribdv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexAttribfv(&self) -> bool {
-    self.0.glGetVertexAttribfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetVertexAttribiv(&self) -> bool {
-    self.0.glGetVertexAttribiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnColorTable(&self) -> bool {
-    self.0.glGetnColorTable.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnCompressedTexImage(&self) -> bool {
-    self.0.glGetnCompressedTexImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnConvolutionFilter(&self) -> bool {
-    self.0.glGetnConvolutionFilter.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnHistogram(&self) -> bool {
-    self.0.glGetnHistogram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnMapdv(&self) -> bool {
-    self.0.glGetnMapdv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnMapfv(&self) -> bool {
-    self.0.glGetnMapfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnMapiv(&self) -> bool {
-    self.0.glGetnMapiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnMinmax(&self) -> bool {
-    self.0.glGetnMinmax.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnPixelMapfv(&self) -> bool {
-    self.0.glGetnPixelMapfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnPixelMapuiv(&self) -> bool {
-    self.0.glGetnPixelMapuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnPixelMapusv(&self) -> bool {
-    self.0.glGetnPixelMapusv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnPolygonStipple(&self) -> bool {
-    self.0.glGetnPolygonStipple.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnSeparableFilter(&self) -> bool {
-    self.0.glGetnSeparableFilter.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnTexImage(&self) -> bool {
-    self.0.glGetnTexImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnUniformdv(&self) -> bool {
-    self.0.glGetnUniformdv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnUniformfv(&self) -> bool {
-    self.0.glGetnUniformfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnUniformiv(&self) -> bool {
-    self.0.glGetnUniformiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn GetnUniformuiv(&self) -> bool {
-    self.0.glGetnUniformuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Hint(&self) -> bool {
-    self.0.glHint.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateBufferData(&self) -> bool {
-    self.0.glInvalidateBufferData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateBufferSubData(&self) -> bool {
-    self.0.glInvalidateBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateFramebuffer(&self) -> bool {
-    self.0.glInvalidateFramebuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateNamedFramebufferData(&self) -> bool {
-    self.0.glInvalidateNamedFramebufferData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateNamedFramebufferSubData(&self) -> bool {
-    self.0.glInvalidateNamedFramebufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateSubFramebuffer(&self) -> bool {
-    self.0.glInvalidateSubFramebuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateTexImage(&self) -> bool {
-    self.0.glInvalidateTexImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn InvalidateTexSubImage(&self) -> bool {
-    self.0.glInvalidateTexSubImage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsBuffer(&self) -> bool {
-    self.0.glIsBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsEnabled(&self) -> bool {
-    self.0.glIsEnabled.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsEnabledi(&self) -> bool {
-    self.0.glIsEnabledi.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsFramebuffer(&self) -> bool {
-    self.0.glIsFramebuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsProgram(&self) -> bool {
-    self.0.glIsProgram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsProgramPipeline(&self) -> bool {
-    self.0.glIsProgramPipeline.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsQuery(&self) -> bool {
-    self.0.glIsQuery.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsRenderbuffer(&self) -> bool {
-    self.0.glIsRenderbuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsSampler(&self) -> bool {
-    self.0.glIsSampler.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsShader(&self) -> bool {
-    self.0.glIsShader.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsSync(&self) -> bool {
-    self.0.glIsSync.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsTexture(&self) -> bool {
-    self.0.glIsTexture.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsTransformFeedback(&self) -> bool {
-    self.0.glIsTransformFeedback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn IsVertexArray(&self) -> bool {
-    self.0.glIsVertexArray.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn LineWidth(&self) -> bool {
-    self.0.glLineWidth.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn LinkProgram(&self) -> bool {
-    self.0.glLinkProgram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn LogicOp(&self) -> bool {
-    self.0.glLogicOp.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MapBuffer(&self) -> bool {
-    self.0.glMapBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MapBufferRange(&self) -> bool {
-    self.0.glMapBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MapNamedBuffer(&self) -> bool {
-    self.0.glMapNamedBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MapNamedBufferRange(&self) -> bool {
-    self.0.glMapNamedBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MemoryBarrier(&self) -> bool {
-    self.0.glMemoryBarrier.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MemoryBarrierByRegion(&self) -> bool {
-    self.0.glMemoryBarrierByRegion.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MinSampleShading(&self) -> bool {
-    self.0.glMinSampleShading.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiDrawArrays(&self) -> bool {
-    self.0.glMultiDrawArrays.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiDrawArraysIndirect(&self) -> bool {
-    self.0.glMultiDrawArraysIndirect.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiDrawArraysIndirectCount(&self) -> bool {
-    self.0.glMultiDrawArraysIndirectCount.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiDrawElements(&self) -> bool {
-    self.0.glMultiDrawElements.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiDrawElementsBaseVertex(&self) -> bool {
-    self.0.glMultiDrawElementsBaseVertex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiDrawElementsIndirect(&self) -> bool {
-    self.0.glMultiDrawElementsIndirect.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiDrawElementsIndirectCount(&self) -> bool {
-    self.0.glMultiDrawElementsIndirectCount.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP1ui(&self) -> bool {
-    self.0.glMultiTexCoordP1ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP1uiv(&self) -> bool {
-    self.0.glMultiTexCoordP1uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP2ui(&self) -> bool {
-    self.0.glMultiTexCoordP2ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP2uiv(&self) -> bool {
-    self.0.glMultiTexCoordP2uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP3ui(&self) -> bool {
-    self.0.glMultiTexCoordP3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP3uiv(&self) -> bool {
-    self.0.glMultiTexCoordP3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP4ui(&self) -> bool {
-    self.0.glMultiTexCoordP4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn MultiTexCoordP4uiv(&self) -> bool {
-    self.0.glMultiTexCoordP4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedBufferData(&self) -> bool {
-    self.0.glNamedBufferData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedBufferStorage(&self) -> bool {
-    self.0.glNamedBufferStorage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedBufferSubData(&self) -> bool {
-    self.0.glNamedBufferSubData.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedFramebufferDrawBuffer(&self) -> bool {
-    self.0.glNamedFramebufferDrawBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedFramebufferDrawBuffers(&self) -> bool {
-    self.0.glNamedFramebufferDrawBuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedFramebufferParameteri(&self) -> bool {
-    self.0.glNamedFramebufferParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedFramebufferReadBuffer(&self) -> bool {
-    self.0.glNamedFramebufferReadBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedFramebufferRenderbuffer(&self) -> bool {
-    self.0.glNamedFramebufferRenderbuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedFramebufferTexture(&self) -> bool {
-    self.0.glNamedFramebufferTexture.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedFramebufferTextureLayer(&self) -> bool {
-    self.0.glNamedFramebufferTextureLayer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedRenderbufferStorage(&self) -> bool {
-    self.0.glNamedRenderbufferStorage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NamedRenderbufferStorageMultisample(&self) -> bool {
-    self.0.glNamedRenderbufferStorageMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NormalP3ui(&self) -> bool {
-    self.0.glNormalP3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn NormalP3uiv(&self) -> bool {
-    self.0.glNormalP3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ObjectLabel(&self) -> bool {
-    self.0.glObjectLabel.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ObjectPtrLabel(&self) -> bool {
-    self.0.glObjectPtrLabel.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PatchParameterfv(&self) -> bool {
-    self.0.glPatchParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PatchParameteri(&self) -> bool {
-    self.0.glPatchParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PauseTransformFeedback(&self) -> bool {
-    self.0.glPauseTransformFeedback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PixelStoref(&self) -> bool {
-    self.0.glPixelStoref.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PixelStorei(&self) -> bool {
-    self.0.glPixelStorei.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PointParameterf(&self) -> bool {
-    self.0.glPointParameterf.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PointParameterfv(&self) -> bool {
-    self.0.glPointParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PointParameteri(&self) -> bool {
-    self.0.glPointParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PointParameteriv(&self) -> bool {
-    self.0.glPointParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PointSize(&self) -> bool {
-    self.0.glPointSize.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PolygonMode(&self) -> bool {
-    self.0.glPolygonMode.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PolygonOffset(&self) -> bool {
-    self.0.glPolygonOffset.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PolygonOffsetClamp(&self) -> bool {
-    self.0.glPolygonOffsetClamp.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PopDebugGroup(&self) -> bool {
-    self.0.glPopDebugGroup.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PrimitiveBoundingBox(&self) -> bool {
-    self.0.glPrimitiveBoundingBox.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PrimitiveRestartIndex(&self) -> bool {
-    self.0.glPrimitiveRestartIndex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramBinary(&self) -> bool {
-    self.0.glProgramBinary.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramParameteri(&self) -> bool {
-    self.0.glProgramParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1d(&self) -> bool {
-    self.0.glProgramUniform1d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1dv(&self) -> bool {
-    self.0.glProgramUniform1dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1f(&self) -> bool {
-    self.0.glProgramUniform1f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1fv(&self) -> bool {
-    self.0.glProgramUniform1fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1i(&self) -> bool {
-    self.0.glProgramUniform1i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1iv(&self) -> bool {
-    self.0.glProgramUniform1iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1ui(&self) -> bool {
-    self.0.glProgramUniform1ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform1uiv(&self) -> bool {
-    self.0.glProgramUniform1uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2d(&self) -> bool {
-    self.0.glProgramUniform2d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2dv(&self) -> bool {
-    self.0.glProgramUniform2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2f(&self) -> bool {
-    self.0.glProgramUniform2f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2fv(&self) -> bool {
-    self.0.glProgramUniform2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2i(&self) -> bool {
-    self.0.glProgramUniform2i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2iv(&self) -> bool {
-    self.0.glProgramUniform2iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2ui(&self) -> bool {
-    self.0.glProgramUniform2ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform2uiv(&self) -> bool {
-    self.0.glProgramUniform2uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3d(&self) -> bool {
-    self.0.glProgramUniform3d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3dv(&self) -> bool {
-    self.0.glProgramUniform3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3f(&self) -> bool {
-    self.0.glProgramUniform3f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3fv(&self) -> bool {
-    self.0.glProgramUniform3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3i(&self) -> bool {
-    self.0.glProgramUniform3i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3iv(&self) -> bool {
-    self.0.glProgramUniform3iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3ui(&self) -> bool {
-    self.0.glProgramUniform3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform3uiv(&self) -> bool {
-    self.0.glProgramUniform3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4d(&self) -> bool {
-    self.0.glProgramUniform4d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4dv(&self) -> bool {
-    self.0.glProgramUniform4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4f(&self) -> bool {
-    self.0.glProgramUniform4f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4fv(&self) -> bool {
-    self.0.glProgramUniform4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4i(&self) -> bool {
-    self.0.glProgramUniform4i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4iv(&self) -> bool {
-    self.0.glProgramUniform4iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4ui(&self) -> bool {
-    self.0.glProgramUniform4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniform4uiv(&self) -> bool {
-    self.0.glProgramUniform4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix2dv(&self) -> bool {
-    self.0.glProgramUniformMatrix2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix2fv(&self) -> bool {
-    self.0.glProgramUniformMatrix2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix2x3dv(&self) -> bool {
-    self.0.glProgramUniformMatrix2x3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix2x3fv(&self) -> bool {
-    self.0.glProgramUniformMatrix2x3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix2x4dv(&self) -> bool {
-    self.0.glProgramUniformMatrix2x4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix2x4fv(&self) -> bool {
-    self.0.glProgramUniformMatrix2x4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix3dv(&self) -> bool {
-    self.0.glProgramUniformMatrix3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix3fv(&self) -> bool {
-    self.0.glProgramUniformMatrix3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix3x2dv(&self) -> bool {
-    self.0.glProgramUniformMatrix3x2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix3x2fv(&self) -> bool {
-    self.0.glProgramUniformMatrix3x2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix3x4dv(&self) -> bool {
-    self.0.glProgramUniformMatrix3x4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix3x4fv(&self) -> bool {
-    self.0.glProgramUniformMatrix3x4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix4dv(&self) -> bool {
-    self.0.glProgramUniformMatrix4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix4fv(&self) -> bool {
-    self.0.glProgramUniformMatrix4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix4x2dv(&self) -> bool {
-    self.0.glProgramUniformMatrix4x2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix4x2fv(&self) -> bool {
-    self.0.glProgramUniformMatrix4x2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix4x3dv(&self) -> bool {
-    self.0.glProgramUniformMatrix4x3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProgramUniformMatrix4x3fv(&self) -> bool {
-    self.0.glProgramUniformMatrix4x3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ProvokingVertex(&self) -> bool {
-    self.0.glProvokingVertex.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn PushDebugGroup(&self) -> bool {
-    self.0.glPushDebugGroup.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn QueryCounter(&self) -> bool {
-    self.0.glQueryCounter.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ReadBuffer(&self) -> bool {
-    self.0.glReadBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ReadPixels(&self) -> bool {
-    self.0.glReadPixels.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ReadnPixels(&self) -> bool {
-    self.0.glReadnPixels.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ReleaseShaderCompiler(&self) -> bool {
-    self.0.glReleaseShaderCompiler.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn RenderbufferStorage(&self) -> bool {
-    self.0.glRenderbufferStorage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn RenderbufferStorageMultisample(&self) -> bool {
-    self.0.glRenderbufferStorageMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ResumeTransformFeedback(&self) -> bool {
-    self.0.glResumeTransformFeedback.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SampleCoverage(&self) -> bool {
-    self.0.glSampleCoverage.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SampleMaski(&self) -> bool {
-    self.0.glSampleMaski.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SamplerParameterIiv(&self) -> bool {
-    self.0.glSamplerParameterIiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SamplerParameterIuiv(&self) -> bool {
-    self.0.glSamplerParameterIuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SamplerParameterf(&self) -> bool {
-    self.0.glSamplerParameterf.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SamplerParameterfv(&self) -> bool {
-    self.0.glSamplerParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SamplerParameteri(&self) -> bool {
-    self.0.glSamplerParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SamplerParameteriv(&self) -> bool {
-    self.0.glSamplerParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Scissor(&self) -> bool {
-    self.0.glScissor.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ScissorArrayv(&self) -> bool {
-    self.0.glScissorArrayv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ScissorIndexed(&self) -> bool {
-    self.0.glScissorIndexed.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ScissorIndexedv(&self) -> bool {
-    self.0.glScissorIndexedv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SecondaryColorP3ui(&self) -> bool {
-    self.0.glSecondaryColorP3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SecondaryColorP3uiv(&self) -> bool {
-    self.0.glSecondaryColorP3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ShaderBinary(&self) -> bool {
-    self.0.glShaderBinary.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ShaderSource(&self) -> bool {
-    self.0.glShaderSource.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ShaderStorageBlockBinding(&self) -> bool {
-    self.0.glShaderStorageBlockBinding.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn SpecializeShader(&self) -> bool {
-    self.0.glSpecializeShader.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn StencilFunc(&self) -> bool {
-    self.0.glStencilFunc.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn StencilFuncSeparate(&self) -> bool {
-    self.0.glStencilFuncSeparate.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn StencilMask(&self) -> bool {
-    self.0.glStencilMask.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn StencilMaskSeparate(&self) -> bool {
-    self.0.glStencilMaskSeparate.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn StencilOp(&self) -> bool {
-    self.0.glStencilOp.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn StencilOpSeparate(&self) -> bool {
-    self.0.glStencilOpSeparate.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexBuffer(&self) -> bool {
-    self.0.glTexBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexBufferRange(&self) -> bool {
-    self.0.glTexBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP1ui(&self) -> bool {
-    self.0.glTexCoordP1ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP1uiv(&self) -> bool {
-    self.0.glTexCoordP1uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP2ui(&self) -> bool {
-    self.0.glTexCoordP2ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP2uiv(&self) -> bool {
-    self.0.glTexCoordP2uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP3ui(&self) -> bool {
-    self.0.glTexCoordP3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP3uiv(&self) -> bool {
-    self.0.glTexCoordP3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP4ui(&self) -> bool {
-    self.0.glTexCoordP4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexCoordP4uiv(&self) -> bool {
-    self.0.glTexCoordP4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexImage1D(&self) -> bool {
-    self.0.glTexImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexImage2D(&self) -> bool {
-    self.0.glTexImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexImage2DMultisample(&self) -> bool {
-    self.0.glTexImage2DMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexImage3D(&self) -> bool {
-    self.0.glTexImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexImage3DMultisample(&self) -> bool {
-    self.0.glTexImage3DMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexParameterIiv(&self) -> bool {
-    self.0.glTexParameterIiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexParameterIuiv(&self) -> bool {
-    self.0.glTexParameterIuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexParameterf(&self) -> bool {
-    self.0.glTexParameterf.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexParameterfv(&self) -> bool {
-    self.0.glTexParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexParameteri(&self) -> bool {
-    self.0.glTexParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexParameteriv(&self) -> bool {
-    self.0.glTexParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexStorage1D(&self) -> bool {
-    self.0.glTexStorage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexStorage2D(&self) -> bool {
-    self.0.glTexStorage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexStorage2DMultisample(&self) -> bool {
-    self.0.glTexStorage2DMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexStorage3D(&self) -> bool {
-    self.0.glTexStorage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexStorage3DMultisample(&self) -> bool {
-    self.0.glTexStorage3DMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexSubImage1D(&self) -> bool {
-    self.0.glTexSubImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexSubImage2D(&self) -> bool {
-    self.0.glTexSubImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TexSubImage3D(&self) -> bool {
-    self.0.glTexSubImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureBarrier(&self) -> bool {
-    self.0.glTextureBarrier.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureBuffer(&self) -> bool {
-    self.0.glTextureBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureBufferRange(&self) -> bool {
-    self.0.glTextureBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureParameterIiv(&self) -> bool {
-    self.0.glTextureParameterIiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureParameterIuiv(&self) -> bool {
-    self.0.glTextureParameterIuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureParameterf(&self) -> bool {
-    self.0.glTextureParameterf.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureParameterfv(&self) -> bool {
-    self.0.glTextureParameterfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureParameteri(&self) -> bool {
-    self.0.glTextureParameteri.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureParameteriv(&self) -> bool {
-    self.0.glTextureParameteriv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureStorage1D(&self) -> bool {
-    self.0.glTextureStorage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureStorage2D(&self) -> bool {
-    self.0.glTextureStorage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureStorage2DMultisample(&self) -> bool {
-    self.0.glTextureStorage2DMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureStorage3D(&self) -> bool {
-    self.0.glTextureStorage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureStorage3DMultisample(&self) -> bool {
-    self.0.glTextureStorage3DMultisample.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureSubImage1D(&self) -> bool {
-    self.0.glTextureSubImage1D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureSubImage2D(&self) -> bool {
-    self.0.glTextureSubImage2D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureSubImage3D(&self) -> bool {
-    self.0.glTextureSubImage3D.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TextureView(&self) -> bool {
-    self.0.glTextureView.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TransformFeedbackBufferBase(&self) -> bool {
-    self.0.glTransformFeedbackBufferBase.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TransformFeedbackBufferRange(&self) -> bool {
-    self.0.glTransformFeedbackBufferRange.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn TransformFeedbackVaryings(&self) -> bool {
-    self.0.glTransformFeedbackVaryings.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1d(&self) -> bool {
-    self.0.glUniform1d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1dv(&self) -> bool {
-    self.0.glUniform1dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1f(&self) -> bool {
-    self.0.glUniform1f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1fv(&self) -> bool {
-    self.0.glUniform1fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1i(&self) -> bool {
-    self.0.glUniform1i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1iv(&self) -> bool {
-    self.0.glUniform1iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1ui(&self) -> bool {
-    self.0.glUniform1ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform1uiv(&self) -> bool {
-    self.0.glUniform1uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2d(&self) -> bool {
-    self.0.glUniform2d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2dv(&self) -> bool {
-    self.0.glUniform2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2f(&self) -> bool {
-    self.0.glUniform2f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2fv(&self) -> bool {
-    self.0.glUniform2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2i(&self) -> bool {
-    self.0.glUniform2i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2iv(&self) -> bool {
-    self.0.glUniform2iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2ui(&self) -> bool {
-    self.0.glUniform2ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform2uiv(&self) -> bool {
-    self.0.glUniform2uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3d(&self) -> bool {
-    self.0.glUniform3d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3dv(&self) -> bool {
-    self.0.glUniform3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3f(&self) -> bool {
-    self.0.glUniform3f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3fv(&self) -> bool {
-    self.0.glUniform3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3i(&self) -> bool {
-    self.0.glUniform3i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3iv(&self) -> bool {
-    self.0.glUniform3iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3ui(&self) -> bool {
-    self.0.glUniform3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform3uiv(&self) -> bool {
-    self.0.glUniform3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4d(&self) -> bool {
-    self.0.glUniform4d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4dv(&self) -> bool {
-    self.0.glUniform4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4f(&self) -> bool {
-    self.0.glUniform4f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4fv(&self) -> bool {
-    self.0.glUniform4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4i(&self) -> bool {
-    self.0.glUniform4i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4iv(&self) -> bool {
-    self.0.glUniform4iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4ui(&self) -> bool {
-    self.0.glUniform4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Uniform4uiv(&self) -> bool {
-    self.0.glUniform4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformBlockBinding(&self) -> bool {
-    self.0.glUniformBlockBinding.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix2dv(&self) -> bool {
-    self.0.glUniformMatrix2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix2fv(&self) -> bool {
-    self.0.glUniformMatrix2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix2x3dv(&self) -> bool {
-    self.0.glUniformMatrix2x3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix2x3fv(&self) -> bool {
-    self.0.glUniformMatrix2x3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix2x4dv(&self) -> bool {
-    self.0.glUniformMatrix2x4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix2x4fv(&self) -> bool {
-    self.0.glUniformMatrix2x4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix3dv(&self) -> bool {
-    self.0.glUniformMatrix3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix3fv(&self) -> bool {
-    self.0.glUniformMatrix3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix3x2dv(&self) -> bool {
-    self.0.glUniformMatrix3x2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix3x2fv(&self) -> bool {
-    self.0.glUniformMatrix3x2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix3x4dv(&self) -> bool {
-    self.0.glUniformMatrix3x4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix3x4fv(&self) -> bool {
-    self.0.glUniformMatrix3x4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix4dv(&self) -> bool {
-    self.0.glUniformMatrix4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix4fv(&self) -> bool {
-    self.0.glUniformMatrix4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix4x2dv(&self) -> bool {
-    self.0.glUniformMatrix4x2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix4x2fv(&self) -> bool {
-    self.0.glUniformMatrix4x2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix4x3dv(&self) -> bool {
-    self.0.glUniformMatrix4x3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformMatrix4x3fv(&self) -> bool {
-    self.0.glUniformMatrix4x3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UniformSubroutinesuiv(&self) -> bool {
-    self.0.glUniformSubroutinesuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UnmapBuffer(&self) -> bool {
-    self.0.glUnmapBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UnmapNamedBuffer(&self) -> bool {
-    self.0.glUnmapNamedBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UseProgram(&self) -> bool {
-    self.0.glUseProgram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn UseProgramStages(&self) -> bool {
-    self.0.glUseProgramStages.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ValidateProgram(&self) -> bool {
-    self.0.glValidateProgram.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ValidateProgramPipeline(&self) -> bool {
-    self.0.glValidateProgramPipeline.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayAttribBinding(&self) -> bool {
-    self.0.glVertexArrayAttribBinding.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayAttribFormat(&self) -> bool {
-    self.0.glVertexArrayAttribFormat.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayAttribIFormat(&self) -> bool {
-    self.0.glVertexArrayAttribIFormat.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayAttribLFormat(&self) -> bool {
-    self.0.glVertexArrayAttribLFormat.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayBindingDivisor(&self) -> bool {
-    self.0.glVertexArrayBindingDivisor.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayElementBuffer(&self) -> bool {
-    self.0.glVertexArrayElementBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayVertexBuffer(&self) -> bool {
-    self.0.glVertexArrayVertexBuffer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexArrayVertexBuffers(&self) -> bool {
-    self.0.glVertexArrayVertexBuffers.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib1d(&self) -> bool {
-    self.0.glVertexAttrib1d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib1dv(&self) -> bool {
-    self.0.glVertexAttrib1dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib1f(&self) -> bool {
-    self.0.glVertexAttrib1f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib1fv(&self) -> bool {
-    self.0.glVertexAttrib1fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib1s(&self) -> bool {
-    self.0.glVertexAttrib1s.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib1sv(&self) -> bool {
-    self.0.glVertexAttrib1sv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib2d(&self) -> bool {
-    self.0.glVertexAttrib2d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib2dv(&self) -> bool {
-    self.0.glVertexAttrib2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib2f(&self) -> bool {
-    self.0.glVertexAttrib2f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib2fv(&self) -> bool {
-    self.0.glVertexAttrib2fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib2s(&self) -> bool {
-    self.0.glVertexAttrib2s.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib2sv(&self) -> bool {
-    self.0.glVertexAttrib2sv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib3d(&self) -> bool {
-    self.0.glVertexAttrib3d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib3dv(&self) -> bool {
-    self.0.glVertexAttrib3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib3f(&self) -> bool {
-    self.0.glVertexAttrib3f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib3fv(&self) -> bool {
-    self.0.glVertexAttrib3fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib3s(&self) -> bool {
-    self.0.glVertexAttrib3s.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib3sv(&self) -> bool {
-    self.0.glVertexAttrib3sv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4Nbv(&self) -> bool {
-    self.0.glVertexAttrib4Nbv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4Niv(&self) -> bool {
-    self.0.glVertexAttrib4Niv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4Nsv(&self) -> bool {
-    self.0.glVertexAttrib4Nsv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4Nub(&self) -> bool {
-    self.0.glVertexAttrib4Nub.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4Nubv(&self) -> bool {
-    self.0.glVertexAttrib4Nubv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4Nuiv(&self) -> bool {
-    self.0.glVertexAttrib4Nuiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4Nusv(&self) -> bool {
-    self.0.glVertexAttrib4Nusv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4bv(&self) -> bool {
-    self.0.glVertexAttrib4bv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4d(&self) -> bool {
-    self.0.glVertexAttrib4d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4dv(&self) -> bool {
-    self.0.glVertexAttrib4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4f(&self) -> bool {
-    self.0.glVertexAttrib4f.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4fv(&self) -> bool {
-    self.0.glVertexAttrib4fv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4iv(&self) -> bool {
-    self.0.glVertexAttrib4iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4s(&self) -> bool {
-    self.0.glVertexAttrib4s.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4sv(&self) -> bool {
-    self.0.glVertexAttrib4sv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4ubv(&self) -> bool {
-    self.0.glVertexAttrib4ubv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4uiv(&self) -> bool {
-    self.0.glVertexAttrib4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttrib4usv(&self) -> bool {
-    self.0.glVertexAttrib4usv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribBinding(&self) -> bool {
-    self.0.glVertexAttribBinding.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribDivisor(&self) -> bool {
-    self.0.glVertexAttribDivisor.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribFormat(&self) -> bool {
-    self.0.glVertexAttribFormat.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI1i(&self) -> bool {
-    self.0.glVertexAttribI1i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI1iv(&self) -> bool {
-    self.0.glVertexAttribI1iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI1ui(&self) -> bool {
-    self.0.glVertexAttribI1ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI1uiv(&self) -> bool {
-    self.0.glVertexAttribI1uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI2i(&self) -> bool {
-    self.0.glVertexAttribI2i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI2iv(&self) -> bool {
-    self.0.glVertexAttribI2iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI2ui(&self) -> bool {
-    self.0.glVertexAttribI2ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI2uiv(&self) -> bool {
-    self.0.glVertexAttribI2uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI3i(&self) -> bool {
-    self.0.glVertexAttribI3i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI3iv(&self) -> bool {
-    self.0.glVertexAttribI3iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI3ui(&self) -> bool {
-    self.0.glVertexAttribI3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI3uiv(&self) -> bool {
-    self.0.glVertexAttribI3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4bv(&self) -> bool {
-    self.0.glVertexAttribI4bv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4i(&self) -> bool {
-    self.0.glVertexAttribI4i.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4iv(&self) -> bool {
-    self.0.glVertexAttribI4iv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4sv(&self) -> bool {
-    self.0.glVertexAttribI4sv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4ubv(&self) -> bool {
-    self.0.glVertexAttribI4ubv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4ui(&self) -> bool {
-    self.0.glVertexAttribI4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4uiv(&self) -> bool {
-    self.0.glVertexAttribI4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribI4usv(&self) -> bool {
-    self.0.glVertexAttribI4usv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribIFormat(&self) -> bool {
-    self.0.glVertexAttribIFormat.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribIPointer(&self) -> bool {
-    self.0.glVertexAttribIPointer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL1d(&self) -> bool {
-    self.0.glVertexAttribL1d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL1dv(&self) -> bool {
-    self.0.glVertexAttribL1dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL2d(&self) -> bool {
-    self.0.glVertexAttribL2d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL2dv(&self) -> bool {
-    self.0.glVertexAttribL2dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL3d(&self) -> bool {
-    self.0.glVertexAttribL3d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL3dv(&self) -> bool {
-    self.0.glVertexAttribL3dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL4d(&self) -> bool {
-    self.0.glVertexAttribL4d.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribL4dv(&self) -> bool {
-    self.0.glVertexAttribL4dv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribLFormat(&self) -> bool {
-    self.0.glVertexAttribLFormat.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribLPointer(&self) -> bool {
-    self.0.glVertexAttribLPointer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP1ui(&self) -> bool {
-    self.0.glVertexAttribP1ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP1uiv(&self) -> bool {
-    self.0.glVertexAttribP1uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP2ui(&self) -> bool {
-    self.0.glVertexAttribP2ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP2uiv(&self) -> bool {
-    self.0.glVertexAttribP2uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP3ui(&self) -> bool {
-    self.0.glVertexAttribP3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP3uiv(&self) -> bool {
-    self.0.glVertexAttribP3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP4ui(&self) -> bool {
-    self.0.glVertexAttribP4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribP4uiv(&self) -> bool {
-    self.0.glVertexAttribP4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexAttribPointer(&self) -> bool {
-    self.0.glVertexAttribPointer.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexBindingDivisor(&self) -> bool {
-    self.0.glVertexBindingDivisor.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexP2ui(&self) -> bool {
-    self.0.glVertexP2ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexP2uiv(&self) -> bool {
-    self.0.glVertexP2uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexP3ui(&self) -> bool {
-    self.0.glVertexP3ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexP3uiv(&self) -> bool {
-    self.0.glVertexP3uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexP4ui(&self) -> bool {
-    self.0.glVertexP4ui.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn VertexP4uiv(&self) -> bool {
-    self.0.glVertexP4uiv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn Viewport(&self) -> bool {
-    self.0.glViewport.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ViewportArrayv(&self) -> bool {
-    self.0.glViewportArrayv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ViewportIndexedf(&self) -> bool {
-    self.0.glViewportIndexedf.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn ViewportIndexedfv(&self) -> bool {
-    self.0.glViewportIndexedfv.is_some()
-  }
-  #[inline]
-  #[must_use]
-  pub fn WaitSync(&self) -> bool {
-    self.0.glWaitSync.is_some()
-  }
+  mk_load_checker_method!(glActiveShaderProgram, ActiveShaderProgram);
+  mk_load_checker_method!(glActiveTexture, ActiveTexture);
+  mk_load_checker_method!(glAttachShader, AttachShader);
+  mk_load_checker_method!(glBeginConditionalRender, BeginConditionalRender);
+  mk_load_checker_method!(glBeginQuery, BeginQuery);
+  mk_load_checker_method!(glBeginQueryIndexed, BeginQueryIndexed);
+  mk_load_checker_method!(glBeginTransformFeedback, BeginTransformFeedback);
+  mk_load_checker_method!(glBindAttribLocation, BindAttribLocation);
+  mk_load_checker_method!(glBindBuffer, BindBuffer);
+  mk_load_checker_method!(glBindBufferBase, BindBufferBase);
+  mk_load_checker_method!(glBindBufferRange, BindBufferRange);
+  mk_load_checker_method!(glBindBuffersBase, BindBuffersBase);
+  mk_load_checker_method!(glBindBuffersRange, BindBuffersRange);
+  mk_load_checker_method!(glBindFragDataLocation, BindFragDataLocation);
+  mk_load_checker_method!(glBindFragDataLocationIndexed, BindFragDataLocationIndexed);
+  mk_load_checker_method!(glBindFramebuffer, BindFramebuffer);
+  mk_load_checker_method!(glBindImageTexture, BindImageTexture);
+  mk_load_checker_method!(glBindImageTextures, BindImageTextures);
+  mk_load_checker_method!(glBindProgramPipeline, BindProgramPipeline);
+  mk_load_checker_method!(glBindRenderbuffer, BindRenderbuffer);
+  mk_load_checker_method!(glBindSampler, BindSampler);
+  mk_load_checker_method!(glBindSamplers, BindSamplers);
+  mk_load_checker_method!(glBindTexture, BindTexture);
+  mk_load_checker_method!(glBindTextureUnit, BindTextureUnit);
+  mk_load_checker_method!(glBindTextures, BindTextures);
+  mk_load_checker_method!(glBindTransformFeedback, BindTransformFeedback);
+  mk_load_checker_method!(glBindVertexArray, BindVertexArray);
+  mk_load_checker_method!(glBindVertexBuffer, BindVertexBuffer);
+  mk_load_checker_method!(glBindVertexBuffers, BindVertexBuffers);
+  mk_load_checker_method!(glBlendBarrier, BlendBarrier);
+  mk_load_checker_method!(glBlendColor, BlendColor);
+  mk_load_checker_method!(glBlendEquation, BlendEquation);
+  mk_load_checker_method!(glBlendEquationSeparate, BlendEquationSeparate);
+  mk_load_checker_method!(glBlendEquationSeparatei, BlendEquationSeparatei);
+  mk_load_checker_method!(glBlendEquationi, BlendEquationi);
+  mk_load_checker_method!(glBlendFunc, BlendFunc);
+  mk_load_checker_method!(glBlendFuncSeparate, BlendFuncSeparate);
+  mk_load_checker_method!(glBlendFuncSeparatei, BlendFuncSeparatei);
+  mk_load_checker_method!(glBlendFunci, BlendFunci);
+  mk_load_checker_method!(glBlitFramebuffer, BlitFramebuffer);
+  mk_load_checker_method!(glBlitNamedFramebuffer, BlitNamedFramebuffer);
+  mk_load_checker_method!(glBufferData, BufferData);
+  mk_load_checker_method!(glBufferStorage, BufferStorage);
+  mk_load_checker_method!(glBufferSubData, BufferSubData);
+  mk_load_checker_method!(glCheckFramebufferStatus, CheckFramebufferStatus);
+  mk_load_checker_method!(glCheckNamedFramebufferStatus, CheckNamedFramebufferStatus);
+  mk_load_checker_method!(glClampColor, ClampColor);
+  mk_load_checker_method!(glClear, Clear);
+  mk_load_checker_method!(glClearBufferData, ClearBufferData);
+  mk_load_checker_method!(glClearBufferSubData, ClearBufferSubData);
+  mk_load_checker_method!(glClearBufferfi, ClearBufferfi);
+  mk_load_checker_method!(glClearBufferfv, ClearBufferfv);
+  mk_load_checker_method!(glClearBufferiv, ClearBufferiv);
+  mk_load_checker_method!(glClearBufferuiv, ClearBufferuiv);
+  mk_load_checker_method!(glClearColor, ClearColor);
+  mk_load_checker_method!(glClearDepth, ClearDepth);
+  mk_load_checker_method!(glClearDepthf, ClearDepthf);
+  mk_load_checker_method!(glClearNamedBufferData, ClearNamedBufferData);
+  mk_load_checker_method!(glClearNamedBufferSubData, ClearNamedBufferSubData);
+  mk_load_checker_method!(glClearNamedFramebufferfi, ClearNamedFramebufferfi);
+  mk_load_checker_method!(glClearNamedFramebufferfv, ClearNamedFramebufferfv);
+  mk_load_checker_method!(glClearNamedFramebufferiv, ClearNamedFramebufferiv);
+  mk_load_checker_method!(glClearNamedFramebufferuiv, ClearNamedFramebufferuiv);
+  mk_load_checker_method!(glClearStencil, ClearStencil);
+  mk_load_checker_method!(glClearTexImage, ClearTexImage);
+  mk_load_checker_method!(glClearTexSubImage, ClearTexSubImage);
+  mk_load_checker_method!(glClientWaitSync, ClientWaitSync);
+  mk_load_checker_method!(glClipControl, ClipControl);
+  mk_load_checker_method!(glColorMask, ColorMask);
+  mk_load_checker_method!(glColorMaski, ColorMaski);
+  mk_load_checker_method!(glColorP3ui, ColorP3ui);
+  mk_load_checker_method!(glColorP3uiv, ColorP3uiv);
+  mk_load_checker_method!(glColorP4ui, ColorP4ui);
+  mk_load_checker_method!(glColorP4uiv, ColorP4uiv);
+  mk_load_checker_method!(glCompileShader, CompileShader);
+  mk_load_checker_method!(glCompressedTexImage1D, CompressedTexImage1D);
+  mk_load_checker_method!(glCompressedTexImage2D, CompressedTexImage2D);
+  mk_load_checker_method!(glCompressedTexImage3D, CompressedTexImage3D);
+  mk_load_checker_method!(glCompressedTexSubImage1D, CompressedTexSubImage1D);
+  mk_load_checker_method!(glCompressedTexSubImage2D, CompressedTexSubImage2D);
+  mk_load_checker_method!(glCompressedTexSubImage3D, CompressedTexSubImage3D);
+  mk_load_checker_method!(glCompressedTextureSubImage1D, CompressedTextureSubImage1D);
+  mk_load_checker_method!(glCompressedTextureSubImage2D, CompressedTextureSubImage2D);
+  mk_load_checker_method!(glCompressedTextureSubImage3D, CompressedTextureSubImage3D);
+  mk_load_checker_method!(glCopyBufferSubData, CopyBufferSubData);
+  mk_load_checker_method!(glCopyImageSubData, CopyImageSubData);
+  mk_load_checker_method!(glCopyNamedBufferSubData, CopyNamedBufferSubData);
+  mk_load_checker_method!(glCopyTexImage1D, CopyTexImage1D);
+  mk_load_checker_method!(glCopyTexImage2D, CopyTexImage2D);
+  mk_load_checker_method!(glCopyTexSubImage1D, CopyTexSubImage1D);
+  mk_load_checker_method!(glCopyTexSubImage2D, CopyTexSubImage2D);
+  mk_load_checker_method!(glCopyTexSubImage3D, CopyTexSubImage3D);
+  mk_load_checker_method!(glCopyTextureSubImage1D, CopyTextureSubImage1D);
+  mk_load_checker_method!(glCopyTextureSubImage2D, CopyTextureSubImage2D);
+  mk_load_checker_method!(glCopyTextureSubImage3D, CopyTextureSubImage3D);
+  mk_load_checker_method!(glCreateBuffers, CreateBuffers);
+  mk_load_checker_method!(glCreateFramebuffers, CreateFramebuffers);
+  mk_load_checker_method!(glCreateProgram, CreateProgram);
+  mk_load_checker_method!(glCreateProgramPipelines, CreateProgramPipelines);
+  mk_load_checker_method!(glCreateQueries, CreateQueries);
+  mk_load_checker_method!(glCreateRenderbuffers, CreateRenderbuffers);
+  mk_load_checker_method!(glCreateSamplers, CreateSamplers);
+  mk_load_checker_method!(glCreateShader, CreateShader);
+  mk_load_checker_method!(glCreateShaderProgramv, CreateShaderProgramv);
+  mk_load_checker_method!(glCreateTextures, CreateTextures);
+  mk_load_checker_method!(glCreateTransformFeedbacks, CreateTransformFeedbacks);
+  mk_load_checker_method!(glCreateVertexArrays, CreateVertexArrays);
+  mk_load_checker_method!(glCullFace, CullFace);
+  mk_load_checker_method!(glDebugMessageCallback, DebugMessageCallback);
+  mk_load_checker_method!(glDebugMessageCallbackKHR, DebugMessageCallbackKHR);
+  mk_load_checker_method!(glDebugMessageControl, DebugMessageControl);
+  mk_load_checker_method!(glDebugMessageControlKHR, DebugMessageControlKHR);
+  mk_load_checker_method!(glDebugMessageInsert, DebugMessageInsert);
+  mk_load_checker_method!(glDebugMessageInsertKHR, DebugMessageInsertKHR);
+  mk_load_checker_method!(glDeleteBuffers, DeleteBuffers);
+  mk_load_checker_method!(glDeleteFramebuffers, DeleteFramebuffers);
+  mk_load_checker_method!(glDeleteProgram, DeleteProgram);
+  mk_load_checker_method!(glDeleteProgramPipelines, DeleteProgramPipelines);
+  mk_load_checker_method!(glDeleteQueries, DeleteQueries);
+  mk_load_checker_method!(glDeleteRenderbuffers, DeleteRenderbuffers);
+  mk_load_checker_method!(glDeleteSamplers, DeleteSamplers);
+  mk_load_checker_method!(glDeleteShader, DeleteShader);
+  mk_load_checker_method!(glDeleteSync, DeleteSync);
+  mk_load_checker_method!(glDeleteTextures, DeleteTextures);
+  mk_load_checker_method!(glDeleteTransformFeedbacks, DeleteTransformFeedbacks);
+  mk_load_checker_method!(glDeleteVertexArrays, DeleteVertexArrays);
+  mk_load_checker_method!(glDepthFunc, DepthFunc);
+  mk_load_checker_method!(glDepthMask, DepthMask);
+  mk_load_checker_method!(glDepthRange, DepthRange);
+  mk_load_checker_method!(glDepthRangeArrayv, DepthRangeArrayv);
+  mk_load_checker_method!(glDepthRangeIndexed, DepthRangeIndexed);
+  mk_load_checker_method!(glDepthRangef, DepthRangef);
+  mk_load_checker_method!(glDetachShader, DetachShader);
+  mk_load_checker_method!(glDisable, Disable);
+  mk_load_checker_method!(glDisableVertexArrayAttrib, DisableVertexArrayAttrib);
+  mk_load_checker_method!(glDisableVertexAttribArray, DisableVertexAttribArray);
+  mk_load_checker_method!(glDisablei, Disablei);
+  mk_load_checker_method!(glDispatchCompute, DispatchCompute);
+  mk_load_checker_method!(glDispatchComputeIndirect, DispatchComputeIndirect);
+  mk_load_checker_method!(glDrawArrays, DrawArrays);
+  mk_load_checker_method!(glDrawArraysIndirect, DrawArraysIndirect);
+  mk_load_checker_method!(glDrawArraysInstanced, DrawArraysInstanced);
+  mk_load_checker_method!(glDrawArraysInstancedBaseInstance, DrawArraysInstancedBaseInstance);
+  mk_load_checker_method!(glDrawBuffer, DrawBuffer);
+  mk_load_checker_method!(glDrawBuffers, DrawBuffers);
+  mk_load_checker_method!(glDrawElements, DrawElements);
+  mk_load_checker_method!(glDrawElementsBaseVertex, DrawElementsBaseVertex);
+  mk_load_checker_method!(glDrawElementsIndirect, DrawElementsIndirect);
+  mk_load_checker_method!(glDrawElementsInstanced, DrawElementsInstanced);
+  mk_load_checker_method!(glDrawElementsInstancedBaseInstance, DrawElementsInstancedBaseInstance);
+  mk_load_checker_method!(glDrawElementsInstancedBaseVertex, DrawElementsInstancedBaseVertex);
+  mk_load_checker_method!(
+    glDrawElementsInstancedBaseVertexBaseInstance,
+    DrawElementsInstancedBaseVertexBaseInstance
+  );
+  mk_load_checker_method!(glDrawRangeElements, DrawRangeElements);
+  mk_load_checker_method!(glDrawRangeElementsBaseVertex, DrawRangeElementsBaseVertex);
+  mk_load_checker_method!(glDrawTransformFeedback, DrawTransformFeedback);
+  mk_load_checker_method!(glDrawTransformFeedbackInstanced, DrawTransformFeedbackInstanced);
+  mk_load_checker_method!(glDrawTransformFeedbackStream, DrawTransformFeedbackStream);
+  mk_load_checker_method!(
+    glDrawTransformFeedbackStreamInstanced,
+    DrawTransformFeedbackStreamInstanced
+  );
+  mk_load_checker_method!(glEnable, Enable);
+  mk_load_checker_method!(glEnableVertexArrayAttrib, EnableVertexArrayAttrib);
+  mk_load_checker_method!(glEnableVertexAttribArray, EnableVertexAttribArray);
+  mk_load_checker_method!(glEnablei, Enablei);
+  mk_load_checker_method!(glEndConditionalRender, EndConditionalRender);
+  mk_load_checker_method!(glEndQuery, EndQuery);
+  mk_load_checker_method!(glEndQueryIndexed, EndQueryIndexed);
+  mk_load_checker_method!(glEndTransformFeedback, EndTransformFeedback);
+  mk_load_checker_method!(glFenceSync, FenceSync);
+  mk_load_checker_method!(glFinish, Finish);
+  mk_load_checker_method!(glFlush, Flush);
+  mk_load_checker_method!(glFlushMappedBufferRange, FlushMappedBufferRange);
+  mk_load_checker_method!(glFlushMappedNamedBufferRange, FlushMappedNamedBufferRange);
+  mk_load_checker_method!(glFramebufferParameteri, FramebufferParameteri);
+  mk_load_checker_method!(glFramebufferRenderbuffer, FramebufferRenderbuffer);
+  mk_load_checker_method!(glFramebufferTexture, FramebufferTexture);
+  mk_load_checker_method!(glFramebufferTexture1D, FramebufferTexture1D);
+  mk_load_checker_method!(glFramebufferTexture2D, FramebufferTexture2D);
+  mk_load_checker_method!(glFramebufferTexture3D, FramebufferTexture3D);
+  mk_load_checker_method!(glFramebufferTextureLayer, FramebufferTextureLayer);
+  mk_load_checker_method!(glFrontFace, FrontFace);
+  mk_load_checker_method!(glGenBuffers, GenBuffers);
+  mk_load_checker_method!(glGenFramebuffers, GenFramebuffers);
+  mk_load_checker_method!(glGenProgramPipelines, GenProgramPipelines);
+  mk_load_checker_method!(glGenQueries, GenQueries);
+  mk_load_checker_method!(glGenRenderbuffers, GenRenderbuffers);
+  mk_load_checker_method!(glGenSamplers, GenSamplers);
+  mk_load_checker_method!(glGenTextures, GenTextures);
+  mk_load_checker_method!(glGenTransformFeedbacks, GenTransformFeedbacks);
+  mk_load_checker_method!(glGenVertexArrays, GenVertexArrays);
+  mk_load_checker_method!(glGenerateMipmap, GenerateMipmap);
+  mk_load_checker_method!(glGenerateTextureMipmap, GenerateTextureMipmap);
+  mk_load_checker_method!(glGetActiveAtomicCounterBufferiv, GetActiveAtomicCounterBufferiv);
+  mk_load_checker_method!(glGetActiveAttrib, GetActiveAttrib);
+  mk_load_checker_method!(glGetActiveSubroutineName, GetActiveSubroutineName);
+  mk_load_checker_method!(glGetActiveSubroutineUniformName, GetActiveSubroutineUniformName);
+  mk_load_checker_method!(glGetActiveSubroutineUniformiv, GetActiveSubroutineUniformiv);
+  mk_load_checker_method!(glGetActiveUniform, GetActiveUniform);
+  mk_load_checker_method!(glGetActiveUniformBlockName, GetActiveUniformBlockName);
+  mk_load_checker_method!(glGetActiveUniformBlockiv, GetActiveUniformBlockiv);
+  mk_load_checker_method!(glGetActiveUniformName, GetActiveUniformName);
+  mk_load_checker_method!(glGetActiveUniformsiv, GetActiveUniformsiv);
+  mk_load_checker_method!(glGetAttachedShaders, GetAttachedShaders);
+  mk_load_checker_method!(glGetAttribLocation, GetAttribLocation);
+  mk_load_checker_method!(glGetBooleani_v, GetBooleani_v);
+  mk_load_checker_method!(glGetBooleanv, GetBooleanv);
+  mk_load_checker_method!(glGetBufferParameteri64v, GetBufferParameteri64v);
+  mk_load_checker_method!(glGetBufferParameteriv, GetBufferParameteriv);
+  mk_load_checker_method!(glGetBufferPointerv, GetBufferPointerv);
+  mk_load_checker_method!(glGetBufferSubData, GetBufferSubData);
+  mk_load_checker_method!(glGetCompressedTexImage, GetCompressedTexImage);
+  mk_load_checker_method!(glGetCompressedTextureImage, GetCompressedTextureImage);
+  mk_load_checker_method!(glGetCompressedTextureSubImage, GetCompressedTextureSubImage);
+  mk_load_checker_method!(glGetDebugMessageLog, GetDebugMessageLog);
+  mk_load_checker_method!(glGetDebugMessageLogKHR, GetDebugMessageLogKHR);
+  mk_load_checker_method!(glGetDoublei_v, GetDoublei_v);
+  mk_load_checker_method!(glGetDoublev, GetDoublev);
+  mk_load_checker_method!(glGetError, GetError);
+  mk_load_checker_method!(glGetFloati_v, GetFloati_v);
+  mk_load_checker_method!(glGetFloatv, GetFloatv);
+  mk_load_checker_method!(glGetFragDataIndex, GetFragDataIndex);
+  mk_load_checker_method!(glGetFragDataLocation, GetFragDataLocation);
+  mk_load_checker_method!(
+    glGetFramebufferAttachmentParameteriv,
+    GetFramebufferAttachmentParameteriv
+  );
+  mk_load_checker_method!(glGetFramebufferParameteriv, GetFramebufferParameteriv);
+  mk_load_checker_method!(glGetGraphicsResetStatus, GetGraphicsResetStatus);
+  mk_load_checker_method!(glGetInteger64i_v, GetInteger64i_v);
+  mk_load_checker_method!(glGetInteger64v, GetInteger64v);
+  mk_load_checker_method!(glGetIntegeri_v, GetIntegeri_v);
+  mk_load_checker_method!(glGetIntegerv, GetIntegerv);
+  mk_load_checker_method!(glGetInternalformati64v, GetInternalformati64v);
+  mk_load_checker_method!(glGetInternalformativ, GetInternalformativ);
+  mk_load_checker_method!(glGetMultisamplefv, GetMultisamplefv);
+  mk_load_checker_method!(glGetNamedBufferParameteri64v, GetNamedBufferParameteri64v);
+  mk_load_checker_method!(glGetNamedBufferParameteriv, GetNamedBufferParameteriv);
+  mk_load_checker_method!(glGetNamedBufferPointerv, GetNamedBufferPointerv);
+  mk_load_checker_method!(glGetNamedBufferSubData, GetNamedBufferSubData);
+  mk_load_checker_method!(
+    glGetNamedFramebufferAttachmentParameteriv,
+    GetNamedFramebufferAttachmentParameteriv
+  );
+  mk_load_checker_method!(glGetNamedFramebufferParameteriv, GetNamedFramebufferParameteriv);
+  mk_load_checker_method!(glGetNamedRenderbufferParameteriv, GetNamedRenderbufferParameteriv);
+  mk_load_checker_method!(glGetObjectLabel, GetObjectLabel);
+  mk_load_checker_method!(glGetObjectLabelKHR, GetObjectLabelKHR);
+  mk_load_checker_method!(glGetObjectPtrLabel, GetObjectPtrLabel);
+  mk_load_checker_method!(glGetObjectPtrLabelKHR, GetObjectPtrLabelKHR);
+  mk_load_checker_method!(glGetPointerv, GetPointerv);
+  mk_load_checker_method!(glGetPointervKHR, GetPointervKHR);
+  mk_load_checker_method!(glGetProgramBinary, GetProgramBinary);
+  mk_load_checker_method!(glGetProgramInfoLog, GetProgramInfoLog);
+  mk_load_checker_method!(glGetProgramInterfaceiv, GetProgramInterfaceiv);
+  mk_load_checker_method!(glGetProgramPipelineInfoLog, GetProgramPipelineInfoLog);
+  mk_load_checker_method!(glGetProgramPipelineiv, GetProgramPipelineiv);
+  mk_load_checker_method!(glGetProgramResourceIndex, GetProgramResourceIndex);
+  mk_load_checker_method!(glGetProgramResourceLocation, GetProgramResourceLocation);
+  mk_load_checker_method!(glGetProgramResourceLocationIndex, GetProgramResourceLocationIndex);
+  mk_load_checker_method!(glGetProgramResourceName, GetProgramResourceName);
+  mk_load_checker_method!(glGetProgramResourceiv, GetProgramResourceiv);
+  mk_load_checker_method!(glGetProgramStageiv, GetProgramStageiv);
+  mk_load_checker_method!(glGetProgramiv, GetProgramiv);
+  mk_load_checker_method!(glGetQueryBufferObjecti64v, GetQueryBufferObjecti64v);
+  mk_load_checker_method!(glGetQueryBufferObjectiv, GetQueryBufferObjectiv);
+  mk_load_checker_method!(glGetQueryBufferObjectui64v, GetQueryBufferObjectui64v);
+  mk_load_checker_method!(glGetQueryBufferObjectuiv, GetQueryBufferObjectuiv);
+  mk_load_checker_method!(glGetQueryIndexediv, GetQueryIndexediv);
+  mk_load_checker_method!(glGetQueryObjecti64v, GetQueryObjecti64v);
+  mk_load_checker_method!(glGetQueryObjectiv, GetQueryObjectiv);
+  mk_load_checker_method!(glGetQueryObjectui64v, GetQueryObjectui64v);
+  mk_load_checker_method!(glGetQueryObjectuiv, GetQueryObjectuiv);
+  mk_load_checker_method!(glGetQueryiv, GetQueryiv);
+  mk_load_checker_method!(glGetRenderbufferParameteriv, GetRenderbufferParameteriv);
+  mk_load_checker_method!(glGetSamplerParameterIiv, GetSamplerParameterIiv);
+  mk_load_checker_method!(glGetSamplerParameterIuiv, GetSamplerParameterIuiv);
+  mk_load_checker_method!(glGetSamplerParameterfv, GetSamplerParameterfv);
+  mk_load_checker_method!(glGetSamplerParameteriv, GetSamplerParameteriv);
+  mk_load_checker_method!(glGetShaderInfoLog, GetShaderInfoLog);
+  mk_load_checker_method!(glGetShaderPrecisionFormat, GetShaderPrecisionFormat);
+  mk_load_checker_method!(glGetShaderSource, GetShaderSource);
+  mk_load_checker_method!(glGetShaderiv, GetShaderiv);
+  mk_load_checker_method!(glGetString, GetString);
+  mk_load_checker_method!(glGetStringi, GetStringi);
+  mk_load_checker_method!(glGetSubroutineIndex, GetSubroutineIndex);
+  mk_load_checker_method!(glGetSubroutineUniformLocation, GetSubroutineUniformLocation);
+  mk_load_checker_method!(glGetSynciv, GetSynciv);
+  mk_load_checker_method!(glGetTexImage, GetTexImage);
+  mk_load_checker_method!(glGetTexLevelParameterfv, GetTexLevelParameterfv);
+  mk_load_checker_method!(glGetTexLevelParameteriv, GetTexLevelParameteriv);
+  mk_load_checker_method!(glGetTexParameterIiv, GetTexParameterIiv);
+  mk_load_checker_method!(glGetTexParameterIuiv, GetTexParameterIuiv);
+  mk_load_checker_method!(glGetTexParameterfv, GetTexParameterfv);
+  mk_load_checker_method!(glGetTexParameteriv, GetTexParameteriv);
+  mk_load_checker_method!(glGetTextureImage, GetTextureImage);
+  mk_load_checker_method!(glGetTextureLevelParameterfv, GetTextureLevelParameterfv);
+  mk_load_checker_method!(glGetTextureLevelParameteriv, GetTextureLevelParameteriv);
+  mk_load_checker_method!(glGetTextureParameterIiv, GetTextureParameterIiv);
+  mk_load_checker_method!(glGetTextureParameterIuiv, GetTextureParameterIuiv);
+  mk_load_checker_method!(glGetTextureParameterfv, GetTextureParameterfv);
+  mk_load_checker_method!(glGetTextureParameteriv, GetTextureParameteriv);
+  mk_load_checker_method!(glGetTextureSubImage, GetTextureSubImage);
+  mk_load_checker_method!(glGetTransformFeedbackVarying, GetTransformFeedbackVarying);
+  mk_load_checker_method!(glGetTransformFeedbacki64_v, GetTransformFeedbacki64_v);
+  mk_load_checker_method!(glGetTransformFeedbacki_v, GetTransformFeedbacki_v);
+  mk_load_checker_method!(glGetTransformFeedbackiv, GetTransformFeedbackiv);
+  mk_load_checker_method!(glGetUniformBlockIndex, GetUniformBlockIndex);
+  mk_load_checker_method!(glGetUniformIndices, GetUniformIndices);
+  mk_load_checker_method!(glGetUniformLocation, GetUniformLocation);
+  mk_load_checker_method!(glGetUniformSubroutineuiv, GetUniformSubroutineuiv);
+  mk_load_checker_method!(glGetUniformdv, GetUniformdv);
+  mk_load_checker_method!(glGetUniformfv, GetUniformfv);
+  mk_load_checker_method!(glGetUniformiv, GetUniformiv);
+  mk_load_checker_method!(glGetUniformuiv, GetUniformuiv);
+  mk_load_checker_method!(glGetVertexArrayIndexed64iv, GetVertexArrayIndexed64iv);
+  mk_load_checker_method!(glGetVertexArrayIndexediv, GetVertexArrayIndexediv);
+  mk_load_checker_method!(glGetVertexArrayiv, GetVertexArrayiv);
+  mk_load_checker_method!(glGetVertexAttribIiv, GetVertexAttribIiv);
+  mk_load_checker_method!(glGetVertexAttribIuiv, GetVertexAttribIuiv);
+  mk_load_checker_method!(glGetVertexAttribLdv, GetVertexAttribLdv);
+  mk_load_checker_method!(glGetVertexAttribPointerv, GetVertexAttribPointerv);
+  mk_load_checker_method!(glGetVertexAttribdv, GetVertexAttribdv);
+  mk_load_checker_method!(glGetVertexAttribfv, GetVertexAttribfv);
+  mk_load_checker_method!(glGetVertexAttribiv, GetVertexAttribiv);
+  mk_load_checker_method!(glGetnColorTable, GetnColorTable);
+  mk_load_checker_method!(glGetnCompressedTexImage, GetnCompressedTexImage);
+  mk_load_checker_method!(glGetnConvolutionFilter, GetnConvolutionFilter);
+  mk_load_checker_method!(glGetnHistogram, GetnHistogram);
+  mk_load_checker_method!(glGetnMapdv, GetnMapdv);
+  mk_load_checker_method!(glGetnMapfv, GetnMapfv);
+  mk_load_checker_method!(glGetnMapiv, GetnMapiv);
+  mk_load_checker_method!(glGetnMinmax, GetnMinmax);
+  mk_load_checker_method!(glGetnPixelMapfv, GetnPixelMapfv);
+  mk_load_checker_method!(glGetnPixelMapuiv, GetnPixelMapuiv);
+  mk_load_checker_method!(glGetnPixelMapusv, GetnPixelMapusv);
+  mk_load_checker_method!(glGetnPolygonStipple, GetnPolygonStipple);
+  mk_load_checker_method!(glGetnSeparableFilter, GetnSeparableFilter);
+  mk_load_checker_method!(glGetnTexImage, GetnTexImage);
+  mk_load_checker_method!(glGetnUniformdv, GetnUniformdv);
+  mk_load_checker_method!(glGetnUniformfv, GetnUniformfv);
+  mk_load_checker_method!(glGetnUniformiv, GetnUniformiv);
+  mk_load_checker_method!(glGetnUniformuiv, GetnUniformuiv);
+  mk_load_checker_method!(glHint, Hint);
+  mk_load_checker_method!(glInvalidateBufferData, InvalidateBufferData);
+  mk_load_checker_method!(glInvalidateBufferSubData, InvalidateBufferSubData);
+  mk_load_checker_method!(glInvalidateFramebuffer, InvalidateFramebuffer);
+  mk_load_checker_method!(glInvalidateNamedFramebufferData, InvalidateNamedFramebufferData);
+  mk_load_checker_method!(glInvalidateNamedFramebufferSubData, InvalidateNamedFramebufferSubData);
+  mk_load_checker_method!(glInvalidateSubFramebuffer, InvalidateSubFramebuffer);
+  mk_load_checker_method!(glInvalidateTexImage, InvalidateTexImage);
+  mk_load_checker_method!(glInvalidateTexSubImage, InvalidateTexSubImage);
+  mk_load_checker_method!(glIsBuffer, IsBuffer);
+  mk_load_checker_method!(glIsEnabled, IsEnabled);
+  mk_load_checker_method!(glIsEnabledi, IsEnabledi);
+  mk_load_checker_method!(glIsFramebuffer, IsFramebuffer);
+  mk_load_checker_method!(glIsProgram, IsProgram);
+  mk_load_checker_method!(glIsProgramPipeline, IsProgramPipeline);
+  mk_load_checker_method!(glIsQuery, IsQuery);
+  mk_load_checker_method!(glIsRenderbuffer, IsRenderbuffer);
+  mk_load_checker_method!(glIsSampler, IsSampler);
+  mk_load_checker_method!(glIsShader, IsShader);
+  mk_load_checker_method!(glIsSync, IsSync);
+  mk_load_checker_method!(glIsTexture, IsTexture);
+  mk_load_checker_method!(glIsTransformFeedback, IsTransformFeedback);
+  mk_load_checker_method!(glIsVertexArray, IsVertexArray);
+  mk_load_checker_method!(glLineWidth, LineWidth);
+  mk_load_checker_method!(glLinkProgram, LinkProgram);
+  mk_load_checker_method!(glLogicOp, LogicOp);
+  mk_load_checker_method!(glMapBuffer, MapBuffer);
+  mk_load_checker_method!(glMapBufferRange, MapBufferRange);
+  mk_load_checker_method!(glMapNamedBuffer, MapNamedBuffer);
+  mk_load_checker_method!(glMapNamedBufferRange, MapNamedBufferRange);
+  mk_load_checker_method!(glMemoryBarrier, MemoryBarrier);
+  mk_load_checker_method!(glMemoryBarrierByRegion, MemoryBarrierByRegion);
+  mk_load_checker_method!(glMinSampleShading, MinSampleShading);
+  mk_load_checker_method!(glMultiDrawArrays, MultiDrawArrays);
+  mk_load_checker_method!(glMultiDrawArraysIndirect, MultiDrawArraysIndirect);
+  mk_load_checker_method!(glMultiDrawArraysIndirectCount, MultiDrawArraysIndirectCount);
+  mk_load_checker_method!(glMultiDrawElements, MultiDrawElements);
+  mk_load_checker_method!(glMultiDrawElementsBaseVertex, MultiDrawElementsBaseVertex);
+  mk_load_checker_method!(glMultiDrawElementsIndirect, MultiDrawElementsIndirect);
+  mk_load_checker_method!(glMultiDrawElementsIndirectCount, MultiDrawElementsIndirectCount);
+  mk_load_checker_method!(glMultiTexCoordP1ui, MultiTexCoordP1ui);
+  mk_load_checker_method!(glMultiTexCoordP1uiv, MultiTexCoordP1uiv);
+  mk_load_checker_method!(glMultiTexCoordP2ui, MultiTexCoordP2ui);
+  mk_load_checker_method!(glMultiTexCoordP2uiv, MultiTexCoordP2uiv);
+  mk_load_checker_method!(glMultiTexCoordP3ui, MultiTexCoordP3ui);
+  mk_load_checker_method!(glMultiTexCoordP3uiv, MultiTexCoordP3uiv);
+  mk_load_checker_method!(glMultiTexCoordP4ui, MultiTexCoordP4ui);
+  mk_load_checker_method!(glMultiTexCoordP4uiv, MultiTexCoordP4uiv);
+  mk_load_checker_method!(glNamedBufferData, NamedBufferData);
+  mk_load_checker_method!(glNamedBufferStorage, NamedBufferStorage);
+  mk_load_checker_method!(glNamedBufferSubData, NamedBufferSubData);
+  mk_load_checker_method!(glNamedFramebufferDrawBuffer, NamedFramebufferDrawBuffer);
+  mk_load_checker_method!(glNamedFramebufferDrawBuffers, NamedFramebufferDrawBuffers);
+  mk_load_checker_method!(glNamedFramebufferParameteri, NamedFramebufferParameteri);
+  mk_load_checker_method!(glNamedFramebufferReadBuffer, NamedFramebufferReadBuffer);
+  mk_load_checker_method!(glNamedFramebufferRenderbuffer, NamedFramebufferRenderbuffer);
+  mk_load_checker_method!(glNamedFramebufferTexture, NamedFramebufferTexture);
+  mk_load_checker_method!(glNamedFramebufferTextureLayer, NamedFramebufferTextureLayer);
+  mk_load_checker_method!(glNamedRenderbufferStorage, NamedRenderbufferStorage);
+  mk_load_checker_method!(
+    glNamedRenderbufferStorageMultisample,
+    NamedRenderbufferStorageMultisample
+  );
+  mk_load_checker_method!(glNormalP3ui, NormalP3ui);
+  mk_load_checker_method!(glNormalP3uiv, NormalP3uiv);
+  mk_load_checker_method!(glObjectLabel, ObjectLabel);
+  mk_load_checker_method!(glObjectLabelKHR, ObjectLabelKHR);
+  mk_load_checker_method!(glObjectPtrLabel, ObjectPtrLabel);
+  mk_load_checker_method!(glObjectPtrLabelKHR, ObjectPtrLabelKHR);
+  mk_load_checker_method!(glPatchParameterfv, PatchParameterfv);
+  mk_load_checker_method!(glPatchParameteri, PatchParameteri);
+  mk_load_checker_method!(glPauseTransformFeedback, PauseTransformFeedback);
+  mk_load_checker_method!(glPixelStoref, PixelStoref);
+  mk_load_checker_method!(glPixelStorei, PixelStorei);
+  mk_load_checker_method!(glPointParameterf, PointParameterf);
+  mk_load_checker_method!(glPointParameterfv, PointParameterfv);
+  mk_load_checker_method!(glPointParameteri, PointParameteri);
+  mk_load_checker_method!(glPointParameteriv, PointParameteriv);
+  mk_load_checker_method!(glPointSize, PointSize);
+  mk_load_checker_method!(glPolygonMode, PolygonMode);
+  mk_load_checker_method!(glPolygonOffset, PolygonOffset);
+  mk_load_checker_method!(glPolygonOffsetClamp, PolygonOffsetClamp);
+  mk_load_checker_method!(glPopDebugGroup, PopDebugGroup);
+  mk_load_checker_method!(glPopDebugGroupKHR, PopDebugGroupKHR);
+  mk_load_checker_method!(glPrimitiveBoundingBox, PrimitiveBoundingBox);
+  mk_load_checker_method!(glPrimitiveRestartIndex, PrimitiveRestartIndex);
+  mk_load_checker_method!(glProgramBinary, ProgramBinary);
+  mk_load_checker_method!(glProgramParameteri, ProgramParameteri);
+  mk_load_checker_method!(glProgramUniform1d, ProgramUniform1d);
+  mk_load_checker_method!(glProgramUniform1dv, ProgramUniform1dv);
+  mk_load_checker_method!(glProgramUniform1f, ProgramUniform1f);
+  mk_load_checker_method!(glProgramUniform1fv, ProgramUniform1fv);
+  mk_load_checker_method!(glProgramUniform1i, ProgramUniform1i);
+  mk_load_checker_method!(glProgramUniform1iv, ProgramUniform1iv);
+  mk_load_checker_method!(glProgramUniform1ui, ProgramUniform1ui);
+  mk_load_checker_method!(glProgramUniform1uiv, ProgramUniform1uiv);
+  mk_load_checker_method!(glProgramUniform2d, ProgramUniform2d);
+  mk_load_checker_method!(glProgramUniform2dv, ProgramUniform2dv);
+  mk_load_checker_method!(glProgramUniform2f, ProgramUniform2f);
+  mk_load_checker_method!(glProgramUniform2fv, ProgramUniform2fv);
+  mk_load_checker_method!(glProgramUniform2i, ProgramUniform2i);
+  mk_load_checker_method!(glProgramUniform2iv, ProgramUniform2iv);
+  mk_load_checker_method!(glProgramUniform2ui, ProgramUniform2ui);
+  mk_load_checker_method!(glProgramUniform2uiv, ProgramUniform2uiv);
+  mk_load_checker_method!(glProgramUniform3d, ProgramUniform3d);
+  mk_load_checker_method!(glProgramUniform3dv, ProgramUniform3dv);
+  mk_load_checker_method!(glProgramUniform3f, ProgramUniform3f);
+  mk_load_checker_method!(glProgramUniform3fv, ProgramUniform3fv);
+  mk_load_checker_method!(glProgramUniform3i, ProgramUniform3i);
+  mk_load_checker_method!(glProgramUniform3iv, ProgramUniform3iv);
+  mk_load_checker_method!(glProgramUniform3ui, ProgramUniform3ui);
+  mk_load_checker_method!(glProgramUniform3uiv, ProgramUniform3uiv);
+  mk_load_checker_method!(glProgramUniform4d, ProgramUniform4d);
+  mk_load_checker_method!(glProgramUniform4dv, ProgramUniform4dv);
+  mk_load_checker_method!(glProgramUniform4f, ProgramUniform4f);
+  mk_load_checker_method!(glProgramUniform4fv, ProgramUniform4fv);
+  mk_load_checker_method!(glProgramUniform4i, ProgramUniform4i);
+  mk_load_checker_method!(glProgramUniform4iv, ProgramUniform4iv);
+  mk_load_checker_method!(glProgramUniform4ui, ProgramUniform4ui);
+  mk_load_checker_method!(glProgramUniform4uiv, ProgramUniform4uiv);
+  mk_load_checker_method!(glProgramUniformMatrix2dv, ProgramUniformMatrix2dv);
+  mk_load_checker_method!(glProgramUniformMatrix2fv, ProgramUniformMatrix2fv);
+  mk_load_checker_method!(glProgramUniformMatrix2x3dv, ProgramUniformMatrix2x3dv);
+  mk_load_checker_method!(glProgramUniformMatrix2x3fv, ProgramUniformMatrix2x3fv);
+  mk_load_checker_method!(glProgramUniformMatrix2x4dv, ProgramUniformMatrix2x4dv);
+  mk_load_checker_method!(glProgramUniformMatrix2x4fv, ProgramUniformMatrix2x4fv);
+  mk_load_checker_method!(glProgramUniformMatrix3dv, ProgramUniformMatrix3dv);
+  mk_load_checker_method!(glProgramUniformMatrix3fv, ProgramUniformMatrix3fv);
+  mk_load_checker_method!(glProgramUniformMatrix3x2dv, ProgramUniformMatrix3x2dv);
+  mk_load_checker_method!(glProgramUniformMatrix3x2fv, ProgramUniformMatrix3x2fv);
+  mk_load_checker_method!(glProgramUniformMatrix3x4dv, ProgramUniformMatrix3x4dv);
+  mk_load_checker_method!(glProgramUniformMatrix3x4fv, ProgramUniformMatrix3x4fv);
+  mk_load_checker_method!(glProgramUniformMatrix4dv, ProgramUniformMatrix4dv);
+  mk_load_checker_method!(glProgramUniformMatrix4fv, ProgramUniformMatrix4fv);
+  mk_load_checker_method!(glProgramUniformMatrix4x2dv, ProgramUniformMatrix4x2dv);
+  mk_load_checker_method!(glProgramUniformMatrix4x2fv, ProgramUniformMatrix4x2fv);
+  mk_load_checker_method!(glProgramUniformMatrix4x3dv, ProgramUniformMatrix4x3dv);
+  mk_load_checker_method!(glProgramUniformMatrix4x3fv, ProgramUniformMatrix4x3fv);
+  mk_load_checker_method!(glProvokingVertex, ProvokingVertex);
+  mk_load_checker_method!(glPushDebugGroup, PushDebugGroup);
+  mk_load_checker_method!(glPushDebugGroupKHR, PushDebugGroupKHR);
+  mk_load_checker_method!(glQueryCounter, QueryCounter);
+  mk_load_checker_method!(glReadBuffer, ReadBuffer);
+  mk_load_checker_method!(glReadPixels, ReadPixels);
+  mk_load_checker_method!(glReadnPixels, ReadnPixels);
+  mk_load_checker_method!(glReleaseShaderCompiler, ReleaseShaderCompiler);
+  mk_load_checker_method!(glRenderbufferStorage, RenderbufferStorage);
+  mk_load_checker_method!(glRenderbufferStorageMultisample, RenderbufferStorageMultisample);
+  mk_load_checker_method!(glResumeTransformFeedback, ResumeTransformFeedback);
+  mk_load_checker_method!(glSampleCoverage, SampleCoverage);
+  mk_load_checker_method!(glSampleMaski, SampleMaski);
+  mk_load_checker_method!(glSamplerParameterIiv, SamplerParameterIiv);
+  mk_load_checker_method!(glSamplerParameterIuiv, SamplerParameterIuiv);
+  mk_load_checker_method!(glSamplerParameterf, SamplerParameterf);
+  mk_load_checker_method!(glSamplerParameterfv, SamplerParameterfv);
+  mk_load_checker_method!(glSamplerParameteri, SamplerParameteri);
+  mk_load_checker_method!(glSamplerParameteriv, SamplerParameteriv);
+  mk_load_checker_method!(glScissor, Scissor);
+  mk_load_checker_method!(glScissorArrayv, ScissorArrayv);
+  mk_load_checker_method!(glScissorIndexed, ScissorIndexed);
+  mk_load_checker_method!(glScissorIndexedv, ScissorIndexedv);
+  mk_load_checker_method!(glSecondaryColorP3ui, SecondaryColorP3ui);
+  mk_load_checker_method!(glSecondaryColorP3uiv, SecondaryColorP3uiv);
+  mk_load_checker_method!(glShaderBinary, ShaderBinary);
+  mk_load_checker_method!(glShaderSource, ShaderSource);
+  mk_load_checker_method!(glShaderStorageBlockBinding, ShaderStorageBlockBinding);
+  mk_load_checker_method!(glSpecializeShader, SpecializeShader);
+  mk_load_checker_method!(glStencilFunc, StencilFunc);
+  mk_load_checker_method!(glStencilFuncSeparate, StencilFuncSeparate);
+  mk_load_checker_method!(glStencilMask, StencilMask);
+  mk_load_checker_method!(glStencilMaskSeparate, StencilMaskSeparate);
+  mk_load_checker_method!(glStencilOp, StencilOp);
+  mk_load_checker_method!(glStencilOpSeparate, StencilOpSeparate);
+  mk_load_checker_method!(glTexBuffer, TexBuffer);
+  mk_load_checker_method!(glTexBufferRange, TexBufferRange);
+  mk_load_checker_method!(glTexCoordP1ui, TexCoordP1ui);
+  mk_load_checker_method!(glTexCoordP1uiv, TexCoordP1uiv);
+  mk_load_checker_method!(glTexCoordP2ui, TexCoordP2ui);
+  mk_load_checker_method!(glTexCoordP2uiv, TexCoordP2uiv);
+  mk_load_checker_method!(glTexCoordP3ui, TexCoordP3ui);
+  mk_load_checker_method!(glTexCoordP3uiv, TexCoordP3uiv);
+  mk_load_checker_method!(glTexCoordP4ui, TexCoordP4ui);
+  mk_load_checker_method!(glTexCoordP4uiv, TexCoordP4uiv);
+  mk_load_checker_method!(glTexImage1D, TexImage1D);
+  mk_load_checker_method!(glTexImage2D, TexImage2D);
+  mk_load_checker_method!(glTexImage2DMultisample, TexImage2DMultisample);
+  mk_load_checker_method!(glTexImage3D, TexImage3D);
+  mk_load_checker_method!(glTexImage3DMultisample, TexImage3DMultisample);
+  mk_load_checker_method!(glTexParameterIiv, TexParameterIiv);
+  mk_load_checker_method!(glTexParameterIuiv, TexParameterIuiv);
+  mk_load_checker_method!(glTexParameterf, TexParameterf);
+  mk_load_checker_method!(glTexParameterfv, TexParameterfv);
+  mk_load_checker_method!(glTexParameteri, TexParameteri);
+  mk_load_checker_method!(glTexParameteriv, TexParameteriv);
+  mk_load_checker_method!(glTexStorage1D, TexStorage1D);
+  mk_load_checker_method!(glTexStorage2D, TexStorage2D);
+  mk_load_checker_method!(glTexStorage2DMultisample, TexStorage2DMultisample);
+  mk_load_checker_method!(glTexStorage3D, TexStorage3D);
+  mk_load_checker_method!(glTexStorage3DMultisample, TexStorage3DMultisample);
+  mk_load_checker_method!(glTexSubImage1D, TexSubImage1D);
+  mk_load_checker_method!(glTexSubImage2D, TexSubImage2D);
+  mk_load_checker_method!(glTexSubImage3D, TexSubImage3D);
+  mk_load_checker_method!(glTextureBarrier, TextureBarrier);
+  mk_load_checker_method!(glTextureBuffer, TextureBuffer);
+  mk_load_checker_method!(glTextureBufferRange, TextureBufferRange);
+  mk_load_checker_method!(glTextureParameterIiv, TextureParameterIiv);
+  mk_load_checker_method!(glTextureParameterIuiv, TextureParameterIuiv);
+  mk_load_checker_method!(glTextureParameterf, TextureParameterf);
+  mk_load_checker_method!(glTextureParameterfv, TextureParameterfv);
+  mk_load_checker_method!(glTextureParameteri, TextureParameteri);
+  mk_load_checker_method!(glTextureParameteriv, TextureParameteriv);
+  mk_load_checker_method!(glTextureStorage1D, TextureStorage1D);
+  mk_load_checker_method!(glTextureStorage2D, TextureStorage2D);
+  mk_load_checker_method!(glTextureStorage2DMultisample, TextureStorage2DMultisample);
+  mk_load_checker_method!(glTextureStorage3D, TextureStorage3D);
+  mk_load_checker_method!(glTextureStorage3DMultisample, TextureStorage3DMultisample);
+  mk_load_checker_method!(glTextureSubImage1D, TextureSubImage1D);
+  mk_load_checker_method!(glTextureSubImage2D, TextureSubImage2D);
+  mk_load_checker_method!(glTextureSubImage3D, TextureSubImage3D);
+  mk_load_checker_method!(glTextureView, TextureView);
+  mk_load_checker_method!(glTransformFeedbackBufferBase, TransformFeedbackBufferBase);
+  mk_load_checker_method!(glTransformFeedbackBufferRange, TransformFeedbackBufferRange);
+  mk_load_checker_method!(glTransformFeedbackVaryings, TransformFeedbackVaryings);
+  mk_load_checker_method!(glUniform1d, Uniform1d);
+  mk_load_checker_method!(glUniform1dv, Uniform1dv);
+  mk_load_checker_method!(glUniform1f, Uniform1f);
+  mk_load_checker_method!(glUniform1fv, Uniform1fv);
+  mk_load_checker_method!(glUniform1i, Uniform1i);
+  mk_load_checker_method!(glUniform1iv, Uniform1iv);
+  mk_load_checker_method!(glUniform1ui, Uniform1ui);
+  mk_load_checker_method!(glUniform1uiv, Uniform1uiv);
+  mk_load_checker_method!(glUniform2d, Uniform2d);
+  mk_load_checker_method!(glUniform2dv, Uniform2dv);
+  mk_load_checker_method!(glUniform2f, Uniform2f);
+  mk_load_checker_method!(glUniform2fv, Uniform2fv);
+  mk_load_checker_method!(glUniform2i, Uniform2i);
+  mk_load_checker_method!(glUniform2iv, Uniform2iv);
+  mk_load_checker_method!(glUniform2ui, Uniform2ui);
+  mk_load_checker_method!(glUniform2uiv, Uniform2uiv);
+  mk_load_checker_method!(glUniform3d, Uniform3d);
+  mk_load_checker_method!(glUniform3dv, Uniform3dv);
+  mk_load_checker_method!(glUniform3f, Uniform3f);
+  mk_load_checker_method!(glUniform3fv, Uniform3fv);
+  mk_load_checker_method!(glUniform3i, Uniform3i);
+  mk_load_checker_method!(glUniform3iv, Uniform3iv);
+  mk_load_checker_method!(glUniform3ui, Uniform3ui);
+  mk_load_checker_method!(glUniform3uiv, Uniform3uiv);
+  mk_load_checker_method!(glUniform4d, Uniform4d);
+  mk_load_checker_method!(glUniform4dv, Uniform4dv);
+  mk_load_checker_method!(glUniform4f, Uniform4f);
+  mk_load_checker_method!(glUniform4fv, Uniform4fv);
+  mk_load_checker_method!(glUniform4i, Uniform4i);
+  mk_load_checker_method!(glUniform4iv, Uniform4iv);
+  mk_load_checker_method!(glUniform4ui, Uniform4ui);
+  mk_load_checker_method!(glUniform4uiv, Uniform4uiv);
+  mk_load_checker_method!(glUniformBlockBinding, UniformBlockBinding);
+  mk_load_checker_method!(glUniformMatrix2dv, UniformMatrix2dv);
+  mk_load_checker_method!(glUniformMatrix2fv, UniformMatrix2fv);
+  mk_load_checker_method!(glUniformMatrix2x3dv, UniformMatrix2x3dv);
+  mk_load_checker_method!(glUniformMatrix2x3fv, UniformMatrix2x3fv);
+  mk_load_checker_method!(glUniformMatrix2x4dv, UniformMatrix2x4dv);
+  mk_load_checker_method!(glUniformMatrix2x4fv, UniformMatrix2x4fv);
+  mk_load_checker_method!(glUniformMatrix3dv, UniformMatrix3dv);
+  mk_load_checker_method!(glUniformMatrix3fv, UniformMatrix3fv);
+  mk_load_checker_method!(glUniformMatrix3x2dv, UniformMatrix3x2dv);
+  mk_load_checker_method!(glUniformMatrix3x2fv, UniformMatrix3x2fv);
+  mk_load_checker_method!(glUniformMatrix3x4dv, UniformMatrix3x4dv);
+  mk_load_checker_method!(glUniformMatrix3x4fv, UniformMatrix3x4fv);
+  mk_load_checker_method!(glUniformMatrix4dv, UniformMatrix4dv);
+  mk_load_checker_method!(glUniformMatrix4fv, UniformMatrix4fv);
+  mk_load_checker_method!(glUniformMatrix4x2dv, UniformMatrix4x2dv);
+  mk_load_checker_method!(glUniformMatrix4x2fv, UniformMatrix4x2fv);
+  mk_load_checker_method!(glUniformMatrix4x3dv, UniformMatrix4x3dv);
+  mk_load_checker_method!(glUniformMatrix4x3fv, UniformMatrix4x3fv);
+  mk_load_checker_method!(glUniformSubroutinesuiv, UniformSubroutinesuiv);
+  mk_load_checker_method!(glUnmapBuffer, UnmapBuffer);
+  mk_load_checker_method!(glUnmapNamedBuffer, UnmapNamedBuffer);
+  mk_load_checker_method!(glUseProgram, UseProgram);
+  mk_load_checker_method!(glUseProgramStages, UseProgramStages);
+  mk_load_checker_method!(glValidateProgram, ValidateProgram);
+  mk_load_checker_method!(glValidateProgramPipeline, ValidateProgramPipeline);
+  mk_load_checker_method!(glVertexArrayAttribBinding, VertexArrayAttribBinding);
+  mk_load_checker_method!(glVertexArrayAttribFormat, VertexArrayAttribFormat);
+  mk_load_checker_method!(glVertexArrayAttribIFormat, VertexArrayAttribIFormat);
+  mk_load_checker_method!(glVertexArrayAttribLFormat, VertexArrayAttribLFormat);
+  mk_load_checker_method!(glVertexArrayBindingDivisor, VertexArrayBindingDivisor);
+  mk_load_checker_method!(glVertexArrayElementBuffer, VertexArrayElementBuffer);
+  mk_load_checker_method!(glVertexArrayVertexBuffer, VertexArrayVertexBuffer);
+  mk_load_checker_method!(glVertexArrayVertexBuffers, VertexArrayVertexBuffers);
+  mk_load_checker_method!(glVertexAttrib1d, VertexAttrib1d);
+  mk_load_checker_method!(glVertexAttrib1dv, VertexAttrib1dv);
+  mk_load_checker_method!(glVertexAttrib1f, VertexAttrib1f);
+  mk_load_checker_method!(glVertexAttrib1fv, VertexAttrib1fv);
+  mk_load_checker_method!(glVertexAttrib1s, VertexAttrib1s);
+  mk_load_checker_method!(glVertexAttrib1sv, VertexAttrib1sv);
+  mk_load_checker_method!(glVertexAttrib2d, VertexAttrib2d);
+  mk_load_checker_method!(glVertexAttrib2dv, VertexAttrib2dv);
+  mk_load_checker_method!(glVertexAttrib2f, VertexAttrib2f);
+  mk_load_checker_method!(glVertexAttrib2fv, VertexAttrib2fv);
+  mk_load_checker_method!(glVertexAttrib2s, VertexAttrib2s);
+  mk_load_checker_method!(glVertexAttrib2sv, VertexAttrib2sv);
+  mk_load_checker_method!(glVertexAttrib3d, VertexAttrib3d);
+  mk_load_checker_method!(glVertexAttrib3dv, VertexAttrib3dv);
+  mk_load_checker_method!(glVertexAttrib3f, VertexAttrib3f);
+  mk_load_checker_method!(glVertexAttrib3fv, VertexAttrib3fv);
+  mk_load_checker_method!(glVertexAttrib3s, VertexAttrib3s);
+  mk_load_checker_method!(glVertexAttrib3sv, VertexAttrib3sv);
+  mk_load_checker_method!(glVertexAttrib4Nbv, VertexAttrib4Nbv);
+  mk_load_checker_method!(glVertexAttrib4Niv, VertexAttrib4Niv);
+  mk_load_checker_method!(glVertexAttrib4Nsv, VertexAttrib4Nsv);
+  mk_load_checker_method!(glVertexAttrib4Nub, VertexAttrib4Nub);
+  mk_load_checker_method!(glVertexAttrib4Nubv, VertexAttrib4Nubv);
+  mk_load_checker_method!(glVertexAttrib4Nuiv, VertexAttrib4Nuiv);
+  mk_load_checker_method!(glVertexAttrib4Nusv, VertexAttrib4Nusv);
+  mk_load_checker_method!(glVertexAttrib4bv, VertexAttrib4bv);
+  mk_load_checker_method!(glVertexAttrib4d, VertexAttrib4d);
+  mk_load_checker_method!(glVertexAttrib4dv, VertexAttrib4dv);
+  mk_load_checker_method!(glVertexAttrib4f, VertexAttrib4f);
+  mk_load_checker_method!(glVertexAttrib4fv, VertexAttrib4fv);
+  mk_load_checker_method!(glVertexAttrib4iv, VertexAttrib4iv);
+  mk_load_checker_method!(glVertexAttrib4s, VertexAttrib4s);
+  mk_load_checker_method!(glVertexAttrib4sv, VertexAttrib4sv);
+  mk_load_checker_method!(glVertexAttrib4ubv, VertexAttrib4ubv);
+  mk_load_checker_method!(glVertexAttrib4uiv, VertexAttrib4uiv);
+  mk_load_checker_method!(glVertexAttrib4usv, VertexAttrib4usv);
+  mk_load_checker_method!(glVertexAttribBinding, VertexAttribBinding);
+  mk_load_checker_method!(glVertexAttribDivisor, VertexAttribDivisor);
+  mk_load_checker_method!(glVertexAttribFormat, VertexAttribFormat);
+  mk_load_checker_method!(glVertexAttribI1i, VertexAttribI1i);
+  mk_load_checker_method!(glVertexAttribI1iv, VertexAttribI1iv);
+  mk_load_checker_method!(glVertexAttribI1ui, VertexAttribI1ui);
+  mk_load_checker_method!(glVertexAttribI1uiv, VertexAttribI1uiv);
+  mk_load_checker_method!(glVertexAttribI2i, VertexAttribI2i);
+  mk_load_checker_method!(glVertexAttribI2iv, VertexAttribI2iv);
+  mk_load_checker_method!(glVertexAttribI2ui, VertexAttribI2ui);
+  mk_load_checker_method!(glVertexAttribI2uiv, VertexAttribI2uiv);
+  mk_load_checker_method!(glVertexAttribI3i, VertexAttribI3i);
+  mk_load_checker_method!(glVertexAttribI3iv, VertexAttribI3iv);
+  mk_load_checker_method!(glVertexAttribI3ui, VertexAttribI3ui);
+  mk_load_checker_method!(glVertexAttribI3uiv, VertexAttribI3uiv);
+  mk_load_checker_method!(glVertexAttribI4bv, VertexAttribI4bv);
+  mk_load_checker_method!(glVertexAttribI4i, VertexAttribI4i);
+  mk_load_checker_method!(glVertexAttribI4iv, VertexAttribI4iv);
+  mk_load_checker_method!(glVertexAttribI4sv, VertexAttribI4sv);
+  mk_load_checker_method!(glVertexAttribI4ubv, VertexAttribI4ubv);
+  mk_load_checker_method!(glVertexAttribI4ui, VertexAttribI4ui);
+  mk_load_checker_method!(glVertexAttribI4uiv, VertexAttribI4uiv);
+  mk_load_checker_method!(glVertexAttribI4usv, VertexAttribI4usv);
+  mk_load_checker_method!(glVertexAttribIFormat, VertexAttribIFormat);
+  mk_load_checker_method!(glVertexAttribIPointer, VertexAttribIPointer);
+  mk_load_checker_method!(glVertexAttribL1d, VertexAttribL1d);
+  mk_load_checker_method!(glVertexAttribL1dv, VertexAttribL1dv);
+  mk_load_checker_method!(glVertexAttribL2d, VertexAttribL2d);
+  mk_load_checker_method!(glVertexAttribL2dv, VertexAttribL2dv);
+  mk_load_checker_method!(glVertexAttribL3d, VertexAttribL3d);
+  mk_load_checker_method!(glVertexAttribL3dv, VertexAttribL3dv);
+  mk_load_checker_method!(glVertexAttribL4d, VertexAttribL4d);
+  mk_load_checker_method!(glVertexAttribL4dv, VertexAttribL4dv);
+  mk_load_checker_method!(glVertexAttribLFormat, VertexAttribLFormat);
+  mk_load_checker_method!(glVertexAttribLPointer, VertexAttribLPointer);
+  mk_load_checker_method!(glVertexAttribP1ui, VertexAttribP1ui);
+  mk_load_checker_method!(glVertexAttribP1uiv, VertexAttribP1uiv);
+  mk_load_checker_method!(glVertexAttribP2ui, VertexAttribP2ui);
+  mk_load_checker_method!(glVertexAttribP2uiv, VertexAttribP2uiv);
+  mk_load_checker_method!(glVertexAttribP3ui, VertexAttribP3ui);
+  mk_load_checker_method!(glVertexAttribP3uiv, VertexAttribP3uiv);
+  mk_load_checker_method!(glVertexAttribP4ui, VertexAttribP4ui);
+  mk_load_checker_method!(glVertexAttribP4uiv, VertexAttribP4uiv);
+  mk_load_checker_method!(glVertexAttribPointer, VertexAttribPointer);
+  mk_load_checker_method!(glVertexBindingDivisor, VertexBindingDivisor);
+  mk_load_checker_method!(glVertexP2ui, VertexP2ui);
+  mk_load_checker_method!(glVertexP2uiv, VertexP2uiv);
+  mk_load_checker_method!(glVertexP3ui, VertexP3ui);
+  mk_load_checker_method!(glVertexP3uiv, VertexP3uiv);
+  mk_load_checker_method!(glVertexP4ui, VertexP4ui);
+  mk_load_checker_method!(glVertexP4uiv, VertexP4uiv);
+  mk_load_checker_method!(glViewport, Viewport);
+  mk_load_checker_method!(glViewportArrayv, ViewportArrayv);
+  mk_load_checker_method!(glViewportIndexedf, ViewportIndexedf);
+  mk_load_checker_method!(glViewportIndexedfv, ViewportIndexedfv);
+  mk_load_checker_method!(glWaitSync, WaitSync);
 }
