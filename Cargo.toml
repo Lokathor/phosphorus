@@ -6,5 +6,4 @@ edition = "2021"
 license = "Zlib OR Apache-2.0 OR MIT"
 
 [dependencies]
-clap = { version = "4.1.6", features = ["derive"] }
 magnesium = "1.2.1"
