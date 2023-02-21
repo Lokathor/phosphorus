@@ -24,25 +24,39 @@ fn main() {
   let mut gl_command_names: Vec<StaticStr> = Vec::new();
   let mut gles2_command_names: Vec<StaticStr> = Vec::new();
   for Feature { name: _, api, number: _, requirements, removals } in features.iter() {
-    let command_names = match *api {
+    let list = match *api {
       "gl" => &mut gl_command_names,
       "gles2" => &mut gles2_command_names,
       _ => continue,
     };
     for requirement in requirements.iter() {
-      command_names.extend(requirement.commands.iter().copied());
+      list.extend(requirement.commands.iter().copied());
     }
     for removal in removals.iter() {
       for removed_command in removal.commands.iter() {
-        if let Some(pos) = command_names.iter().position(|c| c == removed_command) {
-          command_names.remove(pos);
+        if let Some(pos) = list.iter().position(|c| c == removed_command) {
+          list.remove(pos);
         }
       }
     }
   }
   //
 
-  // TODO: any desired extensions would be added here.
+  // IF YOU WANT TO SUPPORT COMMANDS FROM OTHER EXTENSIONS ADD THEM TO THE LIST
+  // IN THIS FILTER RULE HERE.
+  for Extension { require_lists, .. } in
+    extensions.iter().filter(|x| ["GL_KHR_debug"].contains(&x.name))
+  {
+    for RequireList { api, commands, .. } in require_lists.iter() {
+      let list = match *api {
+        "gl" => &mut gl_command_names,
+        "gles2" => &mut gles2_command_names,
+        _ => continue,
+      };
+      eprintln!("Adding: {commands:?}");
+      list.extend(commands.iter().copied());
+    }
+  }
 
   //
   let mut combo_names: Vec<StaticStr> =
@@ -63,18 +77,31 @@ fn main() {
   print_fn_loaded_checker(&combo_commands);
 }
 
+const FN_LOADED_METHOD_MACRO: &str = "
+macro_rules! mk_load_checker_method {
+  ($full_name:ident, $short_name:ident) => {
+    #[inline]
+    #[must_use]
+    pub fn $short_name(&self) -> bool {
+      {
+        self.0.$full_name.is_some()
+      }
+    }
+  };
+}
+";
+
 fn print_fn_loaded_checker(commands: &[Command]) {
   println!("impl GlFns {{");
   println!("  pub fn has_loaded(&self) -> FnLoadedChecker<'_> {{ FnLoadedChecker(self) }}");
   println!("}}");
+  println!("{FN_LOADED_METHOD_MACRO}");
   println!("pub struct FnLoadedChecker<'g>(&'g GlFns);");
   println!("impl FnLoadedChecker<'_> {{");
   for command in commands.iter() {
     let full_name = command.name;
     let short_name = full_name.strip_prefix("gl").unwrap();
-    println!(
-      "#[inline]#[must_use]pub fn {short_name}(&self) -> bool {{ self.0.{full_name}.is_some() }}"
-    );
+    println!("mk_load_checker_method!({full_name}, {short_name});");
   }
   println!("}}");
 }
@@ -97,6 +124,7 @@ pub fn print_struct_loader_method(commands: &[Command]) {
   println!("    let box_self: Box<Self> = unsafe {{ Box::from_raw(ptr_self) }};");
   println!("    box_self");
   println!("  }}");
+  println!("#[allow(clippy::missing_safety_doc)]");
   println!(
     "  pub unsafe fn load(&mut self, mut loader: impl FnMut(*const u8) -> *const core::ffi::c_void) {{"
   );
@@ -121,9 +149,13 @@ pub fn print_struct_loader_method(commands: &[Command]) {
 }
 
 pub fn print_fn_type_aliases(commands: &[Command]) {
+  println!("use fn_ty_aliases::*;");
+  println!("mod fn_ty_aliases {{");
+  println!("  use super::*;");
   for command in commands {
-    println!("type {}_t = {};", command.name, command.get_fn_ty());
+    println!("  pub type {}_t = {};", command.name, command.get_fn_ty());
   }
+  println!("}}");
 }
 
 pub fn print_struct_declaration(commands: &[Command]) {
