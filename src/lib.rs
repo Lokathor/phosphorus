@@ -26,20 +26,12 @@
 //!   check if any fn has been loaded or not first call `has_loaded` to get a
 //!   `FnLoadedChecker`, then call the name of the fn you want to check.
 
-#[allow(dead_code)]
-#[doc(hidden)]
 pub mod type_alias;
 
-#[allow(dead_code)]
-#[doc(hidden)]
 pub mod special_numbers;
 
-#[allow(dead_code)]
-#[doc(hidden)]
 pub mod enumerations;
 
-#[allow(dead_code)]
-#[doc(hidden)]
 pub mod gl_fns;
 
 use core::fmt::Write;
