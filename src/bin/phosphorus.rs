@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 
+use core::fmt::Write;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use magnesium::*;
@@ -39,37 +40,152 @@ fn main() {
       }
     }
   }
-  gl_command_names.sort();
-  gl_command_names.dedup();
-  gles2_command_names.sort();
-  gles2_command_names.dedup();
   //
-  let combo_commands: Vec<Command> = gl_command_names
+
+  // TODO: any desired extensions would be added here.
+
+  //
+  let mut combo_names: Vec<StaticStr> =
+    gl_command_names.into_iter().chain(gles2_command_names.into_iter()).collect();
+  combo_names.sort();
+  combo_names.dedup();
+  //
+  let combo_commands: Vec<Command> = combo_names
     .into_iter()
-    .chain(gles2_command_names.into_iter())
     .map(|name| commands.iter().find(|c| c.name == name).cloned().unwrap())
     .collect();
-  //
-  println!("// listing {} commands from both GL and GLES", combo_commands.len());
-  //print_fn_type_aliases(&combo_commands);
+
+  println!("#![allow(nonstandard_style)]");
   print_struct_declaration(&combo_commands);
+  print_struct_loader_method(&combo_commands);
+  print_struct_gl_methods(&combo_commands);
+  print_fn_type_aliases(&combo_commands);
+  print_fn_loaded_checker(&combo_commands);
+}
+
+fn print_fn_loaded_checker(commands: &[Command]) {
+  println!("impl GlFns {{");
+  println!("  pub fn has_loaded(&self) -> FnLoadedChecker<'_> {{ FnLoadedChecker(self) }}");
+  println!("}}");
+  println!("pub struct FnLoadedChecker<'g>(&'g GlFns);");
+  println!("impl FnLoadedChecker<'_> {{");
+  for command in commands.iter() {
+    let full_name = command.name;
+    let short_name = full_name.strip_prefix("gl").unwrap();
+    println!(
+      "#[inline]#[must_use]pub fn {short_name}(&self) -> bool {{ self.0.{full_name}.is_some() }}"
+    );
+  }
+  println!("}}");
+}
+
+pub fn print_struct_loader_method(commands: &[Command]) {
+  println!("impl GlFns {{");
+  println!("  #[inline]#[must_use]");
+  println!("  pub fn new_boxed() -> Box<Self> {{");
+  println!("    // this struct is usually *hundreds* of `usize` big,");
+  println!("    // so we do this heap dance to avoid stack strain.");
+  println!(
+    "    assert!(core::mem::size_of::<Self>() % core::mem::size_of::<Option<fn()>>() == 0);"
+  );
+  println!("    let len = core::mem::size_of::<Self>() / core::mem::size_of::<Option<fn()>>();");
+  println!("    let v: Vec<Option<fn()>> = vec![None; len];");
+  println!("    #[allow(clippy::type_complexity)]");
+  println!("    let b: Box<[Option<fn()>]> = v.into_boxed_slice();");
+  println!("    let ptr_slice: *mut [Option<fn()>] = Box::leak(b);");
+  println!("    let ptr_self: *mut Self = ptr_slice as *mut Self;");
+  println!("    let box_self: Box<Self> = unsafe {{ Box::from_raw(ptr_self) }};");
+  println!("    box_self");
+  println!("  }}");
+  println!(
+    "  pub unsafe fn load(&mut self, mut loader: impl FnMut(*const u8) -> *const core::ffi::c_void) {{"
+  );
+  println!("    use core::mem::transmute;");
+  for command in commands.iter() {
+    let full_name = command.name;
+    println!("    self.{full_name} = unsafe {{ transmute(loader(\"{full_name}\\0\".as_ptr())) }};");
+  }
+  println!("  }}");
+  println!("}}");
+  println!();
+  println!(
+    "/// This 'literal' value might help if you wanna make a GlFns in a `static mut` or something."
+  );
+  println!("#[allow(unused)] #[doc(hidden)]");
+  println!("pub const BLANK_GL_FNS: GlFns = GlFns {{");
+  for command in commands.iter() {
+    let full_name = command.name;
+    println!("  {full_name}: None,");
+  }
+  println!("}};");
 }
 
 pub fn print_fn_type_aliases(commands: &[Command]) {
   for command in commands {
-    println!(
-      "#[allow(non_camel_case_types)] pub(crate) type {}_t = {};",
-      command.name,
-      command.get_fn_ty()
-    );
+    println!("type {}_t = {};", command.name, command.get_fn_ty());
   }
 }
 
 pub fn print_struct_declaration(commands: &[Command]) {
+  println!("use super::type_alias::*;");
+  println!("/// Holds fn pointers for {} GL functions", commands.len());
+  println!("#[repr(C)]");
   println!("pub struct GlFns {{");
   for command in commands.iter() {
     let field_name = command.name;
     println!("  {field_name}: Option<{field_name}_t>,");
+  }
+  println!("}}");
+}
+
+const COLD_PANIC_SRC: &str = "
+#[cold]
+#[doc(hidden)]
+#[inline(never)]
+#[cfg_attr(feature = \"track_caller\", track_caller)]
+fn cold_panic(msg: &str) -> ! {
+  panic!(\"Called a GL fn that wasn't loaded: {msg}\");
+}
+";
+
+const WRAPPER_METHOD_MACRO: &str = "
+macro_rules! mk_wrapper_method {
+  ($full_name:ident, $short_name:ident, [$($arg_name:ident : $arg_ty:ty,)*] -> $ret_ty:ty) => {
+    #[inline]
+    #[allow(nonstandard_style)]
+    #[allow(clippy::unused_unit)]
+    #[allow(clippy::needless_return)]
+    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::missing_safety_doc)]
+    #[cfg_attr(feature = \"track_caller\", track_caller)]
+    pub unsafe fn $short_name(&self, $($arg_name : $arg_ty),*) -> $ret_ty {
+      if let Some(f) = self.$full_name {
+        return unsafe { f($($arg_name),*) };
+      } else {
+        cold_panic(stringify!($full_name));
+      }
+    }
+  };
+}
+";
+
+pub fn print_struct_gl_methods(commands: &[Command]) {
+  println!("{COLD_PANIC_SRC}");
+  println!("{WRAPPER_METHOD_MACRO}");
+  println!("impl GlFns {{");
+  for command in commands.iter() {
+    let short_name = command.name.strip_prefix("gl").unwrap();
+    let mut args_and_tys = String::new();
+    let mut args = String::new();
+    for param in command.params.iter() {
+      let name = param.name;
+      let ty_string = format_type_and_variant(param.ty, param.ty_variant);
+      write!(args_and_tys, "{name}: {ty_string}, ").ok();
+      write!(args, "{name}, ").ok();
+    }
+    let ret_ty = format_type_and_variant(command.return_ty, command.return_ty_variant);
+    let full_name = command.name;
+    println!("  mk_wrapper_method!({full_name}, {short_name}, [{args_and_tys}] -> {ret_ty});");
   }
   println!("}}");
 }

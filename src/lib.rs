@@ -4,18 +4,43 @@
 #![allow(clippy::match_single_binding)]
 #![allow(clippy::should_implement_trait)]
 
-#[allow(dead_code)]
-#[doc(hidden)]
-pub mod enumerations;
-#[allow(dead_code)]
-#[doc(hidden)]
-pub mod fn_type_signatures;
-#[allow(dead_code)]
-#[doc(hidden)]
-pub mod special_numbers;
+//! THIS CRATE IS NOT CURRENTLY IN A FIT STATE TO BE EASILY USED IN A SINGLE
+//! COMMAND LINE CALL.
+//!
+//! But it can output correct code if you're willing to comment and uncomment
+//! what's printed by the `main` in the binary, and then pipe that output into
+//! whatever files.
+//!
+//! * `type_alias` has all the GL types, you always need this.
+//! * `special_numbers` contains a few constants that GL considers "special
+//!   numbers", which aren't very special as far as I can tell.
+//! * `enumerations` has all other GL constants. It just lists all constants for
+//!   simplicity, no need to adjust the list based on API level or anything like
+//!   that.
+//! * `gl_fns` contains the `GlFns` struct, which lets you load GL functions and
+//!   then call the functions via method calls on the struct. The struct is
+//!   quite large (hundreds of `usize` big). You can make one on the stack with
+//!   the `BLANK_GL_FNS` constant, but you are advised to make the struct
+//!   directly on the heap with `GlFns::new_boxed()`. Either way, then call the
+//!   `load` method with a loader closure to fill in the function pointers. To
+//!   check if any fn has been loaded or not first call `has_loaded` to get a
+//!   `FnLoadedChecker`, then call the name of the fn you want to check.
+
 #[allow(dead_code)]
 #[doc(hidden)]
 pub mod type_alias;
+
+#[allow(dead_code)]
+#[doc(hidden)]
+pub mod special_numbers;
+
+#[allow(dead_code)]
+#[doc(hidden)]
+pub mod enumerations;
+
+#[allow(dead_code)]
+#[doc(hidden)]
+pub mod gl_fns;
 
 use core::fmt::Write;
 use magnesium::{XmlElement::*, *};
@@ -211,7 +236,7 @@ fn do_enums(
   }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum TypeVariant {
   /// `T`
   #[default]
@@ -238,6 +263,23 @@ pub enum TypeVariant {
   BitfieldsLit(usize),
 }
 
+pub fn format_type_and_variant(ty: &str, ty_variant: TypeVariant) -> String {
+  #[allow(clippy::useless_format)]
+  match ty_variant {
+    TypeVariant::Normal => format!("{ty}"),
+    TypeVariant::ConstPtr => format!("*const {ty}"),
+    TypeVariant::MutPtr => format!("*mut {ty}"),
+    TypeVariant::MutPtrMutPtr => format!("*mut *mut {ty}"),
+    TypeVariant::ConstArrayPtrLit(n) => format!("*const [{ty}; {n}]"),
+    TypeVariant::ConstArrayPtrNamed(n) => format!("*const [{ty}; {n}]"),
+    TypeVariant::MutPtrConstPtr => format!("*mut *const {ty}"),
+    TypeVariant::ConstPtrConstPtr => format!("*const *const {ty}"),
+    TypeVariant::ArrayLit(n) => format!("[{ty}; {n}]"),
+    TypeVariant::ArrayOfArrayLit(a, b) => format!("[[{ty}; {a}]; {b}]"),
+    TypeVariant::BitfieldsLit(n) => format!("{ty}{{:{n}}}"),
+  }
+}
+
 #[derive(Clone, Default)]
 pub struct Param {
   pub name: StaticStr,
@@ -262,24 +304,9 @@ impl Param {
   }
 
   pub fn get_name_and_ty(&self) -> String {
-    let mut f = String::new();
     let name = self.name;
-    let ty = self.ty;
-    match self.ty_variant {
-      TypeVariant::Normal => write!(f, "{name}: {ty}"),
-      TypeVariant::ConstPtr => write!(f, "{name}: *const {ty}"),
-      TypeVariant::MutPtr => write!(f, "{name}: *mut {ty}"),
-      TypeVariant::MutPtrMutPtr => write!(f, "{name}: *mut *mut {ty}"),
-      TypeVariant::ConstArrayPtrLit(n) => write!(f, "{name}: *const [{ty}; {n}]"),
-      TypeVariant::ConstArrayPtrNamed(n) => write!(f, "{name}: *const [{ty}; {n}]"),
-      TypeVariant::MutPtrConstPtr => write!(f, "{name}: *mut *const {ty}"),
-      TypeVariant::ConstPtrConstPtr => write!(f, "{name}: *const *const {ty}"),
-      TypeVariant::ArrayLit(n) => write!(f, "{name}: [{ty}; {n}]"),
-      TypeVariant::ArrayOfArrayLit(a, b) => write!(f, "{name}: [[{ty}; {a}]; {b}]"),
-      TypeVariant::BitfieldsLit(n) => write!(f, "{name}: {ty}{{:{n}}}"),
-    }
-    .ok();
-    f
+    let ty_string = format_type_and_variant(self.ty, self.ty_variant);
+    format!("{name}: {ty_string}")
   }
 }
 impl core::fmt::Debug for Param {
@@ -328,6 +355,10 @@ impl Command {
       write!(s, "{},", param.get_name_and_ty()).ok();
     }
     s.push(')');
+    if self.return_ty != "()" {
+      s.push_str("->");
+      s.push_str(&format_type_and_variant(self.return_ty, self.return_ty_variant));
+    }
     s
   }
 }
