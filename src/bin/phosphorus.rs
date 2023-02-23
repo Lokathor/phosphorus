@@ -19,62 +19,71 @@ fn main() {
     Registry::from_iter(&mut iter)
   };
   drop(types);
-  drop(enum_lists);
-  //
-  let mut gl_command_names: Vec<StaticStr> = Vec::new();
-  let mut gles2_command_names: Vec<StaticStr> = Vec::new();
-  for Feature { name: _, api, number: _, requirements, removals } in features.iter() {
-    let list = match *api {
-      "gl" => &mut gl_command_names,
-      "gles2" => &mut gles2_command_names,
-      _ => continue,
-    };
-    for requirement in requirements.iter() {
-      list.extend(requirement.commands.iter().copied());
-    }
-    for removal in removals.iter() {
-      for removed_command in removal.commands.iter() {
-        if let Some(pos) = list.iter().position(|c| c == removed_command) {
-          list.remove(pos);
-        }
-      }
-    }
-  }
   //
 
-  // IF YOU WANT TO SUPPORT COMMANDS FROM OTHER EXTENSIONS ADD THEM TO THE LIST
-  // IN THIS FILTER RULE HERE.
-  for Extension { require_lists, .. } in
-    extensions.iter().filter(|x| ["GL_KHR_debug"].contains(&x.name))
-  {
-    for RequireList { api, commands, .. } in require_lists.iter() {
+  // when active, this gets info on enumerations and prints them out.
+  if false {
+    drop(enum_lists);
+  }
+
+  // When active, this gets info on allowed commands and then prints out the
+  // struct
+  if false {
+    let mut gl_command_names: Vec<StaticStr> = Vec::new();
+    let mut gles2_command_names: Vec<StaticStr> = Vec::new();
+    for Feature { name: _, api, number: _, requirements, removals } in features.iter() {
       let list = match *api {
         "gl" => &mut gl_command_names,
         "gles2" => &mut gles2_command_names,
         _ => continue,
       };
-      eprintln!("Adding: {commands:?}");
-      list.extend(commands.iter().copied());
+      for requirement in requirements.iter() {
+        list.extend(requirement.commands.iter().copied());
+      }
+      for removal in removals.iter() {
+        for removed_command in removal.commands.iter() {
+          if let Some(pos) = list.iter().position(|c| c == removed_command) {
+            list.remove(pos);
+          }
+        }
+      }
     }
+    //
+
+    // IF YOU WANT TO SUPPORT COMMANDS FROM OTHER EXTENSIONS ADD THEM TO THE LIST
+    // IN THIS FILTER RULE HERE.
+    for Extension { require_lists, .. } in
+      extensions.iter().filter(|x| ["GL_KHR_debug"].contains(&x.name))
+    {
+      for RequireList { api, commands, .. } in require_lists.iter() {
+        let list = match *api {
+          "gl" => &mut gl_command_names,
+          "gles2" => &mut gles2_command_names,
+          _ => continue,
+        };
+        eprintln!("Adding: {commands:?}");
+        list.extend(commands.iter().copied());
+      }
+    }
+
+    //
+    let mut combo_names: Vec<StaticStr> =
+      gl_command_names.into_iter().chain(gles2_command_names.into_iter()).collect();
+    combo_names.sort();
+    combo_names.dedup();
+    //
+    let combo_commands: Vec<Command> = combo_names
+      .into_iter()
+      .map(|name| commands.iter().find(|c| c.name == name).cloned().unwrap())
+      .collect();
+
+    println!("#![allow(nonstandard_style)]");
+    print_struct_declaration(&combo_commands);
+    print_struct_loader_method(&combo_commands);
+    print_struct_gl_methods(&combo_commands);
+    print_fn_type_aliases(&combo_commands);
+    print_fn_loaded_checker(&combo_commands);
   }
-
-  //
-  let mut combo_names: Vec<StaticStr> =
-    gl_command_names.into_iter().chain(gles2_command_names.into_iter()).collect();
-  combo_names.sort();
-  combo_names.dedup();
-  //
-  let combo_commands: Vec<Command> = combo_names
-    .into_iter()
-    .map(|name| commands.iter().find(|c| c.name == name).cloned().unwrap())
-    .collect();
-
-  println!("#![allow(nonstandard_style)]");
-  print_struct_declaration(&combo_commands);
-  print_struct_loader_method(&combo_commands);
-  print_struct_gl_methods(&combo_commands);
-  print_fn_type_aliases(&combo_commands);
-  print_fn_loaded_checker(&combo_commands);
 }
 
 const FN_LOADED_METHOD_MACRO: &str = "
