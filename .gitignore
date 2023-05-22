@@ -1,8 +1,2 @@
 /target
-**/*.rs.bk
-gl.txt
-glx.txt
-wgl.txt
-/Cargo.lock
-*.lock
-temp.rs
+Cargo.lock
